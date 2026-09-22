@@ -13,3 +13,9 @@ wheels/
 .env
 .env.*
 !.env.example
+
+# Data — own nested local-only repo, never pushed from the root repo
+data/
+
+# Working build log — kept local-only for now
+workflow.MD
