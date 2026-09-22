@@ -34,7 +34,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(REPO_ROOT)
 load_dotenv(os.path.join(REPO_ROOT, ".env"))
 
-from src.collectors.crawler import HEADERS  # noqa: E402
+from src.collectors.crawler import HEADERS, gather_candidate_links  # noqa: E402
 from src.collectors.ids import make_id  # noqa: E402
 from src.collectors.jsonl import load_jsonl, load_seen_ids, write_jsonl  # noqa: E402
 from src.models.discovered_url import DiscoveredUrl  # noqa: E402
@@ -63,23 +63,35 @@ class ExtractedOpportunity(BaseModel):
 EXTRACTION_SYSTEM_PROMPT = (
     "You are extracting structured data from an arts/culture open-call page. "
     "First decide: is this page CURRENTLY SOLICITING NEW APPLICATIONS from "
-    "artists - a specific open call with eligibility information and a way "
-    "to apply? Or is it NOT one - e.g. it describes an artist or work "
-    "already selected/completed, it's a navigational or procedural page, or "
-    "it's some other non-opportunity content? Set is_open_call accordingly, "
-    "and if false, give a short rejection_reason.\n\n"
+    "artists - a specific open call whose eligibility/requirements "
+    "information is actually present in the page text given to you, with a "
+    "way to apply? Or is it NOT one - e.g. it describes an artist or work "
+    "already selected/completed, it's a navigational or procedural page, the "
+    "call is explicitly stated as closed/expired/past its deadline (even if "
+    "the page otherwise reads like a normal opportunity page), the given "
+    "page text does not itself contain identifiable eligibility/restriction "
+    "information - e.g. only a heading like 'Who can apply?' with no answer "
+    "beneath it, or only deadline/procedural text and no actual "
+    "restrictions - even though the page is otherwise clearly a real call, "
+    "or it's some other non-opportunity content? Set is_open_call "
+    "accordingly, and if false, give a short rejection_reason (for the "
+    "missing-eligibility-content case, say so explicitly rather than citing "
+    "a closed call or navigation page, so it's clear the page just wasn't "
+    "readable this way rather than genuinely not being a live call).\n\n"
     "If is_open_call is true, extract:\n"
     "- title: the specific opportunity's title\n"
     "- organisation: the organisation/institution running it\n"
     "- requirements_text: the eligibility/requirements text copied VERBATIM "
     "from the page - who can apply and any restrictions (nationality, "
     "residence, age, discipline, career stage, education, student status, "
-    "etc.). Copy the actual wording; do not paraphrase or summarize.\n"
+    "etc.). Copy the actual wording; do not paraphrase or summarize. Never "
+    "substitute deadline/procedural text for this field.\n"
     "- deadline: the application deadline exactly as stated on the page "
     "(literal text, do not compute or convert it), or null if not stated\n"
-    "- application_url: a distinct application/submission URL if the page "
-    "names one, or null if the page itself is the application page or none "
-    "is given\n\n"
+    "- application_url: if the page has a distinct application/submission "
+    "link, copy its exact URL from the 'Links found on this page' list "
+    "below - never the anchor text - or null if the page itself is the "
+    "application page or no such link is given\n\n"
     "If is_open_call is false, leave title/organisation/requirements_text/"
     "deadline/application_url as null."
 )
@@ -94,30 +106,49 @@ def extract_pdf_text(content: bytes) -> str:
         # to the model's normal "not readable" rejection path rather than crashing
 
 
-def fetch_page_text(url: str) -> str:
+def fetch_page(url: str) -> tuple[str, list[tuple[str, str]]]:
+    """Fetch a page, returning (visible_text, candidate_links).
+
+    get_text() strips every href along with the rest of the markup, so
+    without candidate_links the model is asked for an application_url
+    it was never actually shown - it can only echo nearby anchor text
+    (e.g. "Apply here"), which is how application_url ended up full of
+    button labels instead of URLs. Link harvesting reuses the crawler's
+    gather_candidate_links() so both stages filter mailto/social/etc.
+    the same way.
+    """
     resp = requests.get(url, headers=HEADERS, timeout=20)
     resp.raise_for_status()
 
     content_type = resp.headers.get("Content-Type", "")
     if "application/pdf" in content_type or url.lower().endswith(".pdf"):
-        return extract_pdf_text(resp.content)[:MAX_PAGE_CHARS]
+        return extract_pdf_text(resp.content)[:MAX_PAGE_CHARS], []
 
     soup = BeautifulSoup(resp.text, "html.parser")
     scope = soup.find("article") or soup.find("main") or soup
-    return scope.get_text(" ", strip=True)[:MAX_PAGE_CHARS]
+    text = scope.get_text(" ", strip=True)[:MAX_PAGE_CHARS]
+    links = gather_candidate_links(str(scope), url)
+    return text, links
 
 
 def extract_opportunity(
     client: OpenAI, url: str, source_name: str
 ) -> tuple[RawOpportunity | None, str | None]:
     """Returns (record, rejection_reason) - record is None iff rejected."""
-    text = fetch_page_text(url)
+    text, links = fetch_page(url)
+    links_block = "\n".join(f"- [{text_}]({link_url})" for link_url, text_ in links) or "(none found)"
 
     response = client.chat.completions.parse(
         model=MODEL,
         messages=[
             {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Page URL: {url}\n\nPage text:\n{text}"},
+            {
+                "role": "user",
+                "content": (
+                    f"Page URL: {url}\n\nPage text:\n{text}\n\n"
+                    f"Links found on this page:\n{links_block}"
+                ),
+            },
         ],
         response_format=ExtractedOpportunity,
     )
@@ -128,11 +159,15 @@ def extract_opportunity(
     if not extracted.title or not extracted.requirements_text:
         return None, "is_open_call=True but title/requirements_text missing"
 
+    application_url = extracted.application_url
+    if application_url and not application_url.startswith(("http://", "https://")):
+        application_url = None  # model echoed anchor text instead of a URL - drop, don't store garbage
+
     record = RawOpportunity(
         id=make_id(url, source_name),
         source=source_name,
         source_url=url,
-        application_url=extracted.application_url,
+        application_url=application_url,
         title=extracted.title,
         organisation=extracted.organisation,
         requirements_text=extracted.requirements_text,
