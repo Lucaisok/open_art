@@ -26,7 +26,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 sys.path.append(REPO_ROOT)
 
 from src.collectors.ids import make_id  # noqa: E402
-from src.collectors.storage import write_jsonl  # noqa: E402
+from src.collectors.jsonl import write_jsonl  # noqa: E402
 from src.models.opportunity import RawOpportunity  # noqa: E402
 
 INTAKE_CSV = os.path.join(REPO_ROOT, "data", "manual", "intake.csv")

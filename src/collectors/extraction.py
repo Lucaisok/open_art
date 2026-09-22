@@ -36,7 +36,7 @@ load_dotenv(os.path.join(REPO_ROOT, ".env"))
 
 from src.collectors.crawler import HEADERS  # noqa: E402
 from src.collectors.ids import make_id  # noqa: E402
-from src.collectors.storage import load_jsonl, load_seen_ids, write_jsonl  # noqa: E402
+from src.collectors.jsonl import load_jsonl, load_seen_ids, write_jsonl  # noqa: E402
 from src.models.discovered_url import DiscoveredUrl  # noqa: E402
 from src.models.opportunity import RawOpportunity  # noqa: E402
 from src.models.rejected_url import RejectedUrl  # noqa: E402
