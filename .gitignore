@@ -22,3 +22,5 @@ data/
 
 # Working build log — kept local-only for now
 workflow.MD
+
+ANNOTATION_GUIDELINES.md

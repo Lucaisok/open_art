@@ -144,13 +144,25 @@ def normalize_all(
 
     client = OpenAI()
     translated = 0
+    failed = 0
     for raw in to_process:
         language = languages.get(raw.source, "en")
+        try:
+            processed[raw.id] = normalize_record(client, raw, language)
+        except Exception as e:
+            # One bad record (translation error, an unparseable deadline
+            # string, ...) must not discard every other record's already-
+            # paid-for translation call in this run - skip it and retry on
+            # the next run rather than crash write_jsonl() below entirely.
+            print(f"  FAILED to normalize {raw.id} ({raw.source}): {e}")
+            failed += 1
+            continue
         if language != "en":
             translated += 1
-        processed[raw.id] = normalize_record(client, raw, language)
 
     write_jsonl(list(processed.values()), processed_path)
+    if failed:
+        print(f"{failed} record(s) failed to normalize - left for the next run.")
     print(
         f"Processed {len(to_process)} new record(s) ({translated} translated) "
         f"-> {processed_path}"
