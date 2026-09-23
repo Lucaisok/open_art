@@ -9,6 +9,20 @@ which links are actual opportunities (vs. nav/social/legal) and whether
 there's a next-page link to follow. See workflow.MD for the full design
 rationale, including why sources.yaml is human-curated, not discovered.
 
+Two cost guards keep that LLM call from being paid for repeatedly on
+content it's already seen (this matters more as source count and crawl
+frequency grow - see workflow.MD's "Known open items"): candidates
+already in `seen_ids` are filtered out *before* classify_links() is
+called, not after, so the model never re-classifies a link it's already
+placed; and a hash of each page's harvested candidate set is cached
+(`data/discovered/_page_hashes.json`) so a page that's byte-identical to
+its last crawl - the common case for a source re-crawled often - skips
+the fetch's classify_links() call entirely rather than re-asking the
+same question. The hash is over the *candidate links*, not raw HTML, so
+incidental page noise (CSRF tokens, "generated at" timestamps) that
+changes on every request without changing the actual link set doesn't
+defeat it.
+
 Requires OPENAI_API_KEY (read from a .env file at the repo root, or the
 environment) to run the classification step - fetching and
 link-harvesting work without it, but classify_links() will raise
@@ -17,6 +31,8 @@ openai.AuthenticationError if no credentials are configured.
 Usage: uv run python -m src.collectors.crawler
 """
 
+import hashlib
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -40,6 +56,7 @@ from src.models.discovered_url import DiscoveredUrl  # noqa: E402
 SOURCES_YAML = os.path.join(REPO_ROOT, "data", "sources.yaml")
 RAW_DIR = os.path.join(REPO_ROOT, "data", "raw")
 DISCOVERED_DIR = os.path.join(REPO_ROOT, "data", "discovered")
+PAGE_HASHES_PATH = os.path.join(DISCOVERED_DIR, "_page_hashes.json")
 
 HEADERS = {
     "User-Agent": "OpenArt-capstone-research-bot/0.1 (student project; contact: lucatomarelli1@gmail.com)"
@@ -76,6 +93,25 @@ def normalize_link(href: str, base_url: str) -> str | None:
         return None
 
     return urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))  # drop fragment
+
+
+def load_page_hashes(path: str = PAGE_HASHES_PATH) -> dict[str, str]:
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_page_hashes(hashes: dict[str, str], path: str = PAGE_HASHES_PATH) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(hashes, f, indent=2, sort_keys=True)
+
+
+def candidates_hash(candidates: list[tuple[str, str]]) -> str:
+    """Hash the (url, anchor_text) set, not raw HTML - see module docstring."""
+    canonical = "\n".join(f"{url}|{text}" for url, text in sorted(candidates))
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def gather_candidate_links(html: str, base_url: str) -> list[tuple[str, str]]:
@@ -151,6 +187,7 @@ def crawl_source(
     client: OpenAI,
     source: dict,
     seen_ids: set[str],
+    page_hashes: dict[str, str],
     max_pages: int = MAX_PAGES_PER_SOURCE,
 ) -> list[DiscoveredUrl]:
     discovered: list[DiscoveredUrl] = []
@@ -170,15 +207,29 @@ def crawl_source(
         if not candidates:
             break
 
-        analysis = classify_links(client, candidates, url)
+        content_hash = candidates_hash(candidates)
+        if page_hashes.get(url) == content_hash:
+            # Unchanged since the last crawl - the candidate set (including
+            # any pagination link) is identical, so there's nothing new to
+            # classify and nothing deeper to discover either.
+            break
+        page_hashes[url] = content_hash
+
+        unseen_candidates = [
+            (link_url, text)
+            for link_url, text in candidates
+            if make_id(link_url, source["name"]) not in seen_ids
+        ]
+        if not unseen_candidates:
+            break  # every candidate here (incl. any pagination link) is already known
+
+        analysis = classify_links(client, unseen_candidates, url)
 
         for i in analysis.opportunity_indices:
-            if not (0 <= i < len(candidates)):
+            if not (0 <= i < len(unseen_candidates)):
                 continue
-            link_url, text = candidates[i]
+            link_url, text = unseen_candidates[i]
             link_id = make_id(link_url, source["name"])
-            if link_id in seen_ids:
-                continue
             seen_ids.add(link_id)
             discovered.append(
                 DiscoveredUrl(
@@ -191,8 +242,8 @@ def crawl_source(
             )
 
         next_url = None
-        if analysis.next_page_index is not None and 0 <= analysis.next_page_index < len(candidates):
-            next_url = candidates[analysis.next_page_index][0]
+        if analysis.next_page_index is not None and 0 <= analysis.next_page_index < len(unseen_candidates):
+            next_url = unseen_candidates[analysis.next_page_index][0]
         if not next_url or next_url == url:
             break
         url = next_url
@@ -219,15 +270,21 @@ def crawl_all(
 
     client = OpenAI()
     seen_ids = load_seen_ids(raw_dir, out_dir)
+    page_hashes = load_page_hashes()
 
     counts = {}
     for source in sources:
         try:
-            newly_discovered = crawl_source(client, source, seen_ids)
+            newly_discovered = crawl_source(client, source, seen_ids, page_hashes)
         except Exception as e:
             print(f"{source['name']}: FAILED - {e}")
             counts[source["name"]] = None
             continue
+        finally:
+            # Saved every source, not just at the very end, so a later
+            # source's failure can't discard hash updates already earned
+            # (and paid for) by sources processed before it.
+            save_page_hashes(page_hashes)
 
         out_path = os.path.join(out_dir, f"{source['name']}.jsonl")
         merged = {d.id: d for d in load_jsonl(out_path, DiscoveredUrl)}
