@@ -60,41 +60,52 @@ class ExtractedOpportunity(BaseModel):
     application_url: str | None
 
 
-EXTRACTION_SYSTEM_PROMPT = (
-    "You are extracting structured data from an arts/culture open-call page. "
-    "First decide: is this page CURRENTLY SOLICITING NEW APPLICATIONS from "
-    "artists - a specific open call whose eligibility/requirements "
-    "information is actually present in the page text given to you, with a "
-    "way to apply? Or is it NOT one - e.g. it describes an artist or work "
-    "already selected/completed, it's a navigational or procedural page, the "
-    "call is explicitly stated as closed/expired/past its deadline (even if "
-    "the page otherwise reads like a normal opportunity page), the given "
-    "page text does not itself contain identifiable eligibility/restriction "
-    "information - e.g. only a heading like 'Who can apply?' with no answer "
-    "beneath it, or only deadline/procedural text and no actual "
-    "restrictions - even though the page is otherwise clearly a real call, "
-    "or it's some other non-opportunity content? Set is_open_call "
-    "accordingly, and if false, give a short rejection_reason (for the "
-    "missing-eligibility-content case, say so explicitly rather than citing "
-    "a closed call or navigation page, so it's clear the page just wasn't "
-    "readable this way rather than genuinely not being a live call).\n\n"
-    "If is_open_call is true, extract:\n"
-    "- title: the specific opportunity's title\n"
-    "- organisation: the organisation/institution running it\n"
-    "- requirements_text: the eligibility/requirements text copied VERBATIM "
-    "from the page - who can apply and any restrictions (nationality, "
-    "residence, age, discipline, career stage, education, student status, "
-    "etc.). Copy the actual wording; do not paraphrase or summarize. Never "
-    "substitute deadline/procedural text for this field.\n"
-    "- deadline: the application deadline exactly as stated on the page "
-    "(literal text, do not compute or convert it), or null if not stated\n"
-    "- application_url: if the page has a distinct application/submission "
-    "link, copy its exact URL from the 'Links found on this page' list "
-    "below - never the anchor text - or null if the page itself is the "
-    "application page or no such link is given\n\n"
-    "If is_open_call is false, leave title/organisation/requirements_text/"
-    "deadline/application_url as null."
-)
+def build_extraction_system_prompt(today: str) -> str:
+    """today (ISO date) lets the model reject calls whose stated deadline
+
+    has already passed even when the page never says "closed" - a static
+    prompt has no notion of "now" and can only catch explicit closure
+    wording, which missed pages that just show a quietly-past date (see
+    workflow.MD for the audit that found this).
+    """
+    return (
+        f"Today's date is {today}. You are extracting structured data from "
+        "an arts/culture open-call page. "
+        "First decide: is this page CURRENTLY SOLICITING NEW APPLICATIONS from "
+        "artists - a specific open call whose eligibility/requirements "
+        "information is actually present in the page text given to you, with a "
+        "way to apply? Or is it NOT one - e.g. it describes an artist or work "
+        "already selected/completed, it's a navigational or procedural page, the "
+        "call is closed/expired - either explicitly stated as such, or because "
+        "its stated deadline falls on or before today's date given above, even "
+        "if the page never says so explicitly and otherwise reads like a normal, "
+        "live opportunity page - the given "
+        "page text does not itself contain identifiable eligibility/restriction "
+        "information - e.g. only a heading like 'Who can apply?' with no answer "
+        "beneath it, or only deadline/procedural text and no actual "
+        "restrictions - even though the page is otherwise clearly a real call, "
+        "or it's some other non-opportunity content? Set is_open_call "
+        "accordingly, and if false, give a short rejection_reason (for the "
+        "missing-eligibility-content case, say so explicitly rather than citing "
+        "a closed call or navigation page, so it's clear the page just wasn't "
+        "readable this way rather than genuinely not being a live call).\n\n"
+        "If is_open_call is true, extract:\n"
+        "- title: the specific opportunity's title\n"
+        "- organisation: the organisation/institution running it\n"
+        "- requirements_text: the eligibility/requirements text copied VERBATIM "
+        "from the page - who can apply and any restrictions (nationality, "
+        "residence, age, discipline, career stage, education, student status, "
+        "etc.). Copy the actual wording; do not paraphrase or summarize. Never "
+        "substitute deadline/procedural text for this field.\n"
+        "- deadline: the application deadline exactly as stated on the page "
+        "(literal text, do not compute or convert it), or null if not stated\n"
+        "- application_url: if the page has a distinct application/submission "
+        "link, copy its exact URL from the 'Links found on this page' list "
+        "below - never the anchor text - or null if the page itself is the "
+        "application page or no such link is given\n\n"
+        "If is_open_call is false, leave title/organisation/requirements_text/"
+        "deadline/application_url as null."
+    )
 
 
 def extract_pdf_text(content: bytes) -> str:
@@ -137,11 +148,12 @@ def extract_opportunity(
     """Returns (record, rejection_reason) - record is None iff rejected."""
     text, links = fetch_page(url)
     links_block = "\n".join(f"- [{text_}]({link_url})" for link_url, text_ in links) or "(none found)"
+    today = datetime.now(timezone.utc).date().isoformat()
 
     response = client.chat.completions.parse(
         model=MODEL,
         messages=[
-            {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+            {"role": "system", "content": build_extraction_system_prompt(today)},
             {
                 "role": "user",
                 "content": (
