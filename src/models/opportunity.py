@@ -14,6 +14,15 @@ class RawOpportunity(BaseModel):
     title: str
     organisation: str | None = None
 
+    description: str | None = None
+    discipline: str | None = None
+    opportunity_type: str | None = None
+    country: str | None = None
+    city: str | None = None
+    funding: str | None = None
+    application_fee: str | None = None
+    career_stage: str | None = None
+
     requirements_text: str
 
     deadline: str | None = None

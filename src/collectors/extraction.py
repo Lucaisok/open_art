@@ -55,6 +55,14 @@ class ExtractedOpportunity(BaseModel):
     rejection_reason: str | None
     title: str | None
     organisation: str | None
+    description: str | None
+    discipline: str | None
+    opportunity_type: str | None
+    country: str | None
+    city: str | None
+    funding: str | None
+    application_fee: str | None
+    career_stage: str | None
     requirements_text: str | None
     deadline: str | None
     application_url: str | None
@@ -92,6 +100,28 @@ def build_extraction_system_prompt(today: str) -> str:
         "If is_open_call is true, extract:\n"
         "- title: the specific opportunity's title\n"
         "- organisation: the organisation/institution running it\n"
+        "- description: a verbatim excerpt describing what the opportunity "
+        "actually is or offers (theme, format, activity) - copy the wording, "
+        "do not paraphrase or summarize; null if the page gives no descriptive "
+        "text beyond the title\n"
+        "- discipline: the artistic discipline(s) the opportunity is for (e.g. "
+        "visual arts, dance, literature, music, film), exactly as stated on "
+        "the page, or null if not stated\n"
+        "- opportunity_type: what kind of opportunity this is (e.g. residency, "
+        "grant, commission, competition, prize, fellowship, exhibition), "
+        "exactly as stated or clearly implied by the page, or null if unclear\n"
+        "- country: the country the opportunity is based in or restricted to, "
+        "exactly as stated, or null if not stated\n"
+        "- city: the city the opportunity is based in, exactly as stated, or "
+        "null if not stated\n"
+        "- funding: the funding/support offered (amount, stipend, grant size, "
+        "residency support, etc.) copied verbatim, or null if not stated\n"
+        "- application_fee: any fee to apply, copied verbatim (including an "
+        "explicit 'no fee' statement if the page says so), or null if not "
+        "mentioned\n"
+        "- career_stage: the career stage the opportunity targets (e.g. "
+        "emerging, early-career, student, established), exactly as stated, "
+        "or null if not stated\n"
         "- requirements_text: the eligibility/requirements text copied VERBATIM "
         "from the page - who can apply and any restrictions (nationality, "
         "residence, age, discipline, career stage, education, student status, "
@@ -103,8 +133,9 @@ def build_extraction_system_prompt(today: str) -> str:
         "link, copy its exact URL from the 'Links found on this page' list "
         "below - never the anchor text - or null if the page itself is the "
         "application page or no such link is given\n\n"
-        "If is_open_call is false, leave title/organisation/requirements_text/"
-        "deadline/application_url as null."
+        "If is_open_call is false, leave title/organisation/description/"
+        "discipline/opportunity_type/country/city/funding/application_fee/"
+        "career_stage/requirements_text/deadline/application_url as null."
     )
 
 
@@ -152,6 +183,8 @@ def extract_opportunity(
 
     response = client.chat.completions.parse(
         model=MODEL,
+        temperature=0,  # accept/reject and field extraction should be repeatable for the
+        # same page, not vary run to run - see workflow.MD for the audit that found this
         messages=[
             {"role": "system", "content": build_extraction_system_prompt(today)},
             {
@@ -182,6 +215,14 @@ def extract_opportunity(
         application_url=application_url,
         title=extracted.title,
         organisation=extracted.organisation,
+        description=extracted.description,
+        discipline=extracted.discipline,
+        opportunity_type=extracted.opportunity_type,
+        country=extracted.country,
+        city=extracted.city,
+        funding=extracted.funding,
+        application_fee=extracted.application_fee,
+        career_stage=extracted.career_stage,
         requirements_text=extracted.requirements_text,
         deadline=extracted.deadline,
         collected_at=datetime.now(timezone.utc),
