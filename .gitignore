@@ -14,7 +14,10 @@ wheels/
 .env.*
 !.env.example
 
-# Data — own nested local-only repo, never pushed from the root repo
+# Data — own nested local-only git repo (data/.git), so individual files
+# under it can never be tracked from here regardless of ignore rules; the
+# published processed CSV is copied out to dataset/ instead (see
+# scripts/export_dataset.py)
 data/
 
 # Working build log — kept local-only for now
