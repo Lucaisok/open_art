@@ -1,6 +1,6 @@
 """
-OpenArt — runs the full pipeline (crawl -> extract -> normalize -> export)
-in one command.
+OpenArt — runs the full pipeline (crawl -> extract -> normalize ->
+canonicalize -> extract_funding -> export) in one command.
 
 Cost/safety note: crawling and extraction each call an LLM per URL. Every
 stage is already incremental (id-based caching - see each module's own
@@ -32,6 +32,8 @@ sys.path.append(REPO_ROOT)
 from scripts.export_dataset import export_dataset, export_processed  # noqa: E402
 from src.collectors.crawler import crawl_all  # noqa: E402
 from src.collectors.extraction import extract_all  # noqa: E402
+from src.processing.canonicalize import canonicalize_all  # noqa: E402
+from src.processing.extract_funding import extract_all as extract_funding_all  # noqa: E402
 from src.processing.normalize import normalize_all  # noqa: E402
 
 SOURCES_YAML = os.path.join(REPO_ROOT, "data", "sources.yaml")
@@ -76,6 +78,12 @@ def main() -> None:
 
     print("\n=== Normalizing ===")
     normalize_all()
+
+    print("\n=== Canonicalizing discipline/opportunity_type/career_stage/country/city ===")
+    canonicalize_all()
+
+    print("\n=== Extracting structured funding/application_fee ===")
+    extract_funding_all()
 
     print("\n=== Exporting CSVs ===")
     export_dataset()

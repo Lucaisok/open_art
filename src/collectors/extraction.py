@@ -19,6 +19,7 @@ Usage: uv run python -m src.collectors.extraction
 
 import io
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -49,6 +50,42 @@ REJECTED_DIR = os.path.join(REPO_ROOT, "data", "rejected")
 MODEL = "gpt-5.4-mini"  # same cost/tier reasoning as the crawler's classify_links
 MAX_PAGE_CHARS = 8000  # ~2000 tokens - generous for one opportunity page, bounded for cost
 
+# The model is told to use null when a field isn't stated (see
+# build_extraction_system_prompt), but at least once it wrote out its own
+# reasoning for the absence instead - "[not present in provided text]"
+# landed in a raw deadline field verbatim (see workflow.MD). A prompt
+# tweak alone isn't a guarantee against a repeat in different phrasing on
+# some future page, so this is caught deterministically instead: any
+# nullable field whose entire value is just the model explaining that the
+# page doesn't state it gets normalized to a real null. Confirmed a second,
+# more widespread variant while building canonicalize.py: the literal
+# string "null" (the JSON keyword itself, not the field being actually
+# null) landed in city (8), application_fee (8), country (2), and
+# career_stage (1) - the model writing the keyword as if it were a value
+# rather than emitting an actual null.
+_PLACEHOLDER_LEAK = re.compile(
+    r"^\[?\s*(?:"
+    r"(?:not|no)\s+(?:present|stated|specified|provided|given|mentioned|available|found)"
+    r"(?:\s+(?:in|on|within)\s+(?:the\s+)?(?:provided\s+)?(?:page\s+)?text)?"
+    r"|n/a|not\s+applicable|none\s+(?:given|stated|provided)|null|none"
+    r")\s*\]?\.?$",
+    re.IGNORECASE,
+)
+
+_NULLABLE_FIELDS = (
+    "organisation",
+    "description",
+    "discipline",
+    "opportunity_type",
+    "country",
+    "city",
+    "funding",
+    "application_fee",
+    "career_stage",
+    "deadline",
+    "application_url",
+)
+
 
 class ExtractedOpportunity(BaseModel):
     is_open_call: bool
@@ -66,6 +103,13 @@ class ExtractedOpportunity(BaseModel):
     requirements_text: str | None
     deadline: str | None
     application_url: str | None
+
+
+def _drop_placeholder_leaks(extracted: ExtractedOpportunity) -> None:
+    for field in _NULLABLE_FIELDS:
+        value = getattr(extracted, field)
+        if isinstance(value, str) and _PLACEHOLDER_LEAK.match(value.strip()):
+            setattr(extracted, field, None)
 
 
 def build_extraction_system_prompt(today: str) -> str:
@@ -198,6 +242,7 @@ def extract_opportunity(
         response_format=ExtractedOpportunity,
     )
     extracted = response.choices[0].message.parsed
+    _drop_placeholder_leaks(extracted)
 
     if not extracted.is_open_call:
         return None, extracted.rejection_reason or "not an open call"

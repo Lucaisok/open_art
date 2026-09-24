@@ -12,6 +12,21 @@ under it can be tracked or pushed from this repo. export_processed()
 also copies its output to dataset/opportunities.csv, which is - the
 one file this repo actually publishes.
 
+export_processed() also drops content-duplicates (see
+src/processing/dedupe.py) - the only normalization this script does -
+since that's a property of the published table (which row represents an
+opportunity), not of data/processed/opportunities.jsonl itself, which
+stays a complete, untouched cache of every normalized record.
+
+export_processed() does NOT filter out rows whose deadline has already
+passed (src/processing/deadline.py's is_closed()) - eligibility
+requirements text stays valid RQ1 training signal regardless of
+staleness, so every row is kept here; it only logs the count. Staleness
+only matters to the not-yet-built product/RAG layer (never recommend a
+closed call to an artist), which should call is_closed() itself,
+evaluated against the actual day it runs - not a value baked into this
+export, which would just go stale. See workflow.MD's "Known open items".
+
 Usage: uv run python scripts/export_dataset.py
 """
 
@@ -28,6 +43,8 @@ sys.path.append(REPO_ROOT)
 from src.collectors.jsonl import load_jsonl  # noqa: E402
 from src.models.opportunity import RawOpportunity  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
+from src.processing.dedupe import drop_content_duplicates  # noqa: E402
+from src.processing.deadline import is_closed  # noqa: E402
 
 RAW_DIR = os.path.join(REPO_ROOT, "data", "raw")
 RAW_OUT_PATH = os.path.join(REPO_ROOT, "data", "raw", "opportunities.csv")
@@ -53,6 +70,15 @@ def export_processed(
     published_path: str = PUBLISHED_OUT_PATH,
 ) -> int:
     records = load_jsonl(processed_path, ProcessedOpportunity)
+
+    records, dropped = drop_content_duplicates(records)
+    for dupe, kept in dropped:
+        print(f"  content-duplicate: {dupe.id} ({dupe.source_url}) - same opportunity as {kept.id}")
+    if dropped:
+        print(f"Dropped {len(dropped)} content-duplicate(s)")
+
+    closed = sum(1 for r in records if is_closed(r.deadline_date))
+    print(f"{closed} of {len(records)} rows have a deadline that's already passed - kept, not filtered (see module docstring)")
 
     df = pd.DataFrame([r.model_dump() for r in records])
     df.to_csv(out_path, index=False)

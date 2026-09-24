@@ -1,20 +1,24 @@
 """
 OpenArt — processed stage: normalizes data/raw/** into data/processed/.
 
-Scoped to deadline parsing and language handling only - the rest of
-CLAUDE.md's processed schema (discipline, country, career_stage, etc.)
-is separate, not-yet-built work. For each RawOpportunity not already in
-data/processed/opportunities.jsonl:
+discipline/opportunity_type/career_stage/country's own translation and
+canonicalization happen separately, in src/processing/canonicalize.py
+(a distinct-value batch pass, not per-row like this module) - see that
+module's docstring. country/city/funding/application_fee's remaining
+canonicalization (country/city name normalization) is also
+canonicalize.py's job, not this one's. For each RawOpportunity not
+already in data/processed/opportunities.jsonl:
 
   - looks up its source's language from sources.yaml's `language` field
     (manual-entry rows, or any source missing from sources.yaml, default
     to "en" - see that file's field doc)
   - parses `deadline` into a structured date (src/processing/deadline.py)
-  - if the source language isn't English, translates title and
-    requirements_text to English with one LLM call, so RQ1 trains on
-    uniform text regardless of source language. requirements_text
-    itself is never overwritten - translation adds title_en /
-    requirements_text_en alongside it.
+  - if the source language isn't English, translates title,
+    requirements_text, and description (if given) to English with one
+    LLM call, so RQ1 trains on uniform text regardless of source
+    language. None of the three originals are ever overwritten -
+    translation adds title_en / requirements_text_en / description_en
+    alongside them.
 
 One language per source is a deliberate simplification, not a
 guarantee - confirmed exception: wiels_brussels is tagged "en" (true
@@ -59,6 +63,7 @@ MODEL = "gpt-5.4-mini"  # same cost/tier reasoning as the collectors' LLM calls
 class Translation(BaseModel):
     title_en: str
     requirements_text_en: str
+    description_en: str | None = None  # null iff no description was given to translate
 
 
 def load_source_languages(sources_path: str = SOURCES_YAML) -> dict[str, str]:
@@ -67,24 +72,29 @@ def load_source_languages(sources_path: str = SOURCES_YAML) -> dict[str, str]:
     return {s["name"]: s.get("language", "en") for s in sources}
 
 
-def translate(client: OpenAI, title: str, requirements_text: str, language: str) -> Translation:
+def translate(
+    client: OpenAI, title: str, requirements_text: str, description: str | None, language: str
+) -> Translation:
+    description_block = f"\n\nDescription:\n{description}" if description else ""
     response = client.chat.completions.parse(
         model=MODEL,
         messages=[
             {
                 "role": "system",
                 "content": (
-                    f"Translate the following arts open-call title and eligibility/"
-                    f"requirements text from language code '{language}' to English. "
-                    "This feeds a downstream eligibility classifier, not general "
-                    "readability - preserve every specific restriction (nationality, "
-                    "residence, age, discipline, career stage, education, etc.) "
-                    "precisely. Do not summarize, omit, or add anything."
+                    f"Translate the following arts open-call fields from language "
+                    f"code '{language}' to English. This feeds a downstream "
+                    "eligibility classifier, not general readability - preserve "
+                    "every specific restriction (nationality, residence, age, "
+                    "discipline, career stage, education, etc.) precisely in "
+                    "requirements_text_en. Do not summarize, omit, or add "
+                    "anything. Translate description literally too if one is "
+                    "given below; leave description_en null if none is given."
                 ),
             },
             {
                 "role": "user",
-                "content": f"Title: {title}\n\nRequirements text:\n{requirements_text}",
+                "content": f"Title: {title}\n\nRequirements text:\n{requirements_text}{description_block}",
             },
         ],
         response_format=Translation,
@@ -94,10 +104,11 @@ def translate(client: OpenAI, title: str, requirements_text: str, language: str)
 
 def normalize_record(client: OpenAI, raw: RawOpportunity, language: str) -> ProcessedOpportunity:
     if language == "en":
-        title_en, requirements_text_en = raw.title, raw.requirements_text
+        title_en, requirements_text_en, description_en = raw.title, raw.requirements_text, raw.description
     else:
-        translation = translate(client, raw.title, raw.requirements_text, language)
+        translation = translate(client, raw.title, raw.requirements_text, raw.description, language)
         title_en, requirements_text_en = translation.title_en, translation.requirements_text_en
+        description_en = translation.description_en if raw.description else None
 
     return ProcessedOpportunity(
         id=raw.id,
@@ -113,6 +124,7 @@ def normalize_record(client: OpenAI, raw: RawOpportunity, language: str) -> Proc
         funding=raw.funding,
         application_fee=raw.application_fee,
         career_stage=raw.career_stage,
+        description_en=description_en,
         language=language,
         title=raw.title,
         requirements_text=raw.requirements_text,
