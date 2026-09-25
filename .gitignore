@@ -20,7 +20,10 @@ wheels/
 # scripts/export_dataset.py)
 data/
 
-# Working build log — kept local-only for now
+# Working build log — kept local-only for now: names the real external
+# sites/listing pages this project scrapes, unlike ANNOTATION_GUIDELINES.md
+# (published — taxonomy/methodology only, no source-identifying specifics
+# beyond what dataset/opportunities.csv already publishes)
 workflow.MD
 
 ANNOTATION_GUIDELINES.md
