@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.15.0",
     "dateparser>=1.4.3",
+    "fastembed>=0.7.4",
     "openai>=3.17.0",
     "pandas>=3.0.6",
     "pydantic>=2.13.5",
@@ -23,4 +24,12 @@ dev = [
     "matplotlib>=3.11.2",
     "nbconvert>=7.17.1",
     "seaborn>=0.13.2",
+]
+
+[tool.uv]
+# Intel macOS (the dev laptop) must stay installable: onnxruntime >= 1.24 ships no
+# macosx x86_64 wheel, so this makes uv resolve to a version that still has one
+# (see workflow.MD, "Embedding runtime: fastembed, not PyTorch")
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]

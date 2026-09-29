@@ -177,7 +177,8 @@ metric.
 |---|---|---|
 | TF-IDF + Logistic Regression (baseline) | 0.625 | `class_weight='balanced'`, `GridSearchCV` over `C`, n-gram range, `min_df`; best C=10, unigrams, min_df=1 |
 | Linear SVM | **0.643** | `LinearSVC(class_weight='balanced')`, same TF-IDF grid, C ∈ {0.01…100}; best C=100 (flat for C ≥ 100), unigrams, min_df=1. Beats the baseline on all 5 folds (+0.003 to +0.038) — a small but consistent gain, mostly AGE (0.90→1.00) and STUDENT_STATUS (0.76→0.85); NONE ↔ DISCIPLINE barely moves (19 → 18 errors) |
-| Sentence-embedding + LogReg | — | planned |
+| Sentence embeddings (`bge-base-en-v1.5`) + LogReg | **0.723** | frozen embeddings via `fastembed`, `class_weight='balanced'`, best C=10. Beats both TF-IDF models on all 5 folds; biggest gains exactly where the limitations below predicted — DISCIPLINE 0.55→0.75, NONE 0.47→0.58, NONE ↔ DISCIPLINE errors 18 → 12. LogReg kept over LinearSVC on the embeddings (0.723 vs 0.704, same folds): isolates the representation change, and gives probabilities for routing low-confidence labels to human review |
+| OpenAI LLM, few-shot (reference only, not a product candidate) | — | planned — an upper-bound comparison point, not shipped |
 
 ### Why the baseline scores low — known limitations
 
@@ -198,9 +199,19 @@ TF-IDF structurally can't handle, not from labeling or tuning:
    "performers" and "choreographic" are related, so an unseen term
    carries no signal and the chunk falls to `NONE`.
 
-Both are the motivation for the sentence-embedding classifier:
+Both are the motivation for the sentence-embedding classifier (and its results bear the diagnosis out — see the table):
 embeddings put related practices near each other and encode sentence
 structure better than word counts. Deliberately not patched with
 hand-built TF-IDF extras — bigrams were already in the grid search and
 lost to unigrams, and a hand-curated discipline lexicon would be effort
 spent on a model the embedding classifier is expected to replace.
+
+### Embedding runtime
+
+Embeddings run on `fastembed` (ONNX Runtime), not `sentence-transformers`
+(PyTorch): PyTorch has no build for the Intel-Mac dev machine on Python
+3.13, and downgrading Python would have pinned the whole project to
+NumPy 1.x and a frozen 2024 torch. Same model weights, same vectors,
+smaller deployment footprint, reusable for matching/RAG. Full decision
+record, including the alternatives rejected: `workflow.MD`,
+"Embedding runtime: fastembed, not PyTorch".
