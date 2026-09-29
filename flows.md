@@ -176,7 +176,7 @@ metric.
 | Model | Best CV macro-F1 | Notes |
 |---|---|---|
 | TF-IDF + Logistic Regression (baseline) | 0.625 | `class_weight='balanced'`, `GridSearchCV` over `C`, n-gram range, `min_df`; best C=10, unigrams, min_df=1 |
-| Linear SVM | — | next |
+| Linear SVM | **0.643** | `LinearSVC(class_weight='balanced')`, same TF-IDF grid, C ∈ {0.01…100}; best C=100 (flat for C ≥ 100), unigrams, min_df=1. Beats the baseline on all 5 folds (+0.003 to +0.038) — a small but consistent gain, mostly AGE (0.90→1.00) and STUDENT_STATUS (0.76→0.85); NONE ↔ DISCIPLINE barely moves (19 → 18 errors) |
 | Sentence-embedding + LogReg | — | planned |
 
 ### Why the baseline scores low — known limitations
