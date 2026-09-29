@@ -152,9 +152,55 @@ phrasing from dominating the labeled sample — same reasoning as
 
 ### Result
 
-302 labeled chunks across 79 opportunities, all 9 taxonomy classes
-represented (11–71 each) — `dataset/labels/eligibility_annotations.csv`,
+292 labeled chunks across 79 opportunities, all 9 taxonomy classes
+represented (11–70 each) — `dataset/labels/eligibility_annotations.csv`,
 the training data for the eligibility classifier. 3 opportunities with a
-broken `requirements_text` were excluded before chunking (§0); 17
-malformed chunks were set aside during labeling rather than
-force-labeled (`skipped_chunks.csv`).
+broken `requirements_text` were excluded before chunking (§0); 27 chunks
+sit in `skipped_chunks.csv` instead of being force-labeled — 17 malformed
+splits set aside during labeling, plus 10 bare section headings ("Who can
+apply?", "Eligible applicants") removed after the baseline showed them
+teaching the model that eligibility vocabulary means `NONE`
+(`ANNOTATION_GUIDELINES.md` §6, 2026-09-29). A model-assisted label audit
+of the baseline's top-30 confident errors changed 4 labels (same §6).
+
+
+## Eligibility classifier (RQ1)
+
+`notebooks/eligibility_classifier.ipynb`. Validation is 5-fold
+`StratifiedGroupKFold` grouped by `opportunity_id`: stratified because
+the 9 classes are imbalanced (11–70), grouped because chunks from the
+same call share phrasing and would otherwise leak across train/test.
+Every model is compared on these same folds, macro-F1 as the headline
+metric.
+
+| Model | Best CV macro-F1 | Notes |
+|---|---|---|
+| TF-IDF + Logistic Regression (baseline) | 0.625 | `class_weight='balanced'`, `GridSearchCV` over `C`, n-gram range, `min_df`; best C=10, unigrams, min_df=1 |
+| Linear SVM | — | next |
+| Sentence-embedding + LogReg | — | planned |
+
+### Why the baseline scores low — known limitations
+
+The densest error cluster is `NONE` ↔ `DISCIPLINE`. Once the heading
+artifacts were removed, what's left comes from two things bag-of-words
+TF-IDF structurally can't handle, not from labeling or tuning:
+
+1. **Arts vocabulary in non-constraint sentences.** Project and delivery
+   descriptions ("you will work with … arts, cultural or creative
+   organisations", "we welcome experimental forms … art and high
+   culture") are `NONE`, but they're full of the same words as real
+   `DISCIPLINE` constraints. TF-IDF counts words; it can't tell "the
+   project involves X" from "the applicant must be X".
+2. **Discipline terms too rare to learn.** Real `DISCIPLINE` chunks
+   name specific practices ("early music", "dancers and circus
+   artists", "costume designers", "translators") that each appear once
+   or twice in 292 chunks. TF-IDF has no notion that "dancers",
+   "performers" and "choreographic" are related, so an unseen term
+   carries no signal and the chunk falls to `NONE`.
+
+Both are the motivation for the sentence-embedding classifier:
+embeddings put related practices near each other and encode sentence
+structure better than word counts. Deliberately not patched with
+hand-built TF-IDF extras — bigrams were already in the grid search and
+lost to unigrams, and a hand-curated discipline lexicon would be effort
+spent on a model the embedding classifier is expected to replace.
