@@ -206,6 +206,30 @@ hand-built TF-IDF extras — bigrams were already in the grid search and
 lost to unigrams, and a hand-curated discipline lexicon would be effort
 spent on a model the embedding classifier is expected to replace.
 
+### Would more annotated data help? — learning curve
+
+Last cell of the notebook: each fold's model retrained on 25/50/75/100% of
+its training *opportunities* (5 random draws per share), scored on the
+untouched test fold.
+
+| Training chunks (avg) | ~62 | ~111 | ~169 | ~234 |
+|---|---|---|---|---|
+| TF-IDF + LogReg | 0.29 | 0.43 | 0.55 | 0.63 |
+| Embeddings + LogReg | 0.50 | 0.61 | 0.70 | 0.72 |
+
+- **Embeddings need far less data than TF-IDF:** with ~half the chunks
+  they nearly match TF-IDF trained on all of them, and beat it from ~170
+  chunks on. The pretrained model already knows the language; TF-IDF only
+  knows words it has seen. Good presentation point.
+- **More data would help, but modestly:** the embeddings curve flattens
+  (+0.11, +0.09, then +0.02 for the last quarter), so doubling the
+  annotations would plausibly add a few points, not transform the result.
+- **Deferred on purpose:** the MVP layers (eligibility engine, matching,
+  RAG, agent) come first. If time allows, a targeted top-up of the weakest
+  classes (EDUCATION, NATIONALITY) plus a human review pass of the
+  LLM-applied labels beats random new annotation — 400 of the corpus's
+  479 opportunities are still unannotated, so the raw material exists.
+
 ### Why model 4 is in the comparison — key presentation point
 
 > **1. It answers the obvious question about RQ1: "why not just call an
