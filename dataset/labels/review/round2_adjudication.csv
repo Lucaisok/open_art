@@ -1,0 +1,10 @@
+chunk_id,final_label,reason
+creative_ireland_b4833a165cef_7,NONE,"partner-type list item: stays NONE (product-owner decision, whole list kept consistent)"
+creative_ireland_b4833a165cef_12,NONE,"partner-type list item: stays NONE (product-owner decision, whole list kept consistent)"
+fpu_slovakia_7d1dec061d0c_2,NONE,"what-is-not-funded rule restricts the project, not the applicant: NONE, round-1 precedent kept"
+mondriaan_fund_bccb4029c0d9_7,STUDENT_STATUS,current enrolment is STUDENT_STATUS per SS2
+mondriaan_fund_af60247339cd_2,CAREER_STAGE,diploma-date rule is CAREER_STAGE per the SS6 2026-09-24 decision
+focuna_luxembourg_65e417572cdc_0,STUDENT_STATUS,current enrolment / university attachment is STUDENT_STATUS per SS2
+villa_arson_0b9a48542cab_0,STUDENT_STATUS,'graduated < 3 years ago' is STUDENT_STATUS per SS2 ('must have graduated within the last 2 years')
+villa_arson_0b9a48542cab_1,STUDENT_STATUS,'graduated < 3 years ago' is STUDENT_STATUS per SS2
+kunsten_be_flanders_43833eaa836e_0,STUDENT_STATUS,'recent art school graduates' is STUDENT_STATUS per SS2
