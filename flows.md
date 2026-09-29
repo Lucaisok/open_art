@@ -178,7 +178,7 @@ metric.
 | TF-IDF + Logistic Regression (baseline) | 0.625 | `class_weight='balanced'`, `GridSearchCV` over `C`, n-gram range, `min_df`; best C=10, unigrams, min_df=1 |
 | Linear SVM | **0.643** | `LinearSVC(class_weight='balanced')`, same TF-IDF grid, C ∈ {0.01…100}; best C=100 (flat for C ≥ 100), unigrams, min_df=1. Beats the baseline on all 5 folds (+0.003 to +0.038) — a small but consistent gain, mostly AGE (0.90→1.00) and STUDENT_STATUS (0.76→0.85); NONE ↔ DISCIPLINE barely moves (19 → 18 errors) |
 | Sentence embeddings (`bge-base-en-v1.5`) + LogReg | **0.723** | frozen embeddings via `fastembed`, `class_weight='balanced'`, best C=10. Beats both TF-IDF models on all 5 folds; biggest gains exactly where the limitations below predicted — DISCIPLINE 0.55→0.75, NONE 0.47→0.58, NONE ↔ DISCIPLINE errors 18 → 12. LogReg kept over LinearSVC on the embeddings (0.723 vs 0.704, same folds): isolates the representation change, and gives probabilities for routing low-confidence labels to human review |
-| OpenAI LLM, few-shot (reference only, not a product candidate) | — | planned — an upper-bound comparison point, not shipped |
+| OpenAI LLM, few-shot (reference only, not a product candidate) | 0.766 | `gpt-5.4-mini`, temperature 0, taxonomy in the prompt + 2 examples per label drawn from each fold's *training* chunks only; answers cached in `notebooks/cache/llm_predictions.jsonl`. Ahead of the embeddings model on average (+0.043) but on only 3 of 5 folds, and far less stable (0.60–0.91 per fold vs 0.67–0.82) — see caveats below |
 
 ### Why the baseline scores low — known limitations
 
@@ -205,6 +205,22 @@ structure better than word counts. Deliberately not patched with
 hand-built TF-IDF extras — bigrams were already in the grid search and
 lost to unigrams, and a hand-curated discipline lexicon would be effort
 spent on a model the embedding classifier is expected to replace.
+
+### Why model 4 is in the comparison — key presentation point
+
+> **1. It answers the obvious question about RQ1: "why not just call an
+> LLM?"** Any NLP project today gets asked this. Without model 4 the
+> answer is an argument; with it, it's a measurement: **a local model
+> that costs nothing per call and always gives the same answer gets
+> within ~0.04 macro-F1 of a hosted LLM** (0.723 vs 0.766) — and the LLM
+> needed no training data to get there.
+>
+> **2. It turns design decisions into a measured trade-off.** 
+> Model 4 puts a number on what those principles cost: **give up ~0.04
+> F1, get determinism, zero per-call cost and local execution.** A
+> stated preference becomes an evidence-based choice.
+
+
 
 ### Embedding runtime
 
