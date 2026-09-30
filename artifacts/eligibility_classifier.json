@@ -1,0 +1,31 @@
+{
+  "task": "RQ1 eligibility classification of requirements_text_en chunks",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "embedding_dim": 768,
+  "classifier": "LogisticRegression",
+  "params": {
+    "C": 10
+  },
+  "class_weight": "balanced",
+  "labels": [
+    "AGE",
+    "CAREER_STAGE",
+    "DISCIPLINE",
+    "EDUCATION",
+    "NATIONALITY",
+    "NONE",
+    "OTHER_ELIGIBILITY",
+    "RESIDENCE",
+    "STUDENT_STATUS"
+  ],
+  "n_train_chunks": 678,
+  "n_train_opportunities": 217,
+  "training_data": "dataset/labels/eligibility_annotations.csv",
+  "cv": "5-fold StratifiedGroupKFold by opportunity_id, random_state=42",
+  "cv_macro_f1": 0.7396,
+  "trained_on": "2026-09-29",
+  "versions": {
+    "scikit-learn": "1.9.1",
+    "fastembed": "0.8.1"
+  }
+}

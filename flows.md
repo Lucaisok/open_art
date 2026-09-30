@@ -244,6 +244,17 @@ kept because the change between the two is itself a finding.
   close to that level of label consistency. More data alone won't push
   much further; clearer class boundaries would.
 
+### Final model
+
+The chosen model is refit on all 678 chunks and saved to
+`artifacts/eligibility_classifier.joblib`, with a metadata file
+(`eligibility_classifier.json`) recording the embedding model it
+expects and its CV score. Its expected quality is the CV estimate
+(0.740 macro-F1). The product embeds each chunk with the same
+`bge-base-en-v1.5` model, and the classifier returns a label plus
+probabilities, so low-confidence labels can go to human review. Details:
+`workflow.MD`, "Final model artifact".
+
 ### Why the baseline scores low — known limitations
 
 The densest error cluster is `NONE` ↔ `DISCIPLINE`. Once the heading
