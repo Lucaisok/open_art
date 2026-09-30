@@ -1,6 +1,6 @@
 """
 OpenArt — interactive CLI for hand-labeling eligibility chunks against the
-9-class taxonomy in ANNOTATION_GUIDELINES.md §2. Reads the candidate pool
+taxonomy in ANNOTATION_GUIDELINES.md §2 (11 classes since round 3). Reads the candidate pool
 built by select_annotation_candidates.py, skips chunks already labeled or
 skipped in a prior session (safe to stop and resume anytime — every label
 is flushed to disk immediately, no batching), and enforces the §7 20-chunk
@@ -35,10 +35,12 @@ SKIPPED_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "skipped_chunks.csv"
 ANNOTATION_FIELDS = ["opportunity_id", "chunk_id", "chunk_text", "label", "excludes", "notes"]
 SKIPPED_FIELDS = ["opportunity_id", "chunk_id", "chunk_text", "reason"]
 
-# ANNOTATION_GUIDELINES.md §2, in menu order
+# ANNOTATION_GUIDELINES.md §2, in menu order. APPLICANT_TYPE and PRIOR_FUNDING were
+# split out of OTHER_ELIGIBILITY in the round-3 taxonomy revision (2026-09-30)
 LABELS = [
     "RESIDENCE", "NATIONALITY", "AGE", "DISCIPLINE", "CAREER_STAGE",
-    "EDUCATION", "STUDENT_STATUS", "OTHER_ELIGIBILITY", "NONE",
+    "EDUCATION", "STUDENT_STATUS", "APPLICANT_TYPE", "PRIOR_FUNDING",
+    "OTHER_ELIGIBILITY", "NONE",
 ]
 
 PILOT_SIZE = 20

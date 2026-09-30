@@ -1,0 +1,9 @@
+chunk_id,final_label,reason
+acc_galerie_weimar_1c586a1763b4_1,NONE,"values statement, excludes no one (NONE test); PRIOR_FUNDING (key 9) likely a slip for NONE (key 11)"
+kunsten_be_flanders_86ac6db836bb_1,STUDENT_STATUS,"recent graduation is STUDENT_STATUS - SS2's own example, same adjudication as round 2"
+kulturdirektoratet_norway_09df7dca2616_9,STUDENT_STATUS,"current enrolment is STUDENT_STATUS (SS2), same adjudication as round 2"
+mondriaan_fund_a939eddff305_1,CAREER_STAGE,"diploma date used to compute years of practice - mondriaan rule (2026-09-24), same adjudication as round 2"
+kulturdirektoratet_norway_51f931899871_3,APPLICANT_TYPE,"explicit waiver of an organisational-form requirement keeps its topic label (2026-09-24 rule)"
+creative_ireland_b4833a165cef_11,NONE,"item in a list of permitted partner types - partner-list rule (round 2), constrains partners not the applicant"
+national_culture_fund_bulgaria_8fca12fac738_1,RESIDENCE,"org-descriptor rule kept (product-owner decision 2026-09-30): national descriptor of an organisation -> RESIDENCE"
+kulturdirektoratet_norway_1b92a135ec95_1,DISCIPLINE,"fused-field rule kept (product-owner decision 2026-09-30): 'performing arts institutions' -> DISCIPLINE"

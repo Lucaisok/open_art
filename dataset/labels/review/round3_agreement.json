@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-30",
+  "blind_rows_scored": 34,
+  "raw_agreement": 0.6471,
+  "cohen_kappa": 0.5899,
+  "disagreements": 12,
+  "flagged_reviewed": 38,
+  "flagged_changed": 1
+}

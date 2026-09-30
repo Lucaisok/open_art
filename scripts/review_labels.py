@@ -1,14 +1,15 @@
 """
-OpenArt — interactive CLI for the round-2 label review (ANNOTATION_GUIDELINES.md
-§6, 2026-09-29). Fills in `your_label` / `your_note` in the two review files,
-one chunk at a time, so they never need editing by hand.
+OpenArt — interactive CLI for a round's label review (ANNOTATION_GUIDELINES.md
+§6, 2026-09-29 and 2026-09-30). Fills in `your_label` / `your_note` in the two
+review files, one chunk at a time, so they never need editing by hand.
+Written for round 2; --round 3 reviews the round-3 files.
 
 Two passes, in this order:
-1. blind   — dataset/labels/review/round2_blind.csv. The pre-label is NOT
+1. blind   — dataset/labels/review/round<N>_blind.csv. The pre-label is NOT
              shown: label each chunk from scratch. This is what measures
              human-vs-LLM agreement, so the order matters - do it first,
              before seeing any of the session's reasoning in the flagged pass.
-2. flagged — dataset/labels/review/round2_flagged.csv. The pre-label and the
+2. flagged — dataset/labels/review/round<N>_flagged.csv. The pre-label and the
              reason it was flagged are shown: press Enter to confirm it, or
              type a number to change it.
 
@@ -17,9 +18,9 @@ skipped, so it's safe to quit (q) and resume anytime. 'u' undoes the previous
 answer. Neighbouring sentences from the same call are shown as context, since
 many chunks are hard to judge alone.
 
-When both passes are done, run scripts/apply_label_review.py.
+When both passes are done, run scripts/apply_label_review.py --round <N>.
 
-Usage: uv run python scripts/review_labels.py [--only blind|flagged]
+Usage: uv run python scripts/review_labels.py [--round 2|3] [--only blind|flagged]
 """
 
 import argparse
@@ -33,10 +34,11 @@ from label_chunks import LABELS
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REVIEW_DIR = os.path.join(REPO_ROOT, "dataset", "labels", "review")
 CANDIDATES_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "candidate_chunks.csv")
-PASSES = {
-    "blind": os.path.join(REVIEW_DIR, "round2_blind.csv"),
-    "flagged": os.path.join(REVIEW_DIR, "round2_flagged.csv"),
-}
+PASS_NAMES = ("blind", "flagged")
+
+
+def passes(round_no: int) -> dict:
+    return {name: os.path.join(REVIEW_DIR, f"round{round_no}_{name}.csv") for name in PASS_NAMES}
 
 SPLIT_SUFFIX_RE = re.compile(r"^(.*_\d+)([a-z])$")  # Option-B split rows: <chunk_id>a, <chunk_id>b, ...
 DIM, BOLD, RESET = "\033[2m", "\033[1m", "\033[0m"
@@ -71,8 +73,8 @@ def _short(text: str, limit: int = 160) -> str:
 
 
 def print_menu() -> None:
-    print("  " + "   ".join(f"{i} {label}" for i, label in enumerate(LABELS[:5], start=1)))
-    print("  " + "   ".join(f"{i} {label}" for i, label in enumerate(LABELS[5:], start=6)))
+    for start in range(0, len(LABELS), 4):  # 4 per line: 11 labels since round 3
+        print("  " + "   ".join(f"{i} {label}" for i, label in enumerate(LABELS[start:start + 4], start=start + 1)))
     print(f"{DIM}  s SKIP (set aside)   u undo previous   q quit{RESET}")
 
 
@@ -139,17 +141,18 @@ def review(name: str, path: str, context: Context) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--only", choices=list(PASSES), help="run just one pass")
+    parser.add_argument("--round", type=int, default=2, dest="round_no", help="annotation round to review (default 2)")
+    parser.add_argument("--only", choices=PASS_NAMES, help="run just one pass")
     args = parser.parse_args()
 
     context = Context(CANDIDATES_PATH)
-    for name, path in PASSES.items():
-        if args.only and name != args.only:
+    for name, path in passes(args.round_no).items():
+        if (args.only and name != args.only) or not os.path.exists(path):
             continue
         if not review(name, path, context):
             return
     if not args.only:
-        print("Both passes done. Next: uv run python scripts/apply_label_review.py")
+        print(f"Both passes done. Next: uv run python scripts/apply_label_review.py --round {args.round_no}")
 
 
 if __name__ == "__main__":

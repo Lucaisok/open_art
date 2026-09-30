@@ -4,26 +4,32 @@
   "embedding_dim": 768,
   "classifier": "LogisticRegression",
   "params": {
-    "C": 10
+    "C": 100
   },
   "class_weight": "balanced",
   "labels": [
     "AGE",
+    "APPLICANT_TYPE",
     "CAREER_STAGE",
     "DISCIPLINE",
     "EDUCATION",
     "NATIONALITY",
     "NONE",
     "OTHER_ELIGIBILITY",
+    "PRIOR_FUNDING",
     "RESIDENCE",
     "STUDENT_STATUS"
   ],
-  "n_train_chunks": 678,
-  "n_train_opportunities": 217,
+  "n_train_chunks": 696,
+  "n_train_opportunities": 231,
   "training_data": "dataset/labels/eligibility_annotations.csv",
   "cv": "5-fold StratifiedGroupKFold by opportunity_id, random_state=42",
-  "cv_macro_f1": 0.7396,
-  "trained_on": "2026-09-29",
+  "cv_macro_f1": 0.701,
+  "cv_macro_f1_10_seeds": {
+    "mean": 0.7013,
+    "std": 0.0124
+  },
+  "trained_on": "2026-09-30",
   "versions": {
     "scikit-learn": "1.9.1",
     "fastembed": "0.8.1"

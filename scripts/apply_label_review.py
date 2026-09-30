@@ -1,6 +1,7 @@
 """
-OpenArt — apply the human review of round-2 pre-labels and measure
-human-vs-LLM agreement (ANNOTATION_GUIDELINES.md §6, 2026-09-29 entry).
+OpenArt — apply the human review of a round's pre-labels and measure
+human-vs-LLM agreement (ANNOTATION_GUIDELINES.md §6, 2026-09-29 and
+2026-09-30 entries). Written for round 2, reused for round 3 via --round.
 
 Round 2's 386 new rows were pre-labeled by a Claude Code session following
 the guidelines. Two review files sit in dataset/labels/review/:
@@ -12,7 +13,9 @@ the guidelines. Two review files sit in dataset/labels/review/:
 - round2_flagged.csv — every pre-label the session marked as uncertain, WITH
                        the pre-label and the reason it was flagged.
 
-Fill `your_label` in both (one of the 9 labels, or SKIP to set a chunk aside;
+Round 3 uses the same file names with `round3_` (flagged file optional).
+
+Fill `your_label` in both (one of the labels in label_chunks.LABELS, or SKIP to set a chunk aside;
 `your_note` is optional), then run this script. It:
 
 1. checks every row is filled in with a valid label,
@@ -26,14 +29,19 @@ Fill `your_label` in both (one of the 9 labels, or SKIP to set a chunk aside;
    final_label, reason). Applied *after* the review and recorded in notes;
    the blind answers themselves are never edited, so the agreement score
    stays a measure of what the reviewer actually said,
-5. saves the agreement numbers to dataset/labels/review/round2_agreement.json.
+5. saves the agreement numbers to dataset/labels/review/round<N>_agreement.json.
 
 Safe to re-run: it recomputes from the review files each time, and rows it
 already applied are recognised by their note.
 
-Usage: uv run python scripts/apply_label_review.py
+Order matters when re-running older rounds: round 2 rewrites its rows with
+9-class labels and drops every note after its own, so re-run
+revise_taxonomy.py and then round 3 afterwards.
+
+Usage: uv run python scripts/apply_label_review.py [--round 2|3]
 """
 
+import argparse
 import json
 import os
 from datetime import date
@@ -41,19 +49,26 @@ from datetime import date
 import pandas as pd
 from sklearn.metrics import cohen_kappa_score
 
+from label_chunks import LABELS
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LABELS_DIR = os.path.join(REPO_ROOT, "dataset", "labels")
 REVIEW_DIR = os.path.join(LABELS_DIR, "review")
 ANNOTATIONS_PATH = os.path.join(LABELS_DIR, "eligibility_annotations.csv")
 SKIPPED_PATH = os.path.join(LABELS_DIR, "skipped_chunks.csv")
-BLIND_PATH = os.path.join(REVIEW_DIR, "round2_blind.csv")
-FLAGGED_PATH = os.path.join(REVIEW_DIR, "round2_flagged.csv")
-AGREEMENT_PATH = os.path.join(REVIEW_DIR, "round2_agreement.json")
-ADJUDICATION_PATH = os.path.join(REVIEW_DIR, "round2_adjudication.csv")  # optional
+VALID = set(LABELS) | {"SKIP"}
 
-VALID = {"RESIDENCE", "NATIONALITY", "AGE", "DISCIPLINE", "CAREER_STAGE", "EDUCATION",
-         "STUDENT_STATUS", "OTHER_ELIGIBILITY", "NONE", "SKIP"}
-REVIEW_TAG = "human review"
+
+def review_paths(round_no: int) -> dict:
+    name = lambda part: os.path.join(REVIEW_DIR, f"round{round_no}_{part}")
+    return {"blind": name("blind.csv"), "flagged": name("flagged.csv"),  # flagged optional from round 3
+            "agreement": name("agreement.json"), "adjudication": name("adjudication.csv")}  # adjudication optional
+
+
+def review_tag(round_no: int) -> str:
+    # round 2's notes predate --round and say just "human review"; notes are always
+    # written as " | <tag>", so "| human review" never matches a round-3 note
+    return "human review" if round_no == 2 else f"round{round_no} human review"
 
 
 def load_review(path: str) -> pd.DataFrame:
@@ -67,16 +82,20 @@ def load_review(path: str) -> pd.DataFrame:
     return df
 
 
-def main() -> None:
-    blind, flagged = load_review(BLIND_PATH), load_review(FLAGGED_PATH)
+def main(round_no: int) -> None:
+    paths, tag = review_paths(round_no), review_tag(round_no)
+    marker = f"| {tag}"
+    blind = load_review(paths["blind"])
+    flagged = load_review(paths["flagged"]) if os.path.exists(paths["flagged"]) else blind.iloc[0:0].assign(claude_label="")
     ann = pd.read_csv(ANNOTATIONS_PATH, keep_default_na=False)
     skipped = pd.read_csv(SKIPPED_PATH, keep_default_na=False)
 
     # the pre-label is still what's in the annotations file, unless an earlier run already
     # overwrote it - in that case recover it from the note this script left behind
     def pre_label(row):
-        if REVIEW_TAG in row["notes"]:
-            return row["notes"].split("pre-label was ")[1].split(")")[0] if "pre-label was " in row["notes"] else row["label"]
+        if marker in row["notes"]:
+            this_round = row["notes"].split(marker)[1]  # an earlier round's note has its own "pre-label was"
+            return this_round.split("pre-label was ")[1].split(")")[0] if "pre-label was " in this_round else row["label"]
         return row["label"]
 
     pre = ann.set_index("chunk_id").apply(pre_label, axis=1)
@@ -106,14 +125,14 @@ def main() -> None:
         if d["your_label"] == "SKIP":
             skipped.loc[len(skipped)] = {"opportunity_id": ann.at[i, "opportunity_id"], "chunk_id": d["chunk_id"],
                                          "chunk_text": ann.at[i, "chunk_text"],
-                                         "reason": f"set aside in {REVIEW_TAG} {today}" + (f": {d['your_note']}" if d["your_note"] else "")}
+                                         "reason": f"set aside in {tag} {today}" + (f": {d['your_note']}" if d["your_note"] else "")}
             ann = ann.drop(index=i)
             moved += 1
             continue
-        base = ann.at[i, "notes"].split(f" | {REVIEW_TAG}")[0]  # drop an earlier run's review/adjudication notes
+        base = ann.at[i, "notes"].split(f" {marker}")[0]  # drop an earlier run's review/adjudication notes
         verdict = "confirmed" if d["your_label"] == old else f"changed (pre-label was {old})"
         ann.at[i, "label"] = d["your_label"]
-        ann.at[i, "notes"] = f"{base} | {REVIEW_TAG} {today}, {d['source']}: {verdict}" + (f" - {d['your_note']}" if d["your_note"] else "")
+        ann.at[i, "notes"] = f"{base} {marker} {today}, {d['source']}: {verdict}" + (f" - {d['your_note']}" if d["your_note"] else "")
         changed += d["your_label"] != old
         confirmed += d["your_label"] == old
 
@@ -121,8 +140,8 @@ def main() -> None:
     # Applied after the review, never instead of it: the blind answers above stay untouched,
     # so the agreement score measures what the reviewer actually said.
     adjudicated = 0
-    if os.path.exists(ADJUDICATION_PATH):
-        for _, d in pd.read_csv(ADJUDICATION_PATH, keep_default_na=False).iterrows():
+    if os.path.exists(paths["adjudication"]):
+        for _, d in pd.read_csv(paths["adjudication"], keep_default_na=False).iterrows():
             hit = ann.index[ann["chunk_id"] == d["chunk_id"]]
             assert len(hit), f"adjudicated chunk not in annotations: {d['chunk_id']}"
             i = hit[0]
@@ -135,13 +154,15 @@ def main() -> None:
     print(f"\nApplied: {confirmed} confirmed, {changed} changed, {moved} moved to skipped_chunks.csv, "
           f"{adjudicated} adjudicated")
 
-    with open(AGREEMENT_PATH, "w") as f:
+    with open(paths["agreement"], "w") as f:
         json.dump({"date": today, "blind_rows_scored": len(scored), "raw_agreement": round(agree, 4),
                    "cohen_kappa": round(kappa, 4), "disagreements": len(diff),
                    "flagged_reviewed": len(flagged), "flagged_changed": int((flagged["your_label"] != flagged["chunk_id"].map(pre)).sum())},
                   f, indent=2)
-    print(f"Agreement saved to {AGREEMENT_PATH}")
+    print(f"Agreement saved to {paths['agreement']}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--round", type=int, default=2, dest="round_no", help="annotation round to apply (default 2)")
+    main(parser.parse_args().round_no)

@@ -35,8 +35,12 @@ data separate, for reproducibility.
 
 ```
 RESIDENCE, NATIONALITY, AGE, DISCIPLINE, CAREER_STAGE, EDUCATION,
-STUDENT_STATUS, OTHER_ELIGIBILITY, NONE
+STUDENT_STATUS, APPLICANT_TYPE, PRIOR_FUNDING, OTHER_ELIGIBILITY, NONE
 ```
+
+(`APPLICANT_TYPE` and `PRIOR_FUNDING` were split out of
+`OTHER_ELIGIBILITY` in round 3, 2026-09-30 — see
+`ANNOTATION_GUIDELINES.md` §6.)
 
 Target 200–300 hand-annotated spans. Single-label per chunk unless
 multi-label is trivial to support — don't let annotation scheme
