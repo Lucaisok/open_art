@@ -107,11 +107,12 @@ def test_review_for_a_different_label_does_not_count():
     assert verdict.status == "CHECK"
 
 
-def test_low_confidence_is_a_check_even_when_reviewed():
+def test_reviewed_sentence_rejects_whatever_the_confidence():
+    # since step 6b the review confirms the class, so it replaces the 0.7 confidence gate
     text = "Open to artists living in Norway."
-    verdict = run(ArtistProfile(residence_country="BE"), [chunk(0, text, "RESIDENCE", confidence=0.6)],
+    verdict = run(ArtistProfile(residence_country="BE"), [chunk(0, text, "RESIDENCE", confidence=0.4)],
                   [reviewed(text, "RESIDENCE", {"countries": ["NO"]})])
-    assert verdict.status == "CHECK"
+    assert verdict.status == "LIKELY_NOT_ELIGIBLE"
 
 
 def test_reviewed_polarity_overrides_the_parsed_one():
@@ -120,6 +121,30 @@ def test_reviewed_polarity_overrides_the_parsed_one():
     verdict = run(ArtistProfile(currently_enrolled=True), [chunk(0, text, "STUDENT_STATUS", polarity="REQUIRES")],
                   [reviewed(text, "STUDENT_STATUS", {"enrolled": True}, "EXCLUDES", decision="fix")])
     assert verdict.status == "LIKELY_NOT_ELIGIBLE" and verdict.items[0].polarity == "EXCLUDES"
+
+
+# -- DISCIPLINE: may PASS, never FAIL ----------------------------------------------------------------------
+
+PAINTER = ArtistProfile(disciplines=["Visual Arts"])
+
+
+@pytest.mark.parametrize("profile, text, polarity, expected", [
+    (PAINTER, "The call is open to visual artists.", "REQUIRES", "PASS"),
+    (PAINTER, "The call is open to writers.", "REQUIRES", "CHECK"),            # no match: CHECK, not FAIL
+    (ArtistProfile(disciplines=["Photography"]), "Photography is not eligible.", "EXCLUDES", "CHECK"),
+    (EMPTY, "The call is open to visual artists.", "REQUIRES", "CHECK"),      # disciplines not in the profile
+])
+def test_discipline(profile, text, polarity, expected):
+    verdict = run(profile, [chunk(0, text, "DISCIPLINE", polarity)])
+    assert verdict.items[0].outcome == expected
+    assert verdict.status == ("ELIGIBLE" if expected == "PASS" else "CHECK")
+
+
+def test_discipline_list_is_an_or_group():
+    chunks = [chunk(0, "• literature", "DISCIPLINE"), chunk(1, "• visual arts", "DISCIPLINE")]
+    verdict = run(PAINTER, chunks)
+    assert [i.outcome for i in verdict.items] == ["CHECK", "PASS"]
+    assert verdict.status == "ELIGIBLE"
 
 
 # -- per class --------------------------------------------------------------------------------------------

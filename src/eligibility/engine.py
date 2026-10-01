@@ -18,14 +18,17 @@ Three verdicts (decision 1, workflow.MD):
 
 Asymmetric on purpose: a wrong "not eligible" hides a real opportunity, a
 wrong "check" costs a minute. So a sentence can only FAIL when it has a
-confirm/fix review row AND the profile field it needs is filled; anything else
-becomes CHECK, quoting the sentence.
+confirm/fix review row for its current class AND the profile field it needs is
+filled; anything else becomes CHECK, quoting the sentence. (Since step 6b the
+review, which also confirms the class, replaces the 0.7 confidence gate.)
 
 How one sentence is read (in this order):
   heading, NONE                 ignored (a NONE flagged by the safety net -> CHECK)
   polarity WAIVES               NO_RESTRICTION ("no restriction on age")
-  DISCIPLINE, CAREER_STAGE,     CHECK: never verified automatically
-  EDUCATION, PRIOR_FUNDING,
+  DISCIPLINE                    PASS if a REQUIRES sentence names one of the artist's disciplines
+                                (src/eligibility/disciplines.py), else CHECK; never FAIL
+  CAREER_STAGE, EDUCATION,      CHECK: never verified automatically
+  PRIOR_FUNDING,
   OTHER_ELIGIBILITY
   AGE, NATIONALITY, RESIDENCE,  CHECK unless reviewed (confirm / fix); then the reviewed value
   APPLICANT_TYPE,               names a set S of artists and the polarity says S is required or
@@ -33,8 +36,8 @@ How one sentence is read (in this order):
                                   REQUIRES + outside S -> FAIL     inside S -> CHECK
                                   EXCLUDES + inside S  -> CHECK    outside S -> PASS
 
-How sentences combine: consecutive sentences of the same class are an OR group
-("• Individuals • Organisations"), and so is a run of adjacent NATIONALITY /
+How sentences combine: consecutive sentences of the same class (a reject class
+or DISCIPLINE) are an OR group ("• Individuals • Organisations"), and so is a run of adjacent NATIONALITY /
 RESIDENCE sentences ("citizens of X" / "or residents of Y"). A group:
   FAIL   if every sentence in it fails for certain;
   PASS   if every EXCLUDES sentence in it passes (misses the artist) and, when it states any
@@ -51,6 +54,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from src.eligibility.disciplines import discipline_match
 from src.eligibility.profile import ArtistProfile
 from src.models.classified_chunk import ClassifiedChunk
 from src.models.processed_opportunity import ProcessedOpportunity
@@ -59,11 +63,12 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 CONSTRAINTS_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
 REVIEWED_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_constraints_reviewed.csv")
 
-# the gate a sentence must pass before it may reject (also used by scripts/review_queue.py,
+# the classes a reviewed sentence may reject on (also used by scripts/review_queue.py,
 # so the review queue and the engine always agree on what needs a review)
 REJECT_CLASSES = {"AGE", "NATIONALITY", "RESIDENCE", "APPLICANT_TYPE", "STUDENT_STATUS"}
-REJECT_CONFIDENCE = 0.7
 CHECK_ONLY_CLASSES = {"DISCIPLINE", "CAREER_STAGE", "EDUCATION", "PRIOR_FUNDING", "OTHER_ELIGIBILITY"}
+# classes whose adjacent sentences form OR groups (DISCIPLINE: lists like "• visual arts • literature")
+GROUPED_CLASSES = REJECT_CLASSES | {"DISCIPLINE"}
 
 TOPIC = {
     "AGE": "age", "NATIONALITY": "nationality", "RESIDENCE": "residence",
@@ -105,6 +110,9 @@ class Item(BaseModel):
     outcome: Outcome
     reason: str
     review: str | None = None  # the review decision this outcome rests on, if any
+    # why a CHECK is a check (None otherwise): safety_net, check_only_class, not_reviewed,
+    # dropped, unreadable, narrower_set (also_requires), missing_profile_field, uncertain_match
+    check_kind: str | None = None
     group: int | None = None   # set when the sentence is part of an OR group of 2+
     group_outcome: Outcome | None = None
 
@@ -281,39 +289,49 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[s
             return None
         return _item(chunk, chunk.suspected_label, "CHECK",
                      f"may be a {TOPIC[chunk.suspected_label]} requirement the classifier missed "
-                     f"({chunk.safety_net_reason}); read it")
+                     f"({chunk.safety_net_reason}); read it", check_kind="safety_net")
     label = chunk.label
     if chunk.polarity == "WAIVES":
         return _item(chunk, label, "NO_RESTRICTION", f"no restriction on {TOPIC[label]}")
+    if label == "DISCIPLINE" and chunk.polarity == "REQUIRES":
+        if not profile.disciplines:
+            return _item(chunk, label, "CHECK", "your disciplines are not in your profile; check that yours fits",
+                         check_kind="missing_profile_field")
+        if match := discipline_match(chunk.text, profile.disciplines):
+            return _item(chunk, label, "PASS", f'names your discipline ({match[0]}: "{match[1]}")')
     if label in CHECK_ONLY_CLASSES:
-        return _item(chunk, label, "CHECK", f"{TOPIC[label]} is not verified automatically; {CHECK_ONLY_HINT[label]}")
+        return _item(chunk, label, "CHECK", f"{TOPIC[label]} is not verified automatically; {CHECK_ONLY_HINT[label]}",
+                     check_kind="check_only_class")
 
     # a class the engine may reject on: only through a reviewed sentence
     review = reviews.get(chunk.text)
     if review is None or review.label != label:
-        return _item(chunk, label, "CHECK", f"{TOPIC[label]} requirement not reviewed yet; read it")
-    if chunk.confidence is None or chunk.confidence < REJECT_CONFIDENCE:
-        return _item(chunk, label, "CHECK", f"the classifier is unsure this is about {TOPIC[label]}; read it",
-                     review=review.decision)
+        return _item(chunk, label, "CHECK", f"{TOPIC[label]} requirement not reviewed yet; read it",
+                     check_kind="not_reviewed")
     if review.decision == "drop":
         return _item(chunk, label, "CHECK", f"reviewed: not a strict {TOPIC[label]} restriction"
-                     + (f" ({review.reason})" if review.reason else "") + "; read it", review="drop")
+                     + (f" ({review.reason})" if review.reason else "") + "; read it", review="drop",
+                     check_kind="dropped")
     if review.polarity not in ("REQUIRES", "EXCLUDES") or not review.value:
         return _item(chunk, label, "CHECK", f"{TOPIC[label]} requirement could not be read; read it",
-                     review=review.decision)
+                     review=review.decision, check_kind="unreadable")
 
     value, polarity = review.value, review.polarity
     inside, detail = _membership(label, value, profile, deadline, today)
     narrower = value.get("also_requires")
     described = _describe(label, value)
     verb = "requires" if polarity == "REQUIRES" else "excludes"
+    kind = None
     if inside is None:
         outcome, reason = "CHECK", f"{verb} {described}; {detail}"
+        # every "can't tell" from a missing field says so in its detail; the rest are date / year edge cases
+        kind = "missing_profile_field" if "not in your profile" in detail else "uncertain_match"
     elif polarity == "REQUIRES":
         if not inside:
             outcome, reason = "FAIL", f"requires {described}; {detail}"
         elif narrower:
             outcome, reason = "CHECK", f"requires {described} and also: {narrower}; {detail}, check the rest"
+            kind = "narrower_set"
         else:
             outcome, reason = "PASS", f"requires {described}; {detail}"
     else:  # EXCLUDES
@@ -322,9 +340,10 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[s
         elif narrower:
             outcome, reason = ("CHECK", f"excludes some {described} ({narrower}); {detail}, "
                                "check whether the exclusion covers you")
+            kind = "narrower_set"
         else:
             outcome, reason = "FAIL", f"excludes {described}; {detail}"
-    item = _item(chunk, label, outcome, reason, review=review.decision)
+    item = _item(chunk, label, outcome, reason, review=review.decision, check_kind=kind)
     item.polarity = polarity  # the reviewed polarity, which may differ from the parsed one
     return item
 
@@ -351,10 +370,10 @@ def _group_outcome(items: list[Item]) -> Outcome:
 
 
 def form_or_groups(items: list[Item]) -> None:
-    """Mark runs of adjacent same-class sentences (classes the engine may reject on) as OR groups."""
+    """Mark runs of adjacent same-class sentences (reject classes, DISCIPLINE) as OR groups."""
     runs: list[list[Item]] = []
     for item in items:
-        if item.label not in REJECT_CLASSES or item.outcome == "NO_RESTRICTION":
+        if item.label not in GROUPED_CLASSES or item.outcome == "NO_RESTRICTION":
             continue
         previous = runs[-1][-1] if runs else None
         if (previous is not None and item.chunk_index == previous.chunk_index + 1
