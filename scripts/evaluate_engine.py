@@ -41,6 +41,9 @@ from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
 PROCESSED_PATH = os.path.join(REPO_ROOT, "data", "processed", "opportunities.jsonl")
 PUBLISHED_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
 GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts.csv")
+# step 6c: a second, fresh sample (seed 2027, none of the step 6 calls), judged and scored once,
+# after the engine was frozen, so it gives an estimate the step 6b changes were not tuned on
+FRESH_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts_fresh.csv")
 
 TODAY = date(2026, 10, 1)  # fixed, so ages and the results are reproducible
 SEED = 2026
@@ -88,7 +91,8 @@ def load_opportunities() -> dict[str, ProcessedOpportunity]:
     return {row.id: row for row in rows if row.id in published}
 
 
-def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedOpportunity]) -> list[str]:
+def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedOpportunity],
+                  seed: int = SEED, exclude: set[str] = frozenset()) -> list[str]:
     """30 calls, fixed seed: half that contain a reviewed sentence the engine could reject on
     (otherwise a random sample has too few possible rejections to measure), half from the rest.
     The split uses the inputs (sentences + reviews), never a verdict."""
@@ -99,8 +103,8 @@ def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedO
                 return True
         return False
 
-    rng = random.Random(SEED)
-    ids = sorted(opportunities)
+    rng = random.Random(seed)
+    ids = sorted(set(opportunities) - set(exclude))
     rng.shuffle(ids)
     picked, per_source = [], {}
     for want_reject in (True, False):
@@ -132,10 +136,11 @@ def write_packet(path: str, sample: list[str], opportunities: dict[str, Processe
 ENGINE_TO_GOLD = {"ELIGIBLE": "ELIGIBLE", "CHECK": "UNCLEAR", "LIKELY_NOT_ELIGIBLE": "NOT_ELIGIBLE"}
 
 
-def evaluate(engine: EligibilityEngine, opportunities: dict[str, ProcessedOpportunity]) -> None:
+def evaluate(engine: EligibilityEngine, opportunities: dict[str, ProcessedOpportunity],
+             gold_path: str = GOLD_PATH) -> None:
     # the 30 calls are frozen in the gold file: select_sample() depends on the review file, which grows,
     # so re-running it later would pick other calls than the ones that were judged
-    gold = pd.read_csv(GOLD_PATH)
+    gold = pd.read_csv(gold_path)
     rows = []
     for _, g in gold.iterrows():
         verdict = engine.evaluate(PERSONAS[g["persona"]], opportunities[g["opportunity_id"]], today=TODAY)
@@ -223,14 +228,21 @@ def diagnose(df: pd.DataFrame) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--packet", help="write the judging packet to this JSON file instead of evaluating")
+    parser.add_argument("--fresh", action="store_true",
+                        help="the fresh sample (step 6c): seed 2027, excluding every call in the step 6 gold file")
     args = parser.parse_args()
 
     engine = EligibilityEngine()
     opportunities = load_opportunities()
     if args.packet:
-        write_packet(args.packet, select_sample(engine, opportunities), opportunities)
+        if args.fresh:
+            judged = set(pd.read_csv(GOLD_PATH)["opportunity_id"])
+            sample = select_sample(engine, opportunities, seed=2027, exclude=judged)
+        else:
+            sample = select_sample(engine, opportunities)
+        write_packet(args.packet, sample, opportunities)
     else:
-        evaluate(engine, opportunities)
+        evaluate(engine, opportunities, FRESH_GOLD_PATH if args.fresh else GOLD_PATH)
 
 
 if __name__ == "__main__":
