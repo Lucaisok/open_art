@@ -20,11 +20,15 @@ Usage: uv run python scripts/select_annotation_candidates.py [--target 260] [--s
 import argparse
 import os
 import random
-import re
+import sys
 
 import pandas as pd
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(REPO_ROOT)
+
+# the splitter lives in src/ so the product and the training data share it
+from src.eligibility.chunking import split_into_chunks  # noqa: E402
 
 DATASET_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
 # dataset/ (not data/) is deliberate: this is derived from already-published
@@ -38,32 +42,6 @@ EXCLUDED_OPPORTUNITY_IDS = {
     "dgartes_portugal_4fe806b71e57",
     "dgartes_portugal_cc9be82e728f",
 }
-
-BULLET_SPLIT_RE = re.compile(r"[\r\n]+|(?:(?<=\s)|^)[•▪◦*]\s+")
-SENTENCE_SPLIT_RE = re.compile(r"(?<=[.;!?])\s+(?=[A-Z0-9(\"'])")
-LEADING_MARKER_RE = re.compile(
-    r"^[\-–—•▪◦*]+\s*"                    # dash/bullet glyphs
-    r"|^\(?[0-9]{1,2}(?:\.[0-9]{1,2})*[.)]\s+"       # 1.  1.1.  2.3)  (1)
-    r"|^[a-zA-Z][.)]\s+"                             # a.  b)
-)
-
-
-def split_into_chunks(text: str) -> list[str]:
-    """Sentence-level chunking per ANNOTATION_GUIDELINES.md §1: one sentence =
-    one chunk, splitting on '.', ';', or a clear clause break like a bullet
-    point. Imperfect on abbreviations and other edge cases by design — a
-    human reviews every chunk during labeling and can skip a malformed one
-    rather than this being tuned further."""
-    chunks = []
-    for block in BULLET_SPLIT_RE.split(text.strip()):
-        block = LEADING_MARKER_RE.sub("", block.strip()).strip()
-        if not block:
-            continue
-        for sentence in SENTENCE_SPLIT_RE.split(block):
-            sentence = sentence.strip()
-            if sentence:
-                chunks.append(sentence)
-    return chunks
 
 
 def select_candidates(

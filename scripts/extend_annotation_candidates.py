@@ -37,17 +37,20 @@ import argparse
 import os
 import random
 import re
+import sys
 
 import pandas as pd
 
-from select_annotation_candidates import (
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(REPO_ROOT)
+
+from select_annotation_candidates import (  # noqa: E402
     DATASET_PATH,
     EXCLUDED_OPPORTUNITY_IDS,
     OUT_PATH,
-    split_into_chunks,
 )
+from src.eligibility.chunking import split_into_chunks  # noqa: E402
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANNOTATIONS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_annotations.csv")
 
 # keyword heuristics for the targeted batch - deliberately broad (recall over

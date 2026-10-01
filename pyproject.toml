@@ -23,6 +23,7 @@ dev = [
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.2",
     "nbconvert>=7.17.1",
+    "pytest>=9.1.1",
     "seaborn>=0.13.2",
 ]
 
@@ -33,3 +34,8 @@ dev = [
 required-environments = [
     "sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
+
+[tool.pytest.ini_options]
+# tests import `src.…` the same way the scripts do, from the repo root
+pythonpath = ["."]
+testpaths = ["tests"]
