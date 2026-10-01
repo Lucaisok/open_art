@@ -36,6 +36,20 @@ def test_probabilities_cover_every_class(classifier):
     assert prediction.confidence == max(prediction.probabilities.values())
 
 
+def test_results_come_back_in_input_order(classifier):
+    """predict() embeds texts sorted by length for speed; the results must
+    still line up with the texts as they were passed in."""
+    texts = [
+        "The residency is open to artists under the age of 35 who live and work in Europe.",
+        "Students are not eligible.",
+        "Applicants must be resident in Scotland.",
+    ]
+    together = classifier.predict(texts)
+    one_by_one = [classifier.predict([text])[0] for text in texts]
+    assert [p.label for p in together] == [p.label for p in one_by_one]
+    assert [p.confidence for p in together] == pytest.approx([p.confidence for p in one_by_one])
+
+
 def test_empty_input(classifier):
     assert classifier.predict([]) == []
 

@@ -1,6 +1,7 @@
 """
 OpenArt — runs the full pipeline (crawl -> extract -> normalize ->
-canonicalize -> extract_funding -> export) in one command.
+canonicalize -> extract_funding -> export -> eligibility constraints) in one
+command.
 
 Cost/safety note: crawling and extraction each call an LLM per URL. Every
 stage is already incremental (id-based caching - see each module's own
@@ -30,6 +31,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(REPO_ROOT)
 
 from scripts.export_dataset import export_dataset, export_processed  # noqa: E402
+from scripts.extract_constraints import extract_constraints, print_report  # noqa: E402
 from src.collectors.crawler import crawl_all  # noqa: E402
 from src.collectors.extraction import extract_all  # noqa: E402
 from src.processing.canonicalize import canonicalize_all  # noqa: E402
@@ -88,6 +90,11 @@ def main() -> None:
     print("\n=== Exporting CSVs ===")
     export_dataset()
     export_processed()
+
+    # last, because it reads the finished processed corpus. Runs the RQ1
+    # classifier locally (no API cost) and rebuilds the file from scratch
+    print("\n=== Classifying eligibility sentences ===")
+    print_report(extract_constraints())
 
 
 if __name__ == "__main__":
