@@ -20,14 +20,15 @@ import argparse
 import json
 import os
 
+import sys
+
 import pandas as pd
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONSTRAINTS_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
-REVIEWED_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_constraints_reviewed.csv")
+sys.path.append(REPO_ROOT)
 
-REJECT_CLASSES = {"AGE", "NATIONALITY", "RESIDENCE", "APPLICANT_TYPE", "STUDENT_STATUS"}
-REJECT_CONFIDENCE = 0.7
+# the engine's own gate, imported so the queue and the engine can never disagree
+from src.eligibility.engine import CONSTRAINTS_PATH, REJECT_CLASSES, REJECT_CONFIDENCE, REVIEWED_PATH  # noqa: E402
 
 
 def pending_review() -> pd.DataFrame:
