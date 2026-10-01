@@ -11,10 +11,10 @@ classifying the full corpus takes about 5 minutes and has no API cost, and a
 full rebuild guarantees every row was labeled by the same model.
 
 Rows carry the class and confidence, a safety-net flag on NONE chunks that
-may be requirements after all (src/eligibility/safety_net.py), and the
-polarity of every (possible) requirement (src/eligibility/polarity.py). The
-parsed value ("under 35" -> max age 35) is added in step 4 (see workflow.MD,
-"Eligibility engine — plan").
+may be requirements after all (src/eligibility/safety_net.py), the polarity
+of every (possible) requirement (src/eligibility/polarity.py), and its parsed
+value where a parser exists ("under 35" -> max age 34,
+src/eligibility/values.py). See workflow.MD, "Eligibility engine — plan".
 
 Usage: uv run python scripts/extract_constraints.py
 """
@@ -31,6 +31,7 @@ from src.eligibility.chunking import chunk_requirements  # noqa: E402
 from src.eligibility.classify import EligibilityClassifier  # noqa: E402
 from src.eligibility.polarity import polarity  # noqa: E402
 from src.eligibility.safety_net import flag_missed_requirement  # noqa: E402
+from src.eligibility.values import parse_value  # noqa: E402
 from src.models.classified_chunk import ClassifiedChunk  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
 
@@ -66,9 +67,13 @@ def extract_constraints(processed_path: str = PROCESSED_PATH, out_path: str = OU
                 flag = flag_missed_requirement(chunk.text, prediction.probabilities)
             # direction of the requirement, for every chunk that is (or may be) one
             requirement_label = flag.suspected_label if flag else (prediction.label if prediction else None)
-            direction = None
+            direction = value = None
             if requirement_label and requirement_label != "NONE":
                 direction = polarity(chunk.text, chunk.heading, requirement_label)
+                # no value for a waived criterion (nothing to check), nor on a
+                # safety-net row (a NONE chunk is only ever a CHECK item)
+                if direction != "WAIVES" and not flag:
+                    value = parse_value(requirement_label, chunk.text)
             rows.append(ClassifiedChunk(
                 opportunity_id=opportunity_id,
                 chunk_id=f"{opportunity_id}_{chunk.index}",
@@ -82,6 +87,7 @@ def extract_constraints(processed_path: str = PROCESSED_PATH, out_path: str = OU
                 suspected_label=flag.suspected_label if flag else None,
                 safety_net_reason=flag.reason if flag else None,
                 polarity=direction,
+                value=value,
                 model_trained_on=trained_on,
             ))
 
@@ -121,8 +127,15 @@ def print_report(rows: list[ClassifiedChunk]) -> None:
 
     with_polarity = [r for r in rows if r.polarity]
     print(f"\nPolarity of {len(with_polarity)} (possible) requirement chunks:")
-    for value, n in Counter(r.polarity for r in with_polarity).most_common():
-        print(f"  {value:9s} {n:4d} ({n / len(with_polarity):.1%})")
+    for direction, n in Counter(r.polarity for r in with_polarity).most_common():
+        print(f"  {direction:9s} {n:4d} ({n / len(with_polarity):.1%})")
+
+    # how often a value could be parsed, per class that has a parser
+    print("\nParsed values (classes with a parser, polarity not WAIVES):")
+    for label in ["AGE", "NATIONALITY", "RESIDENCE", "APPLICANT_TYPE", "STUDENT_STATUS"]:
+        candidates = [r for r in with_polarity if (r.suspected_label or r.label) == label and r.polarity != "WAIVES"]
+        parsed = sum(r.value is not None for r in candidates)
+        print(f"  {label:15s} {parsed:4d} / {len(candidates):4d} ({parsed / max(len(candidates), 1):.0%})")
 
 
 if __name__ == "__main__":

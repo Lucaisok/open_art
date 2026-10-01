@@ -107,3 +107,10 @@ def test_chunks_carry_the_heading_they_sit_under():
         ("Who may not apply?", True, "Who can apply?"),
         ("Students.", False, "Who may not apply?"),
     ]
+
+
+def test_nul_bytes_become_spaces():
+    """A NUL byte in the source ("You\\x00are ...") made CSV readers truncate the
+    sentence to "You"; chunk_requirements replaces it, keeping the same split."""
+    chunks = chunk_requirements("Open to all. You\x00are based in Norway.")
+    assert [c.text for c in chunks] == ["Open to all.", "You are based in Norway."]

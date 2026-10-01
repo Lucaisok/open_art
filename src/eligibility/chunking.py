@@ -124,6 +124,11 @@ def chunk_requirements(text: str) -> list[Chunk]:
     Headings are kept rather than thrown away because they can carry meaning
     the sentence itself lacks: under "Who may not apply?", "Students." is an
     exclusion. The polarity rule (engine step 3) reads `heading` for that."""
+    # a few source texts contain NUL bytes ("You\x00are ..."); CSV readers stop
+    # at a NUL, which silently truncated such a sentence to "You" during
+    # review. A space instead never changes where sentences split, so chunk
+    # indices stay the same as in the labels.
+    text = text.replace("\x00", " ")
     chunks = []
     current_heading = None
     for index, sentence in enumerate(split_into_chunks(text)):

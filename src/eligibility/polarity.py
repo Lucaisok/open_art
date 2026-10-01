@@ -59,10 +59,11 @@ WAIVERS = [
 EXCLUSION_RE = _re(
     r"\bnot eligible|\bineligible|\bnot be eligible"
     r"|\bcannot\b|\bcan ?not\b|\bcan[’']t\b|\bmay not\b|\bmust not\b|\bshall not\b"
-    r"|\bnot (be )?(accepted|considered|allowed|permitted|admitted|open to|awarded|funded|supported)"
+    r"|\bnot (be )?(accepted|considered|allowed|permitted|admitted|open to|awarded|funded|supported|granted|given)"
     r"|\bexclud|\bexclusion"
     r"|\bdo(es)? not (accept|fund|support|provide|award|hold|have|cover)"
     r"|\bshould (instead|rather) apply|\bapply (instead|elsewhere)"
+    r"|\bno longer\b|\bnot (currently )?(studying|enrolled|a student)"
 )
 
 # negations that are not about who may apply; removed before looking for
@@ -84,7 +85,7 @@ HEDGE_RE = _re(r"\b(normally|usually|in principle|as a rule|in exceptional cases
 # softeners that make a rule conditional ("does not need to be resident, as
 # long as ..."), and carve-outs inside a requirement ("from at least 3
 # countries, excluding the applicant's own"): both UNCLEAR
-CONDITION_RE = _re(r"\b(as long as|provided that|on condition that|excluding|except)\b")
+CONDITION_RE = _re(r"\b(as long as|provided that|on condition that|excluding|except|exception)\b")
 
 # a positive requirement in the same sentence ("must be of legal age ... and
 # must not be subject to prohibitions"). With an exclusion or a topic-less

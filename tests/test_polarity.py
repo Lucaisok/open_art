@@ -35,6 +35,10 @@ from src.eligibility.polarity import EXCLUDES, REQUIRES, UNCLEAR, WAIVES, polari
      "RESIDENCE", UNCLEAR),
     ("The applicant does not need to be resident in the Nordic Region, as long as the Nordic dimension is met.",
      "RESIDENCE", UNCLEAR),
+    ("Students are not granted mobility funding.", "STUDENT_STATUS", EXCLUDES),
+    ("You are not (or no longer) studying.", "STUDENT_STATUS", EXCLUDES),
+    ("Applicants still in education (with the exception of doctoral candidates) are excluded.",
+     "STUDENT_STATUS", UNCLEAR),
     ("Individual artists should instead apply to the grant scheme for project support.", "APPLICANT_TYPE", EXCLUDES),
     # negations that don't exclude anyone
     ("Those eligible include but are not limited to: visual artists and curators.", "DISCIPLINE", REQUIRES),

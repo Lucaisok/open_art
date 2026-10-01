@@ -3,7 +3,6 @@
 # (src/eligibility/classify.py). Written by scripts/extract_constraints.py to
 # data/processed/eligibility_constraints.jsonl, one row per chunk, so every
 # verdict the engine gives can be traced back to the sentence it came from.
-# Step 4 adds the parsed value to these rows.
 from pydantic import BaseModel
 
 
@@ -30,5 +29,10 @@ class ClassifiedChunk(BaseModel):
     # polarity (src/eligibility/polarity.py): REQUIRES / EXCLUDES / WAIVES /
     # UNCLEAR, set on every chunk that is (or may be) a requirement
     polarity: str | None = None
+
+    # parsed value (src/eligibility/values.py), e.g. {"max_age": 34} or
+    # {"countries": ["NO"]}; None if the class has no parser, the sentence
+    # waives the criterion, or the parser wasn't sure
+    value: dict | None = None
 
     model_trained_on: str  # eligibility_classifier.json "trained_on", to know which model labeled this
