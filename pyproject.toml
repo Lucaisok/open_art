@@ -8,6 +8,7 @@ dependencies = [
     "beautifulsoup4>=4.15.0",
     "dateparser>=1.4.3",
     "fastembed>=0.7.4",
+    "langdetect>=1.0.9",
     "openai>=3.17.0",
     "pandas>=3.0.6",
     "pydantic>=2.13.5",

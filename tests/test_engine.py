@@ -66,7 +66,8 @@ def test_headings_none_and_waivers_never_count_against_the_artist():
 
 def test_a_call_with_no_requirements_says_so():
     verdict = run(BELGIAN, [chunk(0, "Deadline: 1 December.", "NONE", polarity=None)])
-    assert verdict.status == "ELIGIBLE" and verdict.items == []
+    # nothing to check is not the same as nothing ruling you out (open item 3)
+    assert verdict.status == "CHECK" and verdict.items == []
     assert "No eligibility requirements were found" in verdict.summary
 
 

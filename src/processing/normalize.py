@@ -11,7 +11,8 @@ already in data/processed/opportunities.jsonl:
 
   - looks up its source's language from sources.yaml's `language` field
     (manual-entry rows, or any source missing from sources.yaml, default
-    to "en" - see that file's field doc)
+    to "en" - see that file's field doc), then, for a source tagged "en"
+    only, detects the row's own language (row_language() below)
   - parses `deadline` into a structured date (src/processing/deadline.py)
   - if the source language isn't English, translates title,
     requirements_text, and description (if given) to English with one
@@ -20,16 +21,17 @@ already in data/processed/opportunities.jsonl:
     translation adds title_en / requirements_text_en / description_en
     alongside them.
 
-One language per source is a deliberate simplification, not a
-guarantee - confirmed exception: wiels_brussels is tagged "en" (true
-for its other opportunities) but has one Japanese-language row that
-will NOT get translated by this scheme. Single-row edge case at this
-corpus size, not worth a per-row override mechanism - see workflow.MD.
+Per-row detection exists because "en" tags were not reliable: several
+"en" sources publish some calls in Greek / Spanish / French / Dutch /
+Swedish, and the English-trained classifier could not read them. A
+non-"en" source tag was confirmed by hand and is always kept.
 
 Merges by id like every other stage: re-running only processes raw ids
-not already present in data/processed/, so it never re-spends on
-translation for a row it's already translated. Delete a specific line
-from data/processed/opportunities.jsonl to force it to be reprocessed.
+not already present in data/processed/, plus stored rows whose language
+decision has changed since (a sources.yaml fix, or detection now
+finding a non-English row). So it never re-spends on translation for a
+row it's already translated. Delete a specific line from
+data/processed/opportunities.jsonl to force it to be reprocessed.
 
 Usage: uv run python -m src.processing.normalize
 """
@@ -41,6 +43,7 @@ from datetime import datetime, timezone
 
 import yaml
 from dotenv import load_dotenv
+from langdetect import DetectorFactory, LangDetectException, detect_langs
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -59,6 +62,11 @@ PROCESSED_PATH = os.path.join(REPO_ROOT, "data", "processed", "opportunities.jso
 
 MODEL = "gpt-5.4-mini"  # same cost/tier reasoning as the collectors' LLM calls
 
+DetectorFactory.seed = 0  # langdetect is random by default; fixed seed = same answer every run
+DETECT_MIN_PROB = 0.9     # below this, keep the source tag (an Irish row came out "es" at 0.57)
+# langdetect codes -> the codes the rest of the pipeline uses (dateparser has no "no", see sources.yaml)
+DETECT_CODE_FIX = {"no": "nb"}
+
 
 class Translation(BaseModel):
     title_en: str
@@ -70,6 +78,24 @@ def load_source_languages(sources_path: str = SOURCES_YAML) -> dict[str, str]:
     with open(sources_path, encoding="utf-8") as f:
         sources = yaml.safe_load(f) or []
     return {s["name"]: s.get("language", "en") for s in sources}
+
+
+def row_language(raw: RawOpportunity, source_language: str) -> str:
+    """The language this row is actually written in.
+
+    A non-"en" source tag is trusted as is (confirmed by hand). For an "en"
+    source, detect the row's title + requirements text and use the detected
+    language only when langdetect is confident; otherwise keep "en".
+    """
+    if source_language != "en":
+        return source_language
+    try:
+        best = detect_langs(f"{raw.title}\n{raw.requirements_text}")[0]
+    except LangDetectException:  # no letters to detect from
+        return "en"
+    if best.lang == "en" or best.prob < DETECT_MIN_PROB:
+        return "en"
+    return DETECT_CODE_FIX.get(best.lang, best.lang)
 
 
 def translate(
@@ -148,7 +174,11 @@ def normalize_all(
         raw_records.extend(load_jsonl(path, RawOpportunity))
 
     processed = {p.id: p for p in load_jsonl(processed_path, ProcessedOpportunity)}
-    to_process = [r for r in raw_records if r.id not in processed]
+    # the language each row should be processed as; a stored row processed as another
+    # language (e.g. copied untranslated as "en") is redone
+    row_languages = {r.id: row_language(r, languages.get(r.source, "en")) for r in raw_records}
+    to_process = [r for r in raw_records
+                  if r.id not in processed or processed[r.id].language != row_languages[r.id]]
 
     if not to_process:
         print("Nothing new to process.")
@@ -158,7 +188,7 @@ def normalize_all(
     translated = 0
     failed = 0
     for raw in to_process:
-        language = languages.get(raw.source, "en")
+        language = row_languages[raw.id]
         try:
             processed[raw.id] = normalize_record(client, raw, language)
         except Exception as e:

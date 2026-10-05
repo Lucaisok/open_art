@@ -15,6 +15,7 @@ Three verdicts (decision 1, workflow.MD):
   LIKELY_NOT_ELIGIBLE  at least one certain fail; shown, never hidden, with the quoted sentence
   CHECK                nothing certain fails, but something needs the artist's own reading
   ELIGIBLE             "nothing in this call rules you out" (the classifier can miss a sentence)
+                       A call with no requirement sentence at all is CHECK, not ELIGIBLE.
 
 Asymmetric on purpose: a wrong "not eligible" hides a real opportunity, a
 wrong "check" costs a minute. So a sentence can only FAIL when it has a
@@ -413,10 +414,14 @@ def evaluate_chunks(profile: ArtistProfile, chunks: list[ClassifiedChunk], revie
     elif checks:
         status = "CHECK"
         summary = f"Nothing found rules you out, but {len(checks)} point(s) need your own check before applying."
+    elif not items:
+        # no requirement sentence at all: usually the rules live elsewhere ("the range of applicants
+        # is set out in the regulations"), so "nothing rules you out" would be a guess -> CHECK
+        status = "CHECK"
+        summary = "No eligibility requirements were found in this call; read it to check who can apply."
     else:
         status = "ELIGIBLE"
-        summary = "Nothing in this call rules you out." if items else (
-            "No eligibility requirements were found in this call; read it to be sure.")
+        summary = "Nothing in this call rules you out."
     return Verdict(opportunity_id=opportunity_id, title=title, source_url=source_url,
                    status=status, summary=summary, items=items)
 
