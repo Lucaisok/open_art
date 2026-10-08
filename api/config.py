@@ -28,3 +28,10 @@ def allowed_origins() -> frozenset[str]:
     # the site's own address(es); requests that change data from anywhere else are refused
     raw = os.environ.get("ALLOWED_ORIGINS", "")
     return frozenset(origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip())
+
+
+@lru_cache
+def uploads_dir() -> str:
+    # where the artists' original files are kept: a Docker volume in production
+    # (docker-compose.yml), a temporary folder in the tests
+    return os.environ.get("UPLOADS_DIR", "/data/uploads")

@@ -13,7 +13,7 @@ const formatDate = (iso: string) =>
 export default async function AccountPage() {
     const user = await getCurrentUser();
     if (!user) {
-        redirect("/login"); // private page: logged-out visitors go to the login form
+        redirect("/"); // private page: logged-out visitors go to the login form (the home page)
     }
     return (
         <main id="main" className={styles.main}>

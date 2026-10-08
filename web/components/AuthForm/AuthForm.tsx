@@ -31,12 +31,12 @@ const TEXT = {
         cta: "Create account",
         switchPrompt: "Already have an account?",
         switchLink: "Log in",
-        switchHref: "/login",
+        switchHref: "/",
     },
 };
 
 // One form for both pages: they ask for the same two fields, only the endpoint and wording differ.
-// The Log in / Sign up switch links to the other page (/login, /signup), so each has its own URL.
+// The Log in / Sign up switch links to the other page (/ is the login form, /signup), so each has its own URL.
 const AuthForm = ({ mode }: AuthFormProps) => {
     const router = useRouter();
     const [email, setEmail] = useState("");
@@ -76,8 +76,8 @@ const AuthForm = ({ mode }: AuthFormProps) => {
             setPending(false);
             return;
         }
-        // TODO: login → feed, sign-up → artist profile onboarding, once those pages exist
-        router.push("/account");
+        // both go to the documents page for now (the design's onboarding). Later: login → the feed
+        router.push("/documents");
         router.refresh();
     };
 
@@ -86,7 +86,7 @@ const AuthForm = ({ mode }: AuthFormProps) => {
             {/* Log in / Sign up switch: links styled as two tabs, the current page highlighted */}
             <nav aria-label="Log in or sign up" className={styles.switcher}>
                 <Link
-                    href="/login"
+                    href="/"
                     className={styles.tab}
                     aria-current={isSignup ? undefined : "page"}
                 >

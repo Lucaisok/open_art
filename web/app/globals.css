@@ -9,7 +9,7 @@
 /* Design tokens: every component's .module.css uses these, never raw values */
 :root {
   /* Colors (text on its background meets WCAG AA contrast) */
-  --color-bg: #fafaf7;
+  --color-bg: #f4f4f2;              /* = --color-paper, the bold style's page colour */
   --color-surface: #ffffff;
   --color-text-primary: #1a1a1a;
   --color-text-muted: #5c5c5c;

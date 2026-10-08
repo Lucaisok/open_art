@@ -7,11 +7,12 @@ so all routes live under /api. The interactive docs are at /api/docs.
 Routes so far (workflow.MD, "Web app — plan"):
 - step 1: health check
 - step 2: sign up / log in / log out (api/auth.py), change password / delete account (api/account.py)
+- step 3: upload / list / delete the artist's documents (api/documents.py)
 """
 
 from fastapi import APIRouter, Depends, FastAPI
 
-from api import account, auth
+from api import account, auth, documents
 from api.security import check_origin
 
 app = FastAPI(
@@ -34,3 +35,4 @@ def health() -> dict[str, str]:
 app.include_router(router)
 app.include_router(auth.router)
 app.include_router(account.router)
+app.include_router(documents.router)

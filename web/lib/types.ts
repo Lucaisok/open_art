@@ -3,3 +3,5 @@
 import type { components } from "./api-types";
 
 export type User = components["schemas"]["UserOut"];
+export type DocumentInfo = components["schemas"]["DocumentOut"];
+export type DocumentKind = DocumentInfo["kind"];

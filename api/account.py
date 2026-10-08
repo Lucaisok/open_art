@@ -8,6 +8,7 @@ from sqlalchemy import delete
 
 from api import security
 from api.auth import DB, current_session, end_session_cookie
+from api.documents import delete_user_files
 from api.models import UserSession
 
 router = APIRouter(prefix="/api/account", tags=["account"])
@@ -37,11 +38,14 @@ def change_password(body: PasswordChangeIn, session: CurrentSession, db: DB) -> 
 
 @router.delete("", status_code=204)
 def delete_account(body: DeleteAccountIn, session: CurrentSession, response: Response, db: DB) -> None:
-    """Deletes the user and, through the database's cascades, everything that belongs to them."""
+    """Deletes the user and, through the database's cascades, everything that belongs to them,
+    then their uploaded files."""
     user = session.user
     if not security.verify_password(user.password_hash, body.password):
         raise HTTPException(400, "Your password is wrong.")
+    user_id = user.id
     db.delete(user)
     db.commit()
+    delete_user_files(user_id)
     end_session_cookie(response)
 

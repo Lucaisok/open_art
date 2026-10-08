@@ -7,6 +7,10 @@ type ValidationError = { loc: (string | number)[]; type: string };
 
 // Turns FastAPI's error responses into one sentence for the person filling in the form
 const errorMessage = async (response: Response): Promise<string> => {
+    if (response.status === 413) {
+        // also sent by nginx before the request reaches the API, as HTML, so checked first
+        return "The file is larger than 10 MB.";
+    }
     try {
         const body = await response.json();
         if (typeof body.detail === "string") {
@@ -31,19 +35,27 @@ const errorMessage = async (response: Response): Promise<string> => {
     return "Something went wrong. Please try again.";
 };
 
-export const sendJson = async (
-    method: "POST" | "DELETE",
-    path: string,
-    body?: unknown,
-): Promise<ApiResult> => {
+// Sends one request and reduces the answer to ok / an error sentence
+const send = async (path: string, init: RequestInit): Promise<ApiResult> => {
     try {
-        const response = await fetch(path, {
-            method,
-            headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-            body: body === undefined ? undefined : JSON.stringify(body),
-        });
+        const response = await fetch(path, init);
         return response.ok ? { ok: true } : { ok: false, error: await errorMessage(response) };
     } catch {
         return { ok: false, error: "Can't reach the server. Check your connection and try again." };
     }
+};
+
+export const sendJson = (method: "POST" | "DELETE", path: string, body?: unknown): Promise<ApiResult> =>
+    send(path, {
+        method,
+        headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+// Uploads one file as multipart form data, in the field "file" (FastAPI's UploadFile).
+// No Content-Type header: the browser sets it, with the multipart boundary.
+export const sendFile = (path: string, file: File): Promise<ApiResult> => {
+    const form = new FormData();
+    form.append("file", file);
+    return send(path, { method: "PUT", body: form });
 };

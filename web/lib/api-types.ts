@@ -124,9 +124,45 @@ export interface paths {
         post?: never;
         /**
          * Delete Account
-         * @description Deletes the user and, through the database's cascades, everything that belongs to them.
+         * @description Deletes the user and, through the database's cascades, everything that belongs to them,
+         *     then their uploaded files.
          */
         delete: operations["delete_account_api_account_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["list_documents_api_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upload Document */
+        put: operations["upload_document_api_documents__kind__put"];
+        post?: never;
+        /** Delete Document */
+        delete: operations["delete_document_api_documents__kind__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -136,10 +172,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_upload_document_api_documents__kind__put */
+        Body_upload_document_api_documents__kind__put: {
+            /** File */
+            file: string;
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
             password: string;
+        };
+        /** DocumentOut */
+        DocumentOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "cv" | "statement" | "portfolio";
+            /** File Name */
+            file_name: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -379,6 +439,90 @@ export interface operations {
                 "application/json": components["schemas"]["DeleteAccountIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_documents_api_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"][];
+                };
+            };
+        };
+    };
+    upload_document_api_documents__kind__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "cv" | "statement" | "portfolio";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_api_documents__kind__put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_documents__kind__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "cv" | "statement" | "portfolio";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {

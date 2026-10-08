@@ -15,9 +15,14 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY api/ api/
 COPY src/ src/
 
-# run as an unprivileged user, not root
-RUN useradd --create-home openart
+# run as an unprivileged user, not root. /data/uploads (the artists' files) is a volume
+# (docker-compose.yml); creating it here owned by that user makes the new volume writable by it
+RUN useradd --create-home openart && mkdir -p /data/uploads && chown openart /data/uploads
 USER openart
+
+# download the embedding model now (~0.4 GB, into ~/.cache/fastembed), so the first
+# upload after a deploy doesn't wait for it
+RUN /app/.venv/bin/python -c "from src.matching.index import load_embedder; load_embedder()"
 
 EXPOSE 8000
 # bring the database schema up to date first (does nothing when it already is), then serve

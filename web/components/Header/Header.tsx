@@ -3,7 +3,9 @@ import { getCurrentUser } from "@/lib/session";
 import LogoutButton from "./LogoutButton";
 import styles from "./Header.module.css";
 
-// The bar at the top of every page: the logged-in email and "Log out", or the links to get in
+// The bar on top of every page except the login form: the wordmark, the artist's pages,
+// "Log out". These pages are all private, so logged-out visitors only see the wordmark
+// (and the page itself sends them to the login form).
 const Header = async () => {
     const user = await getCurrentUser();
     return (
@@ -11,35 +13,25 @@ const Header = async () => {
             <Link href="/" className={styles.brand}>
                 OpenArt
             </Link>
-            <nav aria-label="Account">
-                <ul className={styles.links}>
-                    {user ? (
-                        <>
-                            <li>
-                                <Link href="/account" className={styles.link}>
-                                    {user.email}
-                                </Link>
-                            </li>
-                            <li>
-                                <LogoutButton />
-                            </li>
-                        </>
-                    ) : (
-                        <>
-                            <li>
-                                <Link href="/login" className={styles.link}>
-                                    Log in
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/signup" className={styles.link}>
-                                    Sign up
-                                </Link>
-                            </li>
-                        </>
-                    )}
-                </ul>
-            </nav>
+            {user && (
+                <nav aria-label="Main">
+                    <ul className={styles.links}>
+                        <li>
+                            <Link href="/documents" className={styles.link}>
+                                Documents
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="/account" className={styles.link} title={user.email}>
+                                Account
+                            </Link>
+                        </li>
+                        <li>
+                            <LogoutButton className={styles.logout} />
+                        </li>
+                    </ul>
+                </nav>
+            )}
         </header>
     );
 };

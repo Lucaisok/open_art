@@ -17,6 +17,9 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       COOKIE_SECURE: "${COOKIE_SECURE:-true}"   # quoted: unquoted true/false would become a YAML boolean
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS in .env}
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads   # the artists' original files (CVs are personal data: never in git or the image)
     depends_on:
       db:
         condition: service_healthy
@@ -43,3 +46,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:
