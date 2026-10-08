@@ -1,0 +1,55 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Design tokens: every component's .module.css uses these, never raw values */
+:root {
+  /* Colors (text on background meets WCAG AA contrast) */
+  --color-bg: #fafaf7;
+  --color-surface: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-text-muted: #5c5c5c;
+  --color-border: #d9d9d4;
+  --color-accent: #2a5bd7;
+  --color-ok: #1d7a4f;
+  --color-error: #b3261e;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2.5rem;
+
+  /* Typography */
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 2rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Border */
+  --border-radius-md: 6px;
+}
+
+html,
+body {
+  min-height: 100%;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A visible focus ring for keyboard users, on every focusable element */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

@@ -492,3 +492,99 @@ flowchart TD
 
 The personas are invented (`scripts/make_example_artists.py`), and these
 are sanity checks, not benchmarks.
+
+## The web app (2026-10-08)
+
+The website artists use. It puts matching, eligibility and RAG behind one
+login, and later the application agent too. This is the short version; the
+full plan, with the reasons behind each choice, is in `workflow.MD`,
+"Web app — plan".
+
+### What runs where
+
+```mermaid
+flowchart LR
+    B["Artist's browser"] -- "HTTPS" --> N["nginx\nthe front door"]
+    N --> W["Next.js\nthe pages"]
+    W -- "/api/..." --> A["FastAPI\nthe brain: runs src/"]
+    A --> P[("Postgres\naccounts · profiles ·\ndocuments · drafts")]
+    A --> F["Opportunity files\nread-only"]
+    A -- "a few CV passages" --> O["OpenAI"]
+
+    style B fill:#2a78d6,color:#fff
+    style A fill:#1baf7a,color:#fff
+```
+
+| Piece | Job | Built with |
+|---|---|---|
+| nginx | Receives every visit, handles HTTPS | Already on the VPS, certificate from certbot |
+| Next.js | Draws the pages. Holds no data and no secrets. | TypeScript, plain CSS Modules, native HTML elements |
+| FastAPI | Does all the work: login, uploads, profile, matching, eligibility, drafts | Python, calling the existing `src/` code |
+| Postgres | Remembers everything that belongs to an artist | Postgres + pgvector (for the CV passages' embeddings) |
+| Opportunity files | The 479 calls, their search index and their eligibility sentences | The files the pipeline already produces |
+
+Everything runs on the VPS at **https://open-art.lucadev.org**. Only
+nginx can be reached from the internet; every other piece listens on the
+server itself only.
+
+### The artist's journey
+
+```mermaid
+flowchart TD
+    S["1 · Sign up / log in"] --> D["2 · Upload CV, statement, portfolio"]
+    D --> PR["3 · Profile\nreview the values found in the CV"]
+    PR --> DI["4 · Discover\nsearch box filled from the statement"]
+    DI --> OP["5 · Opportunity\nverdict + reasons, each with its quote"]
+    OP --> DR["6 · Draft application\nwritten by the agent, edited by the artist"]
+    DR --> C{"7 · Artist confirms\n'I have reviewed this'"}
+    C --> EX["8 · Export\ncopy or download"]
+
+    S -. "skip documents" .-> DI
+
+    style C fill:#f2c94c,color:#333
+    style PR fill:#f2c94c,color:#333
+```
+
+Yellow = the artist decides. Nothing found in a CV reaches the profile
+until the artist accepts it, and no draft can be exported until the artist
+confirms it. **The app never sends an application anywhere**: the artist
+submits it themselves.
+
+### Screens
+
+| Screen | What the artist does there |
+|---|---|
+| Landing | Learns what OpenArt does |
+| Sign up / Log in | Gets in |
+| Documents | Uploads and deletes CV, statement, portfolio |
+| Profile | Accepts or declines each value found in the CV, fills in the rest by hand |
+| Discover | Searches calls, with type filters next to the search box |
+| Opportunity | Reads the call and why they are or may not be eligible |
+| Draft | Edits the draft application, confirms it, exports it |
+| My drafts | Sees all drafts and their status |
+| Account | Changes password, or deletes the account and all its data |
+
+### Why it is built this way
+
+- **Python where the logic already is.** The matching, eligibility and RAG
+  code is Python, so the API is Python too and calls it directly. Next only
+  shows pages.
+- **Postgres, not files, for artists' data.** Many artists at once, data
+  that must survive restarts and be fully deletable, and a database
+  already installed on the server.
+- **Accessible without a library.** Real forms, labels, buttons and the
+  browser's own `<dialog>` give keyboard and screen-reader support for
+  free.
+- **Safe by default on a shared server.** Passwords hashed, private
+  session cookie, each artist sees only their own data, and nothing but
+  nginx is reachable from outside.
+
+### Build order
+
+1. Empty app online with HTTPS (built)
+2. Database and login
+3. Documents
+4. Profile
+5. Discover and opportunity pages
+6. Application agent and drafts
+7. Accessibility and security check

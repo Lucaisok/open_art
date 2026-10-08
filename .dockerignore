@@ -1,0 +1,16 @@
+# Only pyproject.toml, uv.lock, api/ and src/ are copied into the image (see Dockerfile).
+# Everything else stays out of the build context: faster builds, and no private data
+# or secrets can end up in an image by accident.
+.git
+.venv
+.env
+.env.*
+data/
+notebooks/
+examples/
+dataset/
+artifacts/
+web/
+tests/
+scripts/
+**/__pycache__

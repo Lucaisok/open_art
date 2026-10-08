@@ -1,0 +1,32 @@
+.main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-sm);
+}
+
+.lead {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-lg);
+}
+
+.status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.ok {
+  color: var(--color-ok);
+  font-weight: var(--font-weight-medium);
+}
+
+.error {
+  color: var(--color-error);
+  font-weight: var(--font-weight-medium);
+}

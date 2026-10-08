@@ -1,0 +1,14 @@
+# OpenArt — the Python side of the web app (same file locally and on the VPS).
+# The Next.js frontend runs outside Docker (pm2 on the VPS, `npm run dev` locally).
+#
+# Every port is bound to 127.0.0.1: Docker writes its own firewall rules, which
+# bypass ufw, so "8040:8000" would publish the API to the whole internet.
+
+services:
+  api:
+    build: .
+    container_name: open-art-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8040:8000"
+    mem_limit: 2g   # the embedding model needs ~1.5 GB once loaded; the VPS is shared
