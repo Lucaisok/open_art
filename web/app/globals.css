@@ -24,6 +24,21 @@
   --color-error-hover: #8f1d17;
   --color-error-bg: #fbeceb;
 
+  /* OpenArt bold palette (design_handoff_openart). The auth pages use these; the other
+     pages move over to them as they are restyled. Lime is for the main button, the
+     headline full stop and text selection only, always with ink text on it. */
+  --color-ink: #111111;
+  --color-paper: #f4f4f2;
+  --color-white: #ffffff;
+  --color-grey-600: #555555;   /* secondary text */
+  --color-grey-500: #777773;   /* fine print */
+  --color-grey-400: #9a9a96;   /* placeholders */
+  --color-grey-200: #e2e2df;   /* meter track */
+  --color-grey-100: #ececea;   /* subtle hover */
+  --color-lime: #c6f432;
+  --color-lime-hover: #b5e322;
+  --color-lime-pressed: #a0cc14;
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -49,15 +64,20 @@ body {
   min-height: 100%;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 /* A visible focus ring for keyboard users, on every focusable element */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+::selection {
+  background-color: var(--color-lime);
+  color: var(--color-ink);
 }
 
 /* "Skip to content": hidden until a keyboard user tabs to it */
