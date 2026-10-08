@@ -1,0 +1,268 @@
+/* One upload card (design: design_handoff_openart 2, DOCUMENTS.md → Upload card) */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 460px;
+  padding: 28px;
+  border-radius: 16px;
+  transition: background-color 120ms;
+}
+
+.cardEmpty {
+  border: 3px dashed var(--color-ink);
+  background-color: transparent;
+}
+
+.cardFilled {
+  border: 3px solid var(--color-ink);
+  background-color: var(--color-paper);
+}
+
+.cardDragOver {
+  border: 3px solid var(--color-ink);
+  background-color: var(--color-lime);
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.number {
+  font-size: 15px;
+  font-weight: 900;
+  font-stretch: 110%;
+}
+
+.tag {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* "Not added": the design's #777773 text is under 4.5:1 on paper at 11px, so grey-600 here */
+.tagEmpty {
+  padding: 4px 8px;
+  border: 2px solid var(--color-grey-300);
+  color: var(--color-grey-600);
+}
+
+.tagUploading {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.tagAdded {
+  background-color: var(--color-lime);
+  color: var(--color-ink);
+}
+
+.title {
+  margin-top: 28px;
+  font-size: 38px;
+  font-weight: 900;
+  font-stretch: 120%;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.description {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-grey-600);
+}
+
+/* pushed to the bottom, so file rows and buttons line up across the cards */
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+/* File row: same height as the empty drop button */
+.fileRow {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 112px;
+  padding: 0 14px 0 18px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+}
+
+.fileLine {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ext {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.fileText {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileMeta {
+  margin-top: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
+.remove {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.remove:hover {
+  background-color: var(--color-grey-100);
+}
+
+.bar {
+  height: 6px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 3px;
+  background-color: var(--color-grey-200);
+}
+
+.barFill {
+  height: 100%;
+  background-color: var(--color-ink);
+  transition: width 160ms;
+}
+
+/* Drop button: a label for the (visually hidden, still focusable) file input */
+.drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 112px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropOver {
+  border-color: var(--color-ink);
+  background-color: var(--color-ink);
+  color: var(--color-lime);
+}
+
+.drop:has(.fileInput:focus-visible) {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.dropLabel {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dropHint {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
+.dropOver .dropHint {
+  color: var(--color-lime);
+}
+
+/* touch screens can't drag files */
+@media (hover: none) {
+  .dropHint {
+    display: none;
+  }
+}
+
+/* same ink style as the auth error box, a size smaller */
+.error {
+  padding: 10px 14px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.formats {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-grey-600); /* design: #777773, under 4.5:1 at 12px */
+}
+
+@media (max-width: 480px) {
+  .card {
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .title {
+    margin-top: 20px;
+    font-size: 32px;
+  }
+}

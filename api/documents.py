@@ -2,7 +2,8 @@
 The artist's documents: CV, statement, portfolio. One slot each; uploading into a
 filled slot replaces the file.
 
-An upload is read, chunked and embedded in the request (a CV takes about a second).
+An upload is read, chunked and embedded in the request (a CV takes about a second). The CV's
+stored passages are what /profile reads its suggestions from (api/profile.py).
 Only when that works are the old rows and file replaced, so a bad upload leaves
 the previous document untouched.
 
@@ -25,7 +26,7 @@ from api.auth import DB, CurrentUser
 from api.config import uploads_dir
 from api.knowledge_base import build_chunks
 from api.models import Document
-from src.rag.documents import MAX_FILE_BYTES, SUPPORTED_EXTENSIONS, DocumentError
+from src.rag.documents import MAX_FILE_BYTES, SUPPORTED_EXTENSIONS, DocumentError, read_chunks
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -113,8 +114,10 @@ def upload_document(kind: Kind, file: UploadFile, user: CurrentUser, db: DB) -> 
 
     # 2. read, chunk and embed it; 3. swap the rows. Any failure removes the new file.
     try:
-        document.chunks = build_chunks(path, user.id)
+        chunks = read_chunks(path)
+        document.chunks = build_chunks(chunks, user.id)
         document.chunk_count = len(document.chunks)
+
         if old is not None:
             db.delete(old)          # its chunks go with it (cascade)
             db.flush()              # before the insert, which would clash on (user, kind)

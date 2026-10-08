@@ -1,0 +1,72 @@
+/* Onboarding header (design: design_handoff_openart 2, DOCUMENTS.md → Layout → Header) */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 22px 40px;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.wordmark {
+  font-size: 22px;
+  font-weight: 900;
+  font-stretch: 125%;
+  letter-spacing: -0.01em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.pill {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 2px solid var(--color-paper);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.done {
+  color: var(--color-paper);
+}
+
+.current {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.upcoming {
+  border-color: var(--color-ink-line);
+  color: var(--color-on-ink-faint);
+}
+
+a.pill:hover {
+  border-color: var(--color-paper);
+  color: var(--color-paper);
+}
+
+/* the ink focus ring would be invisible on the ink bar */
+.header :focus-visible {
+  outline-color: var(--color-paper);
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 16px;
+  }
+}

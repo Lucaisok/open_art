@@ -1,0 +1,7 @@
+/* header, page content, footer bar: the footer sits at the bottom even on a short page */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-paper);
+}

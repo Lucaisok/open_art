@@ -423,6 +423,12 @@ came from. Nothing produced here is used until the artist has reviewed it.
 Code: `src/rag/`. The full design rationale and the evaluation numbers are
 in `workflow.MD`, "RAG — artist knowledge base".
 
+In the web app the knowledge base lives in Postgres (pgvector) instead of
+files, and the profile is pre-filled by **plain rules** at upload instead
+of the LLM in step 3, so no CV text is sent anywhere (see "The web app",
+below). The LLM version of step 3 stays as the offline experiment it was
+evaluated as.
+
 ### End-to-end flow
 
 ```mermaid
@@ -434,10 +440,12 @@ flowchart TD
 
     KB --> RET["2 · Retrieve — kb.retrieve(question)\ntop-k passages + citation\n'cv.pdf · p. 1 · EDUCATION'"]
 
-    RET -- "CV passages" --> PRE["3 · Profile pre-fill — profile_prefill.py\n1 LLM call: value + quote per field\nPython checks quote and value"]
+    RET -- "CV passages" --> PRE["3 · Profile pre-fill — profile_prefill.py\n1 LLM call: value + quote per field\nPython checks quote and value\n(offline experiment)"]
+    ING -- "CV lines" --> RULES["3b · Profile from the CV — cv_rules.py\nplain rules, no LLM, at upload\n(used by the web app)"]
     RET -- "statement passages" --> QRY["4 · Query suggestion — query_suggestion.py\npassages as written, no LLM"]
 
-    PRE --> REV1{"Artist accepts /\ndeclines each value"}
+    PRE --> REV1{"Artist checks the\npre-filled values\nand presses Save"}
+    RULES --> REV1
     REV1 --> PROF["ArtistProfile"]
     QRY --> REV2{"Artist edits\nthe query"}
 
@@ -451,6 +459,7 @@ flowchart TD
     style REV1 fill:#f2c94c,color:#333
     style REV2 fill:#f2c94c,color:#333
     style AGENT fill:#e1e0d9,color:#333
+    style PRE fill:#e1e0d9,color:#333
 ```
 
 ### Step by step
@@ -460,6 +469,7 @@ flowchart TD
 | 1 · Ingest | `documents.py`, `knowledge_base.py` | Reads the file. Splits it into passages of at most 800 characters that never cross a section heading, so "2019 MFA" stays under *Education*. Embeds each passage with `bge-base`, the same model as matching and RQ1. | No |
 | 2 · Retrieve | `kb.retrieve()` | Embeds the question and returns the closest passages, each with file, page and section. It can be limited to some files, e.g. only the CV. | No |
 | 3 · Profile pre-fill | `profile_prefill.py` | Five short queries collect 5–6 CV passages. One call proposes profile values (birth date, nationality, residence, degree…), each with a quote. Python drops any proposal whose quote isn't in the passage or whose value the profile's rules refuse. | Yes, one per pre-fill |
+| 3b · Profile from the CV | `cv_rules.py` | What the web app uses. Reads the CV line by line, knowing each line's section: a full date next to "Born", country names on a "Citizenship" line, the country after "based in", degrees under *Education*, the earliest year under *Exhibitions*… Each value keeps the exact line it came from. | No |
 | 4 · Query suggestion | `query_suggestion.py` | Fills the matching search box with the statement passages about the practice, as written. | No |
 
 ### Why it is built this way
@@ -471,10 +481,14 @@ flowchart TD
 - **Only a few passages leave the machine.** Steps 1, 2 and 4 run locally.
   Step 3 sends OpenAI only the 5–6 retrieved CV passages, never a whole
   document. Uploaded files are stored in the private `data/` repo.
-- **The LLM is used only where it is needed.** Turning "Citizenship:
-  Hungarian" into `nationalities=["HU"]` needs language understanding, so
-  step 3 uses an LLM. In step 4 an LLM-written query ranked no better than
-  the artist's own sentences, so step 4 does without one.
+- **No LLM where rules do the job.** Step 3 first used an LLM to turn
+  "Citizenship: Hungarian" into `nationalities=["HU"]`. For the web app the
+  product owner asked for no CV text to leave the server (job boards fill
+  these fields in with their own parsers), so step 3b does it with rules and
+  the country table the eligibility engine already has. It scored as well
+  on the two personas and made no mistakes on five new CVs. In step 4 an
+  LLM-written query ranked no better than the artist's own sentences, so
+  step 4 does without one too.
 - **The checks catch invented evidence, not every mistake.** The quote
   check proves the quote exists, not that it supports the value. The artist
   seeing the quote is the final safeguard.
@@ -487,18 +501,23 @@ flowchart TD
 | | |
 |---|---|
 | Retrieval, CV only, field-style queries | the right section was in the top 3 for 12/12 queries |
-| Profile pre-fill | of 20 fields: 18 filled correctly, 2 correctly left empty, 0 wrong (last 2 runs) |
+| Profile pre-fill, LLM (step 3) | of 20 fields: 18 filled correctly, 2 correctly left empty, 0 wrong (last 2 runs) |
+| Profile from the CV, rules (step 3b) | same 20 fields: 18 right, 2 correctly empty, 0 wrong. **Five new CVs written before the rules:** of 50 fields, 34 right, 15 correctly empty, 1 missed, 0 wrong, 0 invented |
 | Query suggestion | statement passages 5/10 and 9/10 relevant in the top 10, vs. 3/10 and 8/10 for an LLM-written query |
 
 The personas are invented (`scripts/make_example_artists.py`), and these
-are sanity checks, not benchmarks.
+are sanity checks, not benchmarks. The five extra CVs are in
+`examples/cv_eval/` with their answers; `scripts/evaluate_cv_rules.py`
+scores them in a second. They were written by the same author as the rules
+and are tidy, so real CVs will leave more fields empty. An empty field is
+cheap: the artist fills it in.
 
 ## The web app (2026-10-08)
 
 The website artists use. It puts matching, eligibility and RAG behind one
 login, and later the application agent too. This is the short version; the
 full plan, with the reasons behind each choice, is in `workflow.MD`,
-"Web app — plan".
+"Web app — plan" (steps 1–4b).
 
 ### What runs where
 
@@ -507,9 +526,9 @@ flowchart LR
     B["Artist's browser"] -- "HTTPS" --> N["nginx\nthe front door"]
     N --> W["Next.js\nthe pages"]
     W -- "/api/..." --> A["FastAPI\nthe brain: runs src/"]
-    A --> P[("Postgres\naccounts · profiles ·\ndocuments · drafts")]
+    A --> P[("Postgres + pgvector\naccounts · documents ·\npassages · profiles")]
+    A --> U["Uploads volume\nthe original files"]
     A --> F["Opportunity files\nread-only"]
-    A -- "a few CV passages" --> O["OpenAI"]
 
     style B fill:#2a78d6,color:#fff
     style A fill:#1baf7a,color:#fff
@@ -517,52 +536,143 @@ flowchart LR
 
 | Piece | Job | Built with |
 |---|---|---|
-| nginx | Receives every visit, handles HTTPS | Already on the VPS, certificate from certbot |
+| nginx | Receives every visit, handles HTTPS, refuses uploads over 11 MB | Already on the VPS, certificate from certbot |
 | Next.js | Draws the pages. Holds no data and no secrets. | TypeScript, plain CSS Modules, native HTML elements |
-| FastAPI | Does all the work: login, uploads, profile, matching, eligibility, drafts | Python, calling the existing `src/` code |
-| Postgres | Remembers everything that belongs to an artist | Postgres + pgvector (for the CV passages' embeddings) |
+| FastAPI | Does all the work: login, uploads, reading CVs, profile, later matching, eligibility, drafts | Python, calling the existing `src/` code, in Docker |
+| Postgres | Remembers everything that belongs to an artist, including each passage's embedding | Postgres 17 + pgvector, in Docker |
+| Uploads volume | The artist's original files, named by id, never by the artist's file name | A Docker volume |
 | Opportunity files | The 479 calls, their search index and their eligibility sentences | The files the pipeline already produces |
 
 Everything runs on the VPS at **https://open-art.lucadev.org**. Only
 nginx can be reached from the internet; every other piece listens on the
-server itself only.
+server itself only. **The web app sends nothing to OpenAI**: embeddings run
+on the server, and the CV is read by rules.
 
 ### The artist's journey
 
 ```mermaid
 flowchart TD
-    S["1 · Sign up / log in"] --> D["2 · Upload CV, statement, portfolio"]
-    D --> PR["3 · Profile\nreview the values found in the CV"]
+    S["1 · Log in or sign up\n(the home page)"] --> D["2 · Documents\nupload CV, statement, portfolio"]
+    D --> PR["3 · Profile\nalready filled in from the CV:\ncheck, correct, Save"]
     PR --> DI["4 · Discover\nsearch box filled from the statement"]
     DI --> OP["5 · Opportunity\nverdict + reasons, each with its quote"]
     OP --> DR["6 · Draft application\nwritten by the agent, edited by the artist"]
     DR --> C{"7 · Artist confirms\n'I have reviewed this'"}
     C --> EX["8 · Export\ncopy or download"]
 
-    S -. "skip documents" .-> DI
+    D -. "skip for now" .-> PR
 
     style C fill:#f2c94c,color:#333
     style PR fill:#f2c94c,color:#333
 ```
 
-Yellow = the artist decides. Nothing found in a CV reaches the profile
-until the artist accepts it, and no draft can be exported until the artist
-confirms it. **The app never sends an application anywhere**: the artist
-submits it themselves.
+Yellow = the artist decides. The values read from a CV are only
+suggestions until the artist presses Save on the profile, and no draft can
+be exported until the artist confirms it. **The app never sends an
+application anywhere**: the artist submits it themselves.
+
+Steps 1–3 are built; 4–8 come next.
 
 ### Screens
 
-| Screen | What the artist does there |
-|---|---|
-| Landing | Learns what OpenArt does |
-| Sign up / Log in | Gets in |
-| Documents | Uploads and deletes CV, statement, portfolio |
-| Profile | Accepts or declines each value found in the CV, fills in the rest by hand |
-| Discover | Searches calls, with type filters next to the search box |
-| Opportunity | Reads the call and why they are or may not be eligible |
-| Draft | Edits the draft application, confirms it, exports it |
-| My drafts | Sees all drafts and their status |
-| Account | Changes password, or deletes the account and all its data |
+| Screen | Route | What the artist does there | Status |
+|---|---|---|---|
+| Log in / Sign up | `/`, `/signup` | Gets in. Logged-in visitors go straight to Documents. | Built |
+| Documents | `/documents` | Uploads, replaces, removes CV, statement, portfolio | Built |
+| Profile | `/profile` | Checks the values filled in from the CV, fills in the rest, saves | Built |
+| Account | `/account` | Changes password, logs out, or deletes the account and all its data | Built |
+| Discover | `/discover` | Searches calls, with type filters next to the search box | Next |
+| Opportunity | `/opportunities/[id]` | Reads the call and why they are or may not be eligible | Next |
+| Draft | `/drafts/[id]` | Edits the draft application, confirms it, exports it | Later |
+| My drafts | `/drafts` | Sees all drafts and their status | Later |
+
+Documents and Profile are the onboarding: a black header with three step
+pills (1 Account · 2 Documents · 3 Profile) and a bar at the bottom with
+Back and Continue / Save.
+
+### Login and accounts
+
+- Email and password. Passwords are hashed with argon2 (at least 10
+  characters). After 5 wrong attempts on one email, a 15-minute pause.
+- A login gives the browser a random token in a cookie that JavaScript
+  can't read; the database keeps only its hash.
+- Requests that change data must come from the site itself (CSRF check).
+- Deleting the account deletes everything: the account, sessions,
+  documents, passages, profile and the uploaded files.
+
+### What happens when a document is uploaded
+
+```mermaid
+flowchart TD
+    F["Artist picks or drops a file\n(PDF, DOCX, TXT, MD · up to 10 MB)"] --> SAVE["Saved under a new id\n(upload progress shown)"]
+    SAVE --> READ["Read and split into passages\n(documents.py)"]
+    READ --> EMB["Each passage embedded\n(bge, on the server)"]
+    EMB --> DB[("Postgres: document row +\npassages with their vectors")]
+    READ -- "can't read it" --> ERR["Message in the card;\nthe previous file stays"]
+
+    style ERR fill:#e1e0d9,color:#333
+```
+
+- One file per slot; a new file replaces the old one only once it has been
+  read successfully.
+- A CV takes about a second (the first one after a restart about 3–5 s, while
+  the embedding model loads). Its profile values are read later, when
+  `/profile` opens.
+
+### The profile: filled in from the CV
+
+```mermaid
+flowchart TD
+    OPEN["Artist opens /profile"] --> HAS{"A CV whose values\nhaven't been reviewed?"}
+    HAS -- "no CV" --> ADD["Banner: 'Add your CV and\nwe'll fill this in'"]
+    HAS -- "yes" --> RULES["Rules read the CV's stored passages\n(cv_rules.py, milliseconds)"]
+    RULES -- "nothing found" --> NONE["Banner: 'We couldn't find\nthese details in your CV'"]
+    NONE --> CHECK
+    RULES --> FILL["Empty fields filled in,\neach marked 'From your CV'\nwith the line it came from"]
+    FILL --> DIFF["Fields already saved keep their value;\n'Your CV says Austria · Use this'"]
+    DIFF --> CHECK{"Artist checks, corrects,\npresses Save"}
+    ADD --> CHECK
+    CHECK --> STORED[("Profile saved;\nthis CV marked as reviewed")]
+    STORED --> ENGINE["Eligibility engine\n(next step)"]
+
+    style CHECK fill:#f2c94c,color:#333
+```
+
+- **Read when the page opens, not at upload.** The rules take milliseconds
+  on the passages already stored, so an improved rule also applies to CVs
+  uploaded before it.
+- **What the rules look for:** a full date next to "Born"; countries on a
+  "Citizenship" line; the place after "based in", or a line in the CV's
+  header that is only a place ("Berlin", "Lisbon, Portugal"); degrees under
+  Education, with their dates on the same line or just below; an Education
+  date range ending in "Present"; the earliest year under Exhibitions,
+  Residencies, Awards…
+- **Fields:** birth date, nationalities (several allowed), country of
+  residence, disciplines, career stage, active since (a year, so "years of
+  practice" never goes stale), applying as individual / group /
+  organisation, degree, its field and year, currently a student. Every
+  field is optional and has "Not said": an empty field never rules the
+  artist out, the call just says "check this yourself".
+- **Save is the confirmation.** Values from the CV are suggestions until
+  then, and Save is the only thing that writes the profile. A new CV brings
+  new suggestions; a CV already reviewed isn't filled in again.
+- **Errors** appear under the field they belong to ("Birth date can't be in
+  the future."). Leaving with unsaved changes asks first.
+- **Career stage is never read from the CV**: "emerging" or "established"
+  is the artist's own call.
+
+### The look
+
+- One visual language for all pages, from the designer's handoff for the
+  login and documents pages: Archivo (a variable font, used very wide and
+  heavy for headings), ink #111111 on paper #f4f4f2, 3px ink borders,
+  rounded corners, no shadows, and lime #c6f432 only for the main button
+  and a few accents, always with ink text on it.
+- The colours are named tokens in `web/app/globals.css`; every component
+  has its own CSS file.
+- The profile page had no handoff; it was designed in the same language
+  (bordered groups, choice pills, the login page's Yes / No / Not said
+  switch, an ink banner).
 
 ### Why it is built this way
 
@@ -571,20 +681,29 @@ submits it themselves.
   shows pages.
 - **Postgres, not files, for artists' data.** Many artists at once, data
   that must survive restarts and be fully deletable, and a database
-  already installed on the server.
-- **Accessible without a library.** Real forms, labels, buttons and the
-  browser's own `<dialog>` give keyboard and screen-reader support for
-  free.
+  already installed on the server. pgvector keeps each passage's embedding
+  next to it, so retrieval is one SQL query.
+- **Rules, not an LLM, to read the CV.** Nothing leaves the server, it is
+  instant and free, and every value shows the rule's evidence. That fits
+  how the eligibility engine already works.
+- **Accessible without a library.** Real forms, labels, buttons, radios,
+  checkboxes and the browser's own `<dialog>` give keyboard and
+  screen-reader support for free. Focus is always visible, state is never
+  shown by colour alone, and the pages work from 320px wide.
 - **Safe by default on a shared server.** Passwords hashed, private
-  session cookie, each artist sees only their own data, and nothing but
-  nginx is reachable from outside.
+  session cookie, each artist sees only their own data, uploaded files
+  named by id, and nothing but nginx is reachable from outside.
+- **Pinned to the server's CPU.** The VPS's virtual CPU is too old for
+  NumPy 2.4+, so NumPy is pinned below 2.4. Before deploying a dependency
+  upgrade, the image is tested on an emulated copy of that CPU (command in
+  `workflow.MD`).
 
 ### Build order
 
 1. Empty app online with HTTPS (live)
 2. Database and login (built)
-3. Documents
-4. Profile
+3. Documents (built)
+4. Profile, filled in from the CV by rules (built)
 5. Discover and opportunity pages
 6. Application agent and drafts
 7. Accessibility and security check

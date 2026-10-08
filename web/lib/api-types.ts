@@ -168,6 +168,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_api_profile_get"];
+        /** Save Profile */
+        put: operations["save_profile_api_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profile/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Options */
+        get: operations["options_api_profile_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -176,6 +211,18 @@ export interface components {
         Body_upload_document_api_documents__kind__put: {
             /** File */
             file: string;
+        };
+        /** CvSuggestions */
+        CvSuggestions: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** File Name */
+            file_name: string;
+            /** Items */
+            items: components["schemas"]["Suggestion"][];
         };
         /** DeleteAccountIn */
         DeleteAccountIn: {
@@ -201,6 +248,13 @@ export interface components {
              */
             uploaded_at: string;
         };
+        /** Evidence */
+        Evidence: {
+            /** Quote */
+            quote: string;
+            /** Citation */
+            citation: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -216,12 +270,90 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** Option */
+        Option: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** Options */
+        Options: {
+            /** Countries */
+            countries: components["schemas"]["Option"][];
+            /** Disciplines */
+            disciplines: string[];
+            /** Career Stages */
+            career_stages: string[];
+        };
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** ProfileIn */
+        ProfileIn: {
+            values: components["schemas"]["ProfileValues"];
+            /**
+             * Evidence
+             * @default {}
+             */
+            evidence: {
+                [key: string]: components["schemas"]["Evidence"];
+            };
+            /** Reviewed Document Id */
+            reviewed_document_id?: string | null;
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            values: components["schemas"]["ProfileValues"];
+            /**
+             * Evidence
+             * @default {}
+             */
+            evidence: {
+                [key: string]: components["schemas"]["Evidence"];
+            };
+            /** Updated At */
+            updated_at?: string | null;
+            cv_suggestions?: components["schemas"]["CvSuggestions"] | null;
+        };
+        /**
+         * ProfileValues
+         * @description ArtistProfile as the artist fills it in. Every field optional; empty never rejects a call.
+         *     Each check is attached to its field, so the form can show the message next to it.
+         */
+        ProfileValues: {
+            /** Birth Date */
+            birth_date?: string | null;
+            /**
+             * Nationalities
+             * @default []
+             */
+            nationalities: string[];
+            /** Residence Country */
+            residence_country?: string | null;
+            /** Applicant Type */
+            applicant_type?: ("individual" | "group" | "organisation") | null;
+            /**
+             * Disciplines
+             * @default []
+             */
+            disciplines: string[];
+            /** Career Stage */
+            career_stage?: string | null;
+            /** Active Since */
+            active_since?: number | null;
+            /** Currently Enrolled */
+            currently_enrolled?: boolean | null;
+            /** Graduation Year */
+            graduation_year?: number | null;
+            /** Has Degree */
+            has_degree?: boolean | null;
+            /** Degree Field */
+            degree_field?: string | null;
         };
         /** SignupIn */
         SignupIn: {
@@ -232,6 +364,19 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** Suggestion */
+        Suggestion: {
+            /** Field */
+            field: string;
+            /** Value */
+            value: unknown;
+            /** Quote */
+            quote: string;
+            /** Citation */
+            citation: string;
+            /** Note */
+            note?: string | null;
         };
         /** UserOut */
         UserOut: {
@@ -538,6 +683,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_api_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+        };
+    };
+    save_profile_api_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    options_api_profile_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Options"];
                 };
             };
         };

@@ -22,6 +22,11 @@ const Header = async () => {
                             </Link>
                         </li>
                         <li>
+                            <Link href="/profile" className={styles.link}>
+                                Profile
+                            </Link>
+                        </li>
+                        <li>
                             <Link href="/account" className={styles.link} title={user.email}>
                                 Account
                             </Link>

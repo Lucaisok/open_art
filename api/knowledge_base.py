@@ -10,7 +10,7 @@ src/rag/knowledge_base.py.
 `documents` and `retrieve` behave exactly like the file version's, so the RAG steps
 (profile_prefill, query_suggestion) work with either. Adding and removing documents
 is done by api/documents.py, which also handles the uploaded file; this module only
-turns a file into chunk rows (`build_chunks`) and searches them.
+turns a file's chunks into rows (`build_chunks`) and searches them.
 
 The file version stays for the offline scripts and the RAG evaluation (workflow.MD,
 web app step 3). Both share the reader/chunker (src/rag/documents.py), the embedding
@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from api.models import Document, KnowledgeChunkRow
 from src.matching.index import EMBEDDING_MODEL, embed_passages, embed_query, load_embedder
-from src.rag.documents import read_chunks
+from src.rag.documents import Chunk
 from src.rag.knowledge_base import KnowledgeChunk, RetrievedPassage
 
 
@@ -40,10 +40,8 @@ def get_embedder():
     return load_embedder(EMBEDDING_MODEL)
 
 
-def build_chunks(path: str, user_id: uuid.UUID, embedder=None) -> list[KnowledgeChunkRow]:
-    """Read, chunk and embed one file into rows (not yet saved).
-    Raises src.rag.documents.DocumentError, with a message safe to show, on a file we won't read."""
-    chunks = read_chunks(path)
+def build_chunks(chunks: list[Chunk], user_id: uuid.UUID, embedder=None) -> list[KnowledgeChunkRow]:
+    """Embed one file's chunks (src.rag.documents.read_chunks) into rows, not yet saved."""
     vectors = embed_passages(embedder or get_embedder(), [c.embedded_text for c in chunks])
     fastembed_version = version("fastembed")
     return [

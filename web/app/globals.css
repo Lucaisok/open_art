@@ -33,8 +33,12 @@
   --color-grey-600: #555555;   /* secondary text */
   --color-grey-500: #777773;   /* fine print */
   --color-grey-400: #9a9a96;   /* placeholders */
-  --color-grey-200: #e2e2df;   /* meter track */
+  --color-grey-300: #c9c9c5;   /* "Not added" tag border */
+  --color-grey-200: #e2e2df;   /* meter track, disabled button */
   --color-grey-100: #ececea;   /* subtle hover */
+  --color-ink-line: #4a4a48;      /* borders on ink (upcoming step pill) */
+  --color-on-ink-faint: #8a8a86;  /* faint text on ink (upcoming step): 5.4:1 */
+  --color-on-ink-muted: #a8a8a4;  /* secondary text on ink */
   --color-lime: #c6f432;
   --color-lime-hover: #b5e322;
   --color-lime-pressed: #a0cc14;

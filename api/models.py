@@ -10,6 +10,7 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from api.db import Base
@@ -82,3 +83,20 @@ class KnowledgeChunkRow(Base):
     # what made the embedding: retrieval refuses rows made by another model or version
     model: Mapped[str] = mapped_column(String(100))
     fastembed_version: Mapped[str] = mapped_column(String(20))
+
+
+# -- step 4: the artist profile -----------------------------------------------------------------------
+
+class Profile(Base):
+    """The artist's eligibility profile: one row per artist, written only by the artist's own Save.
+    `values` is checked by api/profile.py (ArtistProfile's validators) before it is stored;
+    `evidence` holds, for values accepted from the CV, the quote and where it is."""
+    __tablename__ = "profiles"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    values: Mapped[dict] = mapped_column(JSONB)
+    evidence: Mapped[dict] = mapped_column(JSONB)
+    # the CV whose suggestions the artist has seen and saved: they aren't offered again until a new CV
+    reviewed_document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                 onupdate=func.now())
