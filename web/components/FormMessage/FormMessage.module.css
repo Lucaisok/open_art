@@ -1,0 +1,17 @@
+.message {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  border-left: 4px solid;
+}
+
+.error {
+  background-color: var(--color-error-bg);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.success {
+  background-color: var(--color-ok-bg);
+  border-color: var(--color-ok);
+  color: var(--color-ok);
+}

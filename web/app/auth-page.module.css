@@ -1,0 +1,11 @@
+/* Shared by /login and /signup */
+.main {
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-lg);
+}

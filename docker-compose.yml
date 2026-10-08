@@ -1,5 +1,6 @@
 # OpenArt — the Python side of the web app (same file locally and on the VPS).
 # The Next.js frontend runs outside Docker (pm2 on the VPS, `npm run dev` locally).
+# Settings and the database password come from .env (see .env.example).
 #
 # Every port is bound to 127.0.0.1: Docker writes its own firewall rules, which
 # bypass ufw, so "8040:8000" would publish the API to the whole internet.
@@ -11,4 +12,34 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8040:8000"
+    environment:
+      # "db" is the database container's name on Docker's private network
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"   # quoted: unquoted true/false would become a YAML boolean
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS in .env}
+    depends_on:
+      db:
+        condition: service_healthy
     mem_limit: 2g   # the embedding model needs ~1.5 GB once loaded; the VPS is shared
+
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: open-art-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5434:5432"   # for tests and admin from the host only
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+
+volumes:
+  pgdata:

@@ -1,0 +1,13 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.switch {
+  color: var(--color-text-muted);
+}
+
+.switch a {
+  color: var(--color-accent);
+}

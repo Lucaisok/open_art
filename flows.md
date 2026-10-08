@@ -581,8 +581,8 @@ submits it themselves.
 
 ### Build order
 
-1. Empty app online with HTTPS (built)
-2. Database and login
+1. Empty app online with HTTPS (live)
+2. Database and login (built)
 3. Documents
 4. Profile
 5. Discover and opportunity pages
