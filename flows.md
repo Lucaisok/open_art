@@ -413,3 +413,82 @@ NumPy 1.x and a frozen 2024 torch. Same model weights, same vectors,
 smaller deployment footprint, reusable for matching/RAG. Full decision
 record, including the alternatives rejected: `workflow.MD`,
 "Embedding runtime: fastembed, not PyTorch".
+
+## RAG — artist knowledge base
+
+The artist uploads their CV, statement and portfolio. These are split into
+short passages and embedded locally. Each later use retrieves only the few
+passages it needs, and every value or text it produces shows the passage it
+came from. Nothing produced here is used until the artist has reviewed it.
+Code: `src/rag/`. The full design rationale and the evaluation numbers are
+in `workflow.MD`, "RAG — artist knowledge base".
+
+### End-to-end flow
+
+```mermaid
+flowchart TD
+    UP["Artist uploads\nCV · statement · portfolio\n(PDF, DOCX, TXT, MD)"]
+
+    UP --> ING["1 · Ingest — documents.py + knowledge_base.py\nread → chunk under headings → embed (bge, local)"]
+    ING --> KB["data/artists/&lt;artist_id&gt;/\nraw/ · chunks.jsonl · vectors.npz\n(private, never published)"]
+
+    KB --> RET["2 · Retrieve — kb.retrieve(question)\ntop-k passages + citation\n'cv.pdf · p. 1 · EDUCATION'"]
+
+    RET -- "CV passages" --> PRE["3 · Profile pre-fill — profile_prefill.py\n1 LLM call: value + quote per field\nPython checks quote and value"]
+    RET -- "statement passages" --> QRY["4 · Query suggestion — query_suggestion.py\npassages as written, no LLM"]
+
+    PRE --> REV1{"Artist accepts /\ndeclines each value"}
+    REV1 --> PROF["ArtistProfile"]
+    QRY --> REV2{"Artist edits\nthe query"}
+
+    PROF --> ENG["Eligibility engine\n(deterministic rules)"]
+    REV2 --> MATCH["Semantic matching"]
+    ENG --> MATCH
+
+    RET -. "next: passages to cite" .-> AGENT["Application agent\n(not built yet)"]
+
+    style UP fill:#2a78d6,color:#fff
+    style REV1 fill:#f2c94c,color:#333
+    style REV2 fill:#f2c94c,color:#333
+    style AGENT fill:#e1e0d9,color:#333
+```
+
+### Step by step
+
+| Step | Code | What it does | LLM call? |
+|---|---|---|---|
+| 1 · Ingest | `documents.py`, `knowledge_base.py` | Reads the file. Splits it into passages of at most 800 characters that never cross a section heading, so "2019 MFA" stays under *Education*. Embeds each passage with `bge-base`, the same model as matching and RQ1. | No |
+| 2 · Retrieve | `kb.retrieve()` | Embeds the question and returns the closest passages, each with file, page and section. It can be limited to some files, e.g. only the CV. | No |
+| 3 · Profile pre-fill | `profile_prefill.py` | Five short queries collect 5–6 CV passages. One call proposes profile values (birth date, nationality, residence, degree…), each with a quote. Python drops any proposal whose quote isn't in the passage or whose value the profile's rules refuse. | Yes, one per pre-fill |
+| 4 · Query suggestion | `query_suggestion.py` | Fills the matching search box with the statement passages about the practice, as written. | No |
+
+### Why it is built this way
+
+- **The artist confirms everything.** Pre-filled values are proposals,
+  shown with their quote. Only the ones the artist accepts reach the
+  profile, and the eligibility engine never sees an unreviewed value. The
+  suggested query is only a starting text for the search box.
+- **Only a few passages leave the machine.** Steps 1, 2 and 4 run locally.
+  Step 3 sends OpenAI only the 5–6 retrieved CV passages, never a whole
+  document. Uploaded files are stored in the private `data/` repo.
+- **The LLM is used only where it is needed.** Turning "Citizenship:
+  Hungarian" into `nationalities=["HU"]` needs language understanding, so
+  step 3 uses an LLM. In step 4 an LLM-written query ranked no better than
+  the artist's own sentences, so step 4 does without one.
+- **The checks catch invented evidence, not every mistake.** The quote
+  check proves the quote exists, not that it supports the value. The artist
+  seeing the quote is the final safeguard.
+- **Uploads are untrusted.** Four file types only, size caps, and a clear
+  error message instead of a crash. The prompt treats passages as data,
+  never as instructions.
+
+### Result on the two fictional personas
+
+| | |
+|---|---|
+| Retrieval, CV only, field-style queries | the right section was in the top 3 for 12/12 queries |
+| Profile pre-fill | of 20 fields: 18 filled correctly, 2 correctly left empty, 0 wrong (last 2 runs) |
+| Query suggestion | statement passages 5/10 and 9/10 relevant in the top 10, vs. 3/10 and 8/10 for an LLM-written query |
+
+The personas are invented (`scripts/make_example_artists.py`), and these
+are sanity checks, not benchmarks.
