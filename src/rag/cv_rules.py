@@ -331,6 +331,70 @@ def _education(lines: list[_Line], today: date) -> list[tuple[str, Any, _Line]]:
     return found
 
 
+# -- statement and portfolio: the Practice fields -------------------------------------------------
+# Prose mentions things in passing ("a live musician in the room"), so a discipline counts only
+# if it is named at least twice, or in the document's first sentence.
+
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+WORK_YEAR = re.compile(r"^[^.!?]{1,80}?,\s*(19[5-9]\d|20\d\d)\b\.?\s*$")   # "Rain Score, 2021"
+MAX_DISCIPLINES = 3
+
+
+def _sentences(lines: list[_Line]) -> list[_Line]:
+    """Prose as sentences (keeping each one's section and page), for quoting."""
+    out = []
+    for line in lines:
+        for sentence in SENTENCE_END.split(line.text):
+            if sentence.strip():
+                out.append(_Line(sentence.strip(), line.section, line.page))
+    return out
+
+
+def _prose_disciplines(sentences: list[_Line]) -> tuple[list[str], _Line] | None:
+    counts: dict[str, int] = {}
+    first_at: dict[str, _Line] = {}
+    for i, sentence in enumerate(sentences):
+        for canonical, pattern in DISCIPLINE_RES.items():
+            hits = len(pattern.findall(sentence.text))
+            if hits:
+                counts[canonical] = counts.get(canonical, 0) + hits + (1 if i == 0 else 0)  # first sentence: +1
+                first_at.setdefault(canonical, sentence)
+    kept = sorted((c for c, n in counts.items() if n >= 2), key=lambda c: -counts[c])[:MAX_DISCIPLINES]
+    if not kept:
+        return None
+    return kept, first_at[kept[0]]          # quoted: where the most-named discipline first appears
+
+
+def _earliest_work(lines: list[_Line], today: date) -> tuple[int, _Line] | None:
+    """Portfolio entries are "Title, 2021": the earliest one."""
+    works = [(int(m.group(1)), line) for line in lines if (m := WORK_YEAR.match(line.text))]
+    works = [(year, line) for year, line in works if year <= today.year]
+    return min(works, key=lambda w: w[0]) if works else None
+
+
+def extract_practice(chunks: list[Chunk], document: str, kind: str, today: date | None = None) -> list[Suggestion]:
+    """The Practice fields an artist statement or portfolio can state: disciplines, applying as
+    (statements: "We are a theatre collective"), active since (portfolios: the earliest dated work).
+    Career stage is never read: it's the artist's own call."""
+    today = today or date.today()
+    lines = _lines(chunks)
+    sentences = _sentences(lines)
+    suggestions: list[Suggestion] = []
+
+    def add(field: str, result, note: str | None = None) -> None:
+        if result:
+            value, line = result
+            suggestions.append(Suggestion(field, value, line.text, _citation(document, line), note))
+
+    add("disciplines", _prose_disciplines(sentences),
+        note="named more than once" if kind == "statement" else "named in your works' descriptions")
+    if kind == "statement":
+        add("applicant_type", _applicant_type(sentences[:6]))
+    if kind == "portfolio":
+        add("active_since", _earliest_work(lines, today), note="your earliest dated work in the portfolio")
+    return suggestions
+
+
 # -- all together ---------------------------------------------------------------------------------
 
 def extract_profile(chunks: list[Chunk], document: str, today: date | None = None) -> list[Suggestion]:

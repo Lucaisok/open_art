@@ -638,6 +638,10 @@ flowchart TD
     style CHECK fill:#f2c94c,color:#333
 ```
 
+- **CV, statement and portfolio.** The CV can give any field; the
+  statement and portfolio fill only the Practice fields the CV left empty:
+  disciplines named at least twice, "we are a collective", the earliest
+  dated work in the portfolio. Each value says which document it came from.
 - **Read when the page opens, not at upload.** The rules take milliseconds
   on the passages already stored, so an improved rule also applies to CVs
   uploaded before it.
@@ -656,6 +660,8 @@ flowchart TD
 - **Save is the confirmation.** Values from the CV are suggestions until
   then, and Save is the only thing that writes the profile. A new CV brings
   new suggestions; a CV already reviewed isn't filled in again.
+- **Birth date** is three boxes (Day, Month, Year), not a calendar: easier for a
+  date decades back, and the same in every browser.
 - **Errors** appear under the field they belong to ("Birth date can't be in
   the future."). Leaving with unsaved changes asks first.
 - **Career stage is never read from the CV**: "emerging" or "established"

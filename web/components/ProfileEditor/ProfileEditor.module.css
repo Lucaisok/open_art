@@ -30,12 +30,11 @@
   color: var(--color-grey-600);
 }
 
-/* one column: the banner, then the three groups */
+/* the banner, then the three groups, across the page's full width (aligned with the title) */
 .layout {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 860px;
   margin-top: 48px;
 }
 
@@ -47,19 +46,43 @@
 
 /* -- form groups ------------------------------------------------------------------------- */
 
+/* a group: its number and title on the left, its fields on the right; stacked when narrow */
 .group {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  align-items: start;
+  gap: 30px 56px;
+  padding: 36px;
   border: 3px solid var(--color-ink);
   border-radius: 16px;
 }
 
+.groupFields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .group {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 28px;
+  }
+}
+
 .groupHead {
+  position: sticky; /* the title stays in view while its fields scroll past */
+  top: 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .groupHead {
+    position: static;
+  }
 }
 
 .groupNumber {
@@ -169,6 +192,7 @@
 
 .input {
   width: 100%;
+  max-width: 560px; /* a comfortable width, not the whole column (narrower: .inputShort, .inputYear) */
   height: 58px;
   padding: 0 18px;
   border: 3px solid var(--color-ink);
@@ -192,8 +216,44 @@
   max-width: 260px;
 }
 
+
 .inputYear {
   max-width: 180px;
+}
+
+/* birth date: Day / Month / Year boxes, each with its small label above */
+.dateParts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.datePart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.datePartLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-grey-600);
+}
+
+.inputDay {
+  width: 88px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.inputMonth {
+  width: 210px;
+}
+
+.inputYear4 {
+  width: 120px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* native select with our own arrow */
@@ -296,6 +356,7 @@
 
 /* nationalities */
 .chipsBox {
+  max-width: 560px;
   display: flex;
   flex-direction: column;
   gap: 10px;

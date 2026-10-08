@@ -121,22 +121,28 @@ def test_years_active_is_worked_out_when_needed():
     assert to_artist_profile(ProfileValues()).years_active is None
 
 
-# -- CV suggestions ----------------------------------------------------------------------------------
+# -- suggestions from the artist's documents -------------------------------------------------------
 
 def suggestions(client):
-    return client.get("/api/profile").json()["cv_suggestions"]
+    return client.get("/api/profile").json()["suggestions"]
 
 
-def test_no_cv_no_suggestions(artist):
+def review_and_save(client, values=None):
+    """Save the way the page does: the values plus the documents whose suggestions it showed."""
+    ids = [d["id"] for d in suggestions(client)["documents"]]
+    return client.put("/api/profile", json={"values": values or {}, "reviewed_documents": ids})
+
+
+def test_no_documents_no_suggestions(artist):
     assert suggestions(artist) is None
 
 
 def test_cv_upload_brings_quoted_suggestions_and_saves_nothing(artist):
     upload(artist, "cv", os.path.join(ILKA, "cv.pdf"))
     found = suggestions(artist)
-    assert found["file_name"] == "cv.pdf"
+    assert [d["file_name"] for d in found["documents"]] == ["cv.pdf"]
     items = {s["field"]: s for s in found["items"]}
-    assert items["birth_date"]["value"] == "1994-03-12"
+    assert items["birth_date"]["value"] == "1994-03-12" and items["birth_date"]["source"] == "cv"
     assert items["birth_date"]["quote"] == "Born 12 March 1994 in Debrecen, Hungary"
     assert items["birth_date"]["citation"].startswith("cv.pdf")
     assert items["nationalities"]["value"] == ["HU"] and items["active_since"]["value"] == 2021
@@ -145,45 +151,54 @@ def test_cv_upload_brings_quoted_suggestions_and_saves_nothing(artist):
     assert profile_rows() == 0
 
 
+def test_statement_and_portfolio_fill_only_what_the_cv_left_empty(artist):
+    upload(artist, "statement", os.path.join(TOMAS, "statement.md"))
+    upload(artist, "portfolio", os.path.join(TOMAS, "portfolio.txt"))
+    items = {s["field"]: s for s in suggestions(artist)["items"]}
+    assert items["disciplines"]["source"] == "statement" and "Music" in items["disciplines"]["value"]
+    assert items["active_since"] == {**items["active_since"], "value": 2021, "source": "portfolio"}
+    assert "birth_date" not in items                          # a statement doesn't state that
+    upload(artist, "cv", os.path.join(TOMAS, "cv.docx"))
+    items = {s["field"]: s for s in suggestions(artist)["items"]}
+    assert items["disciplines"]["source"] == "cv"             # the CV first
+    assert items["active_since"]["source"] == "cv" and items["active_since"]["value"] == 2019
+
+
 def test_saving_after_review_stops_the_suggestions(artist):
     upload(artist, "cv", os.path.join(ILKA, "cv.pdf"))
-    document_id = suggestions(artist)["document_id"]
-    body = {"values": {"birth_date": "1994-03-12"}, "evidence": {}, "reviewed_document_id": document_id}
-    assert artist.put("/api/profile", json=body).status_code == 200
+    assert review_and_save(artist, {"birth_date": "1994-03-12"}).status_code == 200
     assert suggestions(artist) is None
-    # a later Save without the id keeps the CV marked as reviewed
+    # a later Save without ids keeps the documents marked as reviewed
     save(artist, {"birth_date": "1994-03-12", "disciplines": ["Craft"]})
     assert suggestions(artist) is None
 
 
-def test_a_new_cv_brings_new_suggestions(artist):
+def test_a_new_document_brings_new_suggestions(artist):
     upload(artist, "cv", os.path.join(ILKA, "cv.pdf"))
-    artist.put("/api/profile", json={"values": {}, "reviewed_document_id": suggestions(artist)["document_id"]})
-    upload(artist, "cv", os.path.join(TOMAS, "cv.docx"))
+    review_and_save(artist)
+    upload(artist, "statement", os.path.join(ILKA, "statement.docx"))
     found = suggestions(artist)
-    assert found["file_name"] == "cv.docx"
+    assert [d["kind"] for d in found["documents"]] == ["statement"]       # the reviewed CV isn't read again
+    upload(artist, "cv", os.path.join(TOMAS, "cv.docx"))                 # a new CV: a new id
+    found = suggestions(artist)
+    assert [d["kind"] for d in found["documents"]] == ["cv", "statement"]
     assert {s["field"]: s["value"] for s in found["items"]}["nationalities"] == ["BR", "PT"]
 
 
-def test_a_cv_with_nothing_found_says_so(artist):
+def test_documents_with_nothing_found_say_so(artist):
     artist.put("/api/documents/cv", files={"file": ("cv.txt", b"Portfolio on request.\nThank you for reading.")})
     found = suggestions(artist)
-    assert found is not None and found["items"] == []
+    assert found is not None and found["items"] == [] and len(found["documents"]) == 1
 
 
-def test_only_cvs_are_read_for_suggestions(artist):
-    upload(artist, "statement", os.path.join(ILKA, "statement.docx"))
-    assert suggestions(artist) is None
-
-
-def test_reviewed_id_of_another_users_document_is_ignored(artist):
+def test_reviewed_ids_of_another_users_documents_are_ignored(artist):
     other = TestClient(app)
     other.post("/api/auth/signup", json={"email": "other@example.com", "password": PASSWORD})
     upload(other, "cv", os.path.join(ILKA, "cv.pdf"))
-    foreign_id = suggestions(other)["document_id"]
-    assert artist.put("/api/profile", json={"values": {}, "reviewed_document_id": foreign_id}).status_code == 200
+    foreign = [d["id"] for d in suggestions(other)["documents"]]
+    assert artist.put("/api/profile", json={"values": {}, "reviewed_documents": foreign}).status_code == 200
     with Session(db.get_engine()) as session:
-        assert session.scalar(select(Profile.reviewed_document_id)) is None
+        assert session.scalar(select(Profile.reviewed_documents)) == []
 
 
 def test_removing_the_cv_removes_its_suggestions(artist):

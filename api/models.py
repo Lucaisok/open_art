@@ -96,7 +96,8 @@ class Profile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     values: Mapped[dict] = mapped_column(JSONB)
     evidence: Mapped[dict] = mapped_column(JSONB)
-    # the CV whose suggestions the artist has seen and saved: they aren't offered again until a new CV
-    reviewed_document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    # ids of the documents whose suggestions the artist has seen and saved: not offered again.
+    # A new upload has a new id, so its suggestions are offered. (Ids of deleted documents just linger.)
+    reviewed_documents: Mapped[list] = mapped_column(JSONB, server_default="[]")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())

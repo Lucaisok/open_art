@@ -1,0 +1,8 @@
+{
+  "_about": "Held-out statements and portfolios for the Practice fields read by rules (src/rag/cv_rules.py, extract_practice). FICTIONAL. Written, with these answers, BEFORE the rules. Only the fields a statement or portfolio can state are scored: disciplines (any non-empty subset of the list is right), applicant_type, active_since ([min, max]). null = not stated. Traps: Jonas mentions a musician once (not Music), Lucía mentions photography in passing (not Photography).",
+  "nadia_okafor_statement.md": {"disciplines": ["Visual Arts"], "applicant_type": null, "active_since": null},
+  "bruit_blanc_statement.md": {"disciplines": ["Theatre", "Performing Arts"], "applicant_type": "group", "active_since": null},
+  "jonas_lindqvist_statement.txt": {"disciplines": ["Dance", "Performing Arts"], "applicant_type": null, "active_since": null},
+  "mei_tanaka_portfolio.txt": {"disciplines": ["Photography", "Visual Arts"], "applicant_type": null, "active_since": [2009, 2009]},
+  "lucia_romero_statement.md": {"disciplines": ["Literature/Writing", "Curating/Art Criticism"], "applicant_type": null, "active_since": null}
+}

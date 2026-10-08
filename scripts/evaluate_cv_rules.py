@@ -23,7 +23,7 @@ from datetime import date
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
-from src.rag.cv_rules import extract_profile  # noqa: E402
+from src.rag.cv_rules import extract_practice, extract_profile  # noqa: E402
 from src.rag.documents import read_chunks  # noqa: E402
 
 TODAY = date(2026, 10, 8)   # fixed, so the answers don't move with the calendar
@@ -59,14 +59,34 @@ def is_right(field: str, value, truth) -> bool:
     return value == truth
 
 
-def score(name: str, cvs: dict[str, dict]) -> Counter:
+# statements and portfolios: only the Practice fields they can state
+PRACTICE_FIELDS = ["disciplines", "applicant_type", "active_since"]
+DEV_PRACTICE = {
+    "examples/artists/ilka_varga/statement.docx": {"disciplines": ["Visual Arts"], "applicant_type": None,
+                                                   "active_since": None},
+    "examples/artists/tomas_ferreira/statement.md": {
+        "disciplines": ["Music", "Visual Arts", "Digital/New Media Arts", "Performing Arts", "Multidisciplinary"],
+        "applicant_type": None, "active_since": None},
+    "examples/artists/tomas_ferreira/portfolio.txt": {
+        "disciplines": ["Music", "Visual Arts", "Digital/New Media Arts", "Performing Arts", "Multidisciplinary"],
+        "applicant_type": None, "active_since": [2019, 2021]},
+}
+
+
+def _kind(path: str) -> str:
+    return "portfolio" if "portfolio" in os.path.basename(path) else "statement"
+
+
+def score(name: str, cvs: dict[str, dict], practice: bool = False) -> Counter:
     totals = Counter()
     print(f"\n#### {name}")
     for path, truth in cvs.items():
-        found = {s.field: s for s in extract_profile(read_chunks(os.path.join(REPO_ROOT, path)),
-                                                     os.path.basename(path), TODAY)}
+        chunks = read_chunks(os.path.join(REPO_ROOT, path))
+        found_list = (extract_practice(chunks, os.path.basename(path), _kind(path), TODAY) if practice
+                      else extract_profile(chunks, os.path.basename(path), TODAY))
+        found = {s.field: s for s in found_list}
         print(f"\n{os.path.basename(path)}")
-        for field in FIELDS:
+        for field in (PRACTICE_FIELDS if practice else FIELDS):
             expected, proposal = truth[field], found.get(field)
             stated = expected not in (None, [])
             if proposal is None:
@@ -87,6 +107,12 @@ def main() -> None:
         truth = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     score("dev (rules written against these)", DEV)
     score("held-out (written before the rules)", {f"examples/cv_eval/{k}": v for k, v in truth.items()})
+
+    with open(os.path.join(REPO_ROOT, "examples", "cv_eval", "truth_practice.json"), encoding="utf-8") as f:
+        practice = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
+    score("statements + portfolios, dev", DEV_PRACTICE, practice=True)
+    score("statements + portfolios, held-out (written before the rules)",
+          {f"examples/cv_eval/{k}": v for k, v in practice.items()}, practice=True)
 
 
 if __name__ == "__main__":

@@ -1,16 +1,19 @@
 """
 The artist's eligibility profile (web app step 4).
 
-    GET  /api/profile           what the artist saved, plus the CV's suggestions not yet reviewed
+    GET  /api/profile           what the artist saved, plus suggestions from documents not yet reviewed
     PUT  /api/profile           the artist's Save: replaces the whole profile
     GET  /api/profile/options   countries, disciplines, career stages for the form
 
-The CV is read for profile values when /profile opens: plain rules (src/rag/cv_rules.py) on the
-CV's stored passages, in milliseconds, nothing sent anywhere. Reading it then rather than at upload
-means an improved rule applies to CVs already uploaded. /profile shows them filled into the form,
-each marked "From your CV" with its quote. Human in the loop: they become the profile only
-when the artist presses Save (PUT), the only route that writes it. That Save also records
-which CV was reviewed, so its suggestions aren't offered again until a new CV is uploaded.
+The artist's documents are read for profile values when /profile opens: plain rules
+(src/rag/cv_rules.py) on their stored passages, in milliseconds, nothing sent anywhere. The CV
+gives any field; the statement and portfolio only the Practice fields the CV left empty
+(disciplines, applying as, active since). Reading them then rather than at upload means an
+improved rule applies to documents already uploaded. /profile shows the values filled into
+the form, each marked "From your CV / statement / portfolio" with its quote. Human in the
+loop: they become the profile only when the artist presses Save (PUT), the only route that
+writes it. That Save also records which documents were reviewed, so their suggestions
+aren't offered again until a new one is uploaded.
 
 Stored as the artist sees it, with "active since" (a year) instead of ArtistProfile's
 "years active", which would go stale every January: `to_artist_profile` does that
@@ -30,7 +33,7 @@ from api.models import Document, KnowledgeChunkRow, Profile
 from src.eligibility.geo import COUNTRIES
 from src.eligibility.profile import ApplicantType, ArtistProfile
 from src.processing.canonicalize import CANONICAL_DISCIPLINES
-from src.rag.cv_rules import extract_profile
+from src.rag.cv_rules import extract_practice, extract_profile
 from src.rag.documents import Chunk
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -118,25 +121,32 @@ def _artist_profile_check(field: str, value: Any, message: str) -> Any:
 class Evidence(BaseModel):
     quote: str
     citation: str           # "cv.pdf · p. 1 · PERSONAL DETAILS"
+    source: str | None = None   # "cv" / "statement" / "portfolio"
 
 
 class ProfileIn(BaseModel):
     values: ProfileValues
     evidence: dict[str, Evidence] = {}   # field name -> where the accepted value came from
-    reviewed_document_id: uuid.UUID | None = None   # the CV whose suggestions the page showed
+    reviewed_documents: list[uuid.UUID] = []   # the documents whose suggestions the page showed
 
 
 class Suggestion(BaseModel):
     field: str              # a ProfileValues field name
     value: Any              # in ProfileValues' format
-    quote: str              # the CV line it was read from
+    quote: str              # the line it was read from
     citation: str           # "cv.pdf · p. 1 · EDUCATION"
     note: str | None = None
+    source: str             # "cv" / "statement" / "portfolio": shown as "From your CV"
 
 
-class CvSuggestions(BaseModel):
-    document_id: uuid.UUID
+class SourceDocument(BaseModel):
+    id: uuid.UUID
+    kind: str
     file_name: str
+
+
+class DocumentSuggestions(BaseModel):
+    documents: list[SourceDocument]   # the documents read (not yet reviewed), even those that gave nothing
     items: list[Suggestion]
 
 
@@ -144,7 +154,7 @@ class ProfileOut(BaseModel):
     values: ProfileValues
     evidence: dict[str, Evidence] = {}
     updated_at: datetime | None = None              # None: never saved
-    cv_suggestions: CvSuggestions | None = None     # the CV's values, if this CV wasn't reviewed yet
+    suggestions: DocumentSuggestions | None = None  # values from documents not reviewed yet
 
 
 class Option(BaseModel):
@@ -168,25 +178,38 @@ def to_artist_profile(values: ProfileValues, today: date | None = None) -> Artis
 
 # -- routes ------------------------------------------------------------------------------------------
 
-def _unreviewed_cv(db, user_id: uuid.UUID, profile: Profile | None) -> CvSuggestions | None:
-    """The CV's suggestions, unless the artist already saved the profile after seeing them. An empty
-    list is returned too: the page then says nothing was found, instead of saying nothing."""
-    cv = db.scalar(select(Document).where(Document.user_id == user_id, Document.kind == "cv"))
-    if cv is None or (profile is not None and profile.reviewed_document_id == cv.id):
+KIND_ORDER = ["cv", "statement", "portfolio"]   # the CV first: it states facts, the others describe
+
+
+def _unreviewed_suggestions(db, user_id: uuid.UUID, profile: Profile | None) -> DocumentSuggestions | None:
+    """Values read from the documents the artist hasn't reviewed yet. An empty item list is returned
+    too: the page then says nothing was found, instead of saying nothing."""
+    reviewed = set(profile.reviewed_documents) if profile is not None else set()
+    documents = sorted(db.scalars(select(Document).where(Document.user_id == user_id)),
+                       key=lambda d: KIND_ORDER.index(d.kind))
+    documents = [d for d in documents if str(d.id) not in reviewed]
+    if not documents:
         return None
-    rows = db.scalars(select(KnowledgeChunkRow).where(KnowledgeChunkRow.document_id == cv.id)
-                      .order_by(KnowledgeChunkRow.index))
-    chunks = [Chunk(index=r.index, section=r.section, text=r.text, page=r.page) for r in rows]
-    items = [Suggestion(**vars(s)) for s in extract_profile(chunks, cv.file_name)]
-    return CvSuggestions(document_id=cv.id, file_name=cv.file_name, items=items)
+
+    items: list[Suggestion] = []
+    for document in documents:
+        rows = db.scalars(select(KnowledgeChunkRow).where(KnowledgeChunkRow.document_id == document.id)
+                          .order_by(KnowledgeChunkRow.index))
+        chunks = [Chunk(index=r.index, section=r.section, text=r.text, page=r.page) for r in rows]
+        found = (extract_profile(chunks, document.file_name) if document.kind == "cv"
+                 else extract_practice(chunks, document.file_name, document.kind))
+        taken = {item.field for item in items}
+        items += [Suggestion(**vars(s), source=document.kind) for s in found if s.field not in taken]
+    return DocumentSuggestions(
+        documents=[SourceDocument(id=d.id, kind=d.kind, file_name=d.file_name) for d in documents], items=items)
 
 
 def _out(db, user_id: uuid.UUID, profile: Profile | None) -> ProfileOut:
-    suggestions = _unreviewed_cv(db, user_id, profile)
+    suggestions = _unreviewed_suggestions(db, user_id, profile)
     if profile is None:
-        return ProfileOut(values=ProfileValues(), cv_suggestions=suggestions)
+        return ProfileOut(values=ProfileValues(), suggestions=suggestions)
     return ProfileOut(values=profile.values, evidence=profile.evidence, updated_at=profile.updated_at,
-                      cv_suggestions=suggestions)
+                      suggestions=suggestions)
 
 
 @router.get("")
@@ -200,19 +223,16 @@ def save_profile(body: ProfileIn, user: CurrentUser, db: DB) -> ProfileOut:
     # evidence only for fields that exist and have a value: an emptied field loses its quote
     evidence = {name: e.model_dump() for name, e in body.evidence.items()
                 if name in ProfileValues.model_fields and values.get(name) not in (None, [])}
-    # the CV the page showed suggestions from: only one of this artist's own documents counts
-    reviewed = None
-    if body.reviewed_document_id is not None:
-        reviewed = db.scalar(select(Document.id).where(Document.id == body.reviewed_document_id,
-                                                       Document.user_id == user.id))
+    # the documents the page showed suggestions from: only this artist's own documents count
+    own = {str(i) for i in db.scalars(select(Document.id).where(Document.id.in_(body.reviewed_documents),
+                                                                 Document.user_id == user.id))}
     profile = db.get(Profile, user.id)
     if profile is None:
-        profile = Profile(user_id=user.id, values=values, evidence=evidence, reviewed_document_id=reviewed)
+        profile = Profile(user_id=user.id, values=values, evidence=evidence, reviewed_documents=sorted(own))
         db.add(profile)
     else:
         profile.values, profile.evidence = values, evidence
-        if reviewed is not None:
-            profile.reviewed_document_id = reviewed
+        profile.reviewed_documents = sorted(set(profile.reviewed_documents) | own)
     db.commit()
     db.refresh(profile)
     return _out(db, user.id, profile)

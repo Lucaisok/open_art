@@ -10,7 +10,7 @@ from datetime import date
 
 import pytest
 
-from src.rag.cv_rules import extract_profile
+from src.rag.cv_rules import extract_practice, extract_profile
 from src.rag.documents import Chunk, read_chunks
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -132,3 +132,37 @@ def test_dates_of_the_next_entry_are_not_taken():
         "MFA Painting, Royal Academy", "BA Fine Art, Goldsmiths", "2010 – 2013", section="EDUCATION"),
         "cv.pdf", TODAY)}
     assert found["graduation_year"] == 2013 and found["degree_field"] == "Fine Art"
+
+
+# -- statements and portfolios (extract_practice) -----------------------------------------------------
+
+def practice(path: str, kind: str) -> dict:
+    found = extract_practice(read_chunks(os.path.join(ROOT, path)), os.path.basename(path), kind, TODAY)
+    return {s.field: s.value for s in found}
+
+
+def test_dev_statements_and_portfolio():
+    assert practice("examples/artists/ilka_varga/statement.docx", "statement") == {"disciplines": ["Visual Arts"]}
+    tomas = practice("examples/artists/tomas_ferreira/portfolio.txt", "portfolio")
+    assert tomas["active_since"] == 2021 and "Visual Arts" in tomas["disciplines"]
+
+
+def test_a_discipline_named_once_in_passing_is_not_taken():
+    found = practice("examples/cv_eval/jonas_lindqvist_statement.txt", "statement")
+    assert found == {"disciplines": ["Dance"]}          # "a live musician in the room" isn't Music
+
+
+def test_a_collective_statement():
+    found = practice("examples/cv_eval/bruit_blanc_statement.md", "statement")
+    assert found["applicant_type"] == "group" and found["disciplines"][0] == "Theatre"
+
+
+def test_known_held_out_error_is_still_there():
+    """Lucía's statement names photography twice while writing about archives (the trap): the rule
+    takes it. Pinned so it shows up if a change fixes it, or makes it worse."""
+    assert "Photography" in practice("examples/cv_eval/lucia_romero_statement.md", "statement")["disciplines"]
+
+
+def test_career_stage_is_never_read():
+    found = extract_practice(chunks("I am an emerging artist and an established painter."), "s.md", "statement", TODAY)
+    assert "career_stage" not in {s.field for s in found}

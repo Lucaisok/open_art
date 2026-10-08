@@ -7,6 +7,7 @@ import type { ProfileData, ProfileOptions, ProfileValues, Suggestion } from "@/l
 import { MultiChoice, SingleChoice } from "./Choices";
 import CountryChips from "./CountryChips";
 import CvBanner from "./CvBanner";
+import DateParts from "./DateParts";
 import Field, { describedBy } from "./Field";
 import {
     APPLICANT_TYPES,
@@ -27,7 +28,6 @@ type ProfileEditorProps = {
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
 const THIS_YEAR = new Date().getFullYear();
-const TODAY = new Date().toISOString().slice(0, 10);
 
 // why we ask, shown under each label
 const HELPERS: Partial<Record<FieldName, string>> = {
@@ -49,7 +49,7 @@ const toYear = (text: string): number | null => (text.trim() === "" ? null : Num
 const isEmpty = (value: unknown) =>
     value === null || value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 
-// The form's starting point: the saved profile, with the CV's suggestions (read at upload)
+// The form's starting point: the saved profile, with the suggestions read from the artist's documents
 // filled into the fields that are still empty. A saved value is never overwritten: where the
 // CV says something else, the suggestion is kept aside and shown under the field.
 const startingPoint = (initial: ProfileData) => {
@@ -57,7 +57,7 @@ const startingPoint = (initial: ProfileData) => {
     const evidence: EvidenceMap = { ...(initial.evidence ?? {}) };
     const differing: Partial<Record<FieldName, Suggestion>> = {};
     let filled = 0;
-    for (const suggestion of initial.cv_suggestions?.items ?? []) {
+    for (const suggestion of initial.suggestions?.items ?? []) {
         const field = suggestion.field as FieldName;
         if (!(field in FIELD_LABELS)) {
             continue;
@@ -65,7 +65,7 @@ const startingPoint = (initial: ProfileData) => {
         const current = values[field];
         if (isEmpty(current)) {
             values[field] = suggestion.value as never;
-            evidence[field] = { quote: suggestion.quote, citation: suggestion.citation };
+            evidence[field] = { quote: suggestion.quote, citation: suggestion.citation, source: suggestion.source };
             filled++;
         } else if (JSON.stringify(current) !== JSON.stringify(suggestion.value)) {
             differing[field] = suggestion;
@@ -75,22 +75,24 @@ const startingPoint = (initial: ProfileData) => {
 };
 
 // The profile page: what the CV filled in (banner), the form (three groups), and a footer bar
-// with Save. Only Save writes anything (PUT /api/profile): the values from the CV are suggestions
+// with Save. Only Save writes anything (PUT /api/profile): the values from documents are suggestions
 // until then, and Save also marks this CV as reviewed so they aren't filled in again.
 const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
     const [start] = useState(() => startingPoint(initial));
     const [values, setValues] = useState<ProfileValues>(start.values);
     const [evidence, setEvidence] = useState<EvidenceMap>(start.evidence);
     const [differing, setDiffering] = useState(start.differing);
-    const [reviewing, setReviewing] = useState(initial.cv_suggestions?.document_id ?? null); // CV not yet saved after
+    // documents whose suggestions are shown and not yet saved after
+    const [reviewing, setReviewing] = useState<string[]>(() => initial.suggestions?.documents.map((d) => d.id) ?? []);
     const [saved, setSaved] = useState(() => JSON.stringify({ values: initial.values, evidence: initial.evidence ?? {} }));
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
+    const [birthIncomplete, setBirthIncomplete] = useState(false); // some date boxes filled, not all
     const neverSaved = initial.updated_at === null && saveState.kind !== "saved";
 
-    // unsaved: values changed, or the CV's suggestions still need the artist's Save
+    // unsaved: values changed, or the documents' suggestions still need the artist's Save
     const dirty = useMemo(
-        () => JSON.stringify({ values, evidence }) !== saved || reviewing !== null,
+        () => JSON.stringify({ values, evidence }) !== saved || reviewing.length > 0,
         [values, evidence, saved, reviewing],
     );
 
@@ -125,6 +127,9 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
         });
         setErrors((prev) => ({ ...prev, [field]: "" }));
         setSaveState({ kind: "idle" });
+        if (field === "birth_date") {
+            setBirthIncomplete(false); // a full date (or none) was just set
+        }
     };
 
     // "Use this": the CV's value instead of the saved one, with its quote
@@ -134,16 +139,26 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
             return;
         }
         set(field, suggestion.value as never);
-        setEvidence((prev) => ({ ...prev, [field]: { quote: suggestion.quote, citation: suggestion.citation } }));
+        setEvidence((prev) => ({
+            ...prev,
+            [field]: { quote: suggestion.quote, citation: suggestion.citation, source: suggestion.source },
+        }));
     };
 
     const save = async (event?: FormEvent) => {
         event?.preventDefault();
+        if (birthIncomplete) {
+            // checked here: a half-typed date never reaches the form's values
+            setErrors((prev) => ({ ...prev, birth_date: "Enter the full date: day, month and year." }));
+            setSaveState({ kind: "error", message: "Fix the field marked above." });
+            document.getElementById("field-birth_date")?.focus();
+            return;
+        }
         setSaveState({ kind: "saving" });
         const result = await requestJson<ProfileData>("PUT", "/api/profile", {
             values,
             evidence,
-            reviewed_document_id: reviewing,
+            reviewed_documents: reviewing,
         });
         if (!result.ok) {
             setErrors(result.fieldErrors);
@@ -154,7 +169,11 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
             });
             const first = Object.keys(result.fieldErrors)[0];
             if (first) {
-                document.getElementById(`field-${first}`)?.focus();
+                // the control itself, or the first control of a group (pills, chips)
+                const target =
+                    document.getElementById(`field-${first}`) ??
+                    document.querySelector<HTMLElement>(`#field-${first}-group input, #field-${first}-group select`);
+                target?.focus();
             }
             return;
         }
@@ -162,7 +181,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
         setValues(result.data.values);
         setEvidence(result.data.evidence ?? {});
         setSaved(JSON.stringify({ values: result.data.values, evidence: result.data.evidence ?? {} }));
-        setReviewing(null);
+        setReviewing([]);
         setDiffering({});
         setErrors({});
         setSaveState({ kind: "saved" });
@@ -181,6 +200,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                 ? {
                       value: formatValue(name, fromCv.value, options) ?? "",
                       quote: fromCv.quote,
+                      source: fromCv.source,
                       onUse: () => takeCvValue(name),
                   }
                 : undefined,
@@ -201,8 +221,8 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
             ? "Saving…"
             : saveState.kind === "error"
               ? saveState.message
-              : reviewing !== null && start.filled > 0 && JSON.stringify({ values, evidence }) === JSON.stringify({ values: start.values, evidence: start.evidence })
-                ? "Filled in from your CV, not saved yet"
+              : reviewing.length > 0 && start.filled > 0 && JSON.stringify({ values, evidence }) === JSON.stringify({ values: start.values, evidence: start.evidence })
+                ? "Filled in from your documents, not saved yet"
                 : dirty
                 ? "Unsaved changes"
                 : saveState.kind === "saved"
@@ -225,7 +245,8 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                 <div className={styles.layout}>
                     <CvBanner
                         cvName={cvName}
-                        found={initial.cv_suggestions ? initial.cv_suggestions.items.length : null}
+                        documents={initial.suggestions?.documents.map((d) => d.file_name) ?? []}
+                        found={initial.suggestions ? initial.suggestions.items.length : null}
                         filled={start.filled}
                         differing={Object.keys(start.differing).length}
                     />
@@ -240,17 +261,16 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     About you
                                 </h2>
                             </div>
+                            <div className={styles.groupFields}>
 
-                            <Field {...field("birth_date")}>
-                                <input
+                            <Field {...field("birth_date")} group>
+                                <DateParts
                                     id="field-birth_date"
-                                    type="date"
-                                    className={`${styles.input} ${styles.inputShort}`}
-                                    min="1900-01-01"
-                                    max={TODAY}
-                                    value={values.birth_date ?? ""}
-                                    onChange={(e) => set("birth_date", e.target.value || null)}
-                                    {...ariaFor("birth_date")}
+                                    value={values.birth_date ?? null}
+                                    onChange={(v) => set("birth_date", v)}
+                                    onIncomplete={setBirthIncomplete}
+                                    describedBy={ariaFor("birth_date")["aria-describedby"]}
+                                    invalid={Boolean(errors.birth_date)}
                                 />
                             </Field>
 
@@ -280,6 +300,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     ))}
                                 </select>
                             </Field>
+                            </div>
                         </section>
 
                         <section className={styles.group} aria-labelledby="group-practice">
@@ -291,6 +312,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     Practice
                                 </h2>
                             </div>
+                            <div className={styles.groupFields}>
 
                             <Field {...field("disciplines")} group>
                                 <MultiChoice
@@ -343,6 +365,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     onChange={(v) => set("applicant_type", v)}
                                 />
                             </Field>
+                            </div>
                         </section>
 
                         <section className={styles.group} aria-labelledby="group-education">
@@ -354,6 +377,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     Education
                                 </h2>
                             </div>
+                            <div className={styles.groupFields}>
 
                             <Field {...field("has_degree")} group>
                                 <SingleChoice
@@ -419,6 +443,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     onChange={(v) => set("currently_enrolled", v)}
                                 />
                             </Field>
+                            </div>
                         </section>
                     </form>
                 </div>

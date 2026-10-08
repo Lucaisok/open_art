@@ -212,18 +212,6 @@ export interface components {
             /** File */
             file: string;
         };
-        /** CvSuggestions */
-        CvSuggestions: {
-            /**
-             * Document Id
-             * Format: uuid
-             */
-            document_id: string;
-            /** File Name */
-            file_name: string;
-            /** Items */
-            items: components["schemas"]["Suggestion"][];
-        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
@@ -248,12 +236,21 @@ export interface components {
              */
             uploaded_at: string;
         };
+        /** DocumentSuggestions */
+        DocumentSuggestions: {
+            /** Documents */
+            documents: components["schemas"]["SourceDocument"][];
+            /** Items */
+            items: components["schemas"]["Suggestion"][];
+        };
         /** Evidence */
         Evidence: {
             /** Quote */
             quote: string;
             /** Citation */
             citation: string;
+            /** Source */
+            source?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -303,8 +300,11 @@ export interface components {
             evidence: {
                 [key: string]: components["schemas"]["Evidence"];
             };
-            /** Reviewed Document Id */
-            reviewed_document_id?: string | null;
+            /**
+             * Reviewed Documents
+             * @default []
+             */
+            reviewed_documents: string[];
         };
         /** ProfileOut */
         ProfileOut: {
@@ -318,7 +318,7 @@ export interface components {
             };
             /** Updated At */
             updated_at?: string | null;
-            cv_suggestions?: components["schemas"]["CvSuggestions"] | null;
+            suggestions?: components["schemas"]["DocumentSuggestions"] | null;
         };
         /**
          * ProfileValues
@@ -365,6 +365,18 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** SourceDocument */
+        SourceDocument: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** File Name */
+            file_name: string;
+        };
         /** Suggestion */
         Suggestion: {
             /** Field */
@@ -377,6 +389,8 @@ export interface components {
             citation: string;
             /** Note */
             note?: string | null;
+            /** Source */
+            source: string;
         };
         /** UserOut */
         UserOut: {
