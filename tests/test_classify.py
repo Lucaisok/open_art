@@ -14,26 +14,44 @@ def classifier():
 
 
 def test_reproduces_the_notebook(classifier):
-    """Same 4 sentences and results as the sanity check in
-    notebooks/eligibility_classifier.ipynb (cell 30). If these differ, the
-    product is not using the model the notebook evaluated."""
+    """Same 4 sentences and results as the sanity check at the end of
+    notebooks/eligibility_multilabel.ipynb. If these differ, the product is
+    not using the model the notebook evaluated."""
+    senegal = ("Applicants must be over 18 years of age , be proficient in French or English, and reside in "
+               "South Africa, Benin, Cameroon, Ghana, Guinea, Kenya, Mali, Mozambique, Uganda, the Republic of "
+               "the Congo, Rwanda or Senegal.")
     expected = [
-        ("Applicants must be resident in Scotland.", "RESIDENCE", 0.99),
-        ("The residency is open to artists under the age of 35.", "AGE", 0.90),
-        ("We welcome applications from painters, sculptors and printmakers.", "DISCIPLINE", 0.59),
-        ("The selected artist will present their work at the end of the residency.", "OTHER_ELIGIBILITY", 0.37),
+        ("Applicants must be resident in Scotland.", ["RESIDENCE"], {"RESIDENCE": 0.99}),
+        ("The residency is open to artists under the age of 35.", ["AGE"], {"AGE": 1.0}),
+        # the production sentence the single-label model read as AGE only
+        (senegal, ["AGE", "RESIDENCE", "OTHER_ELIGIBILITY"], {"AGE": 0.99, "RESIDENCE": 0.96}),
+        # a known false positive (an obligation after selection, not a requirement): kept as a reference
+        ("The selected artist will present their work at the end of the residency.", ["OTHER_ELIGIBILITY"],
+         {"OTHER_ELIGIBILITY": 0.76}),
     ]
     predictions = classifier.predict([text for text, _, _ in expected])
-    for (text, label, confidence), prediction in zip(expected, predictions):
-        assert prediction.label == label, text
-        assert round(prediction.confidence, 2) == confidence, text
+    for (text, labels, probabilities), prediction in zip(expected, predictions):
+        assert prediction.labels == labels, text
+        for label, p in probabilities.items():
+            assert round(prediction.probabilities[label], 2) == p, (text, label)
 
 
-def test_probabilities_cover_every_class(classifier):
+def test_no_label_means_none(classifier):
+    [prediction] = classifier.predict(["The residency lasts three months and includes a studio."])
+    assert prediction.labels == [] and prediction.label == "NONE"
+    assert max(prediction.probabilities.values()) < 0.5
+
+
+def test_probabilities_cover_every_requirement_label(classifier):
     [prediction] = classifier.predict(["Applicants must be under 35."])
     assert set(prediction.probabilities) == set(classifier.metadata["labels"])
-    assert sum(prediction.probabilities.values()) == pytest.approx(1.0)
-    assert prediction.confidence == max(prediction.probabilities.values())
+    assert "NONE" not in prediction.probabilities
+    assert prediction.label == "AGE" and prediction.labels[0] == "AGE"
+    # labels are the ones at or above their threshold, most probable first
+    fired = [l for l, p in prediction.probabilities.items() if p >= classifier.thresholds[l]]
+    assert sorted(fired) == sorted(prediction.labels)
+    assert [prediction.probabilities[l] for l in prediction.labels] == sorted(
+        (prediction.probabilities[l] for l in prediction.labels), reverse=True)
 
 
 def test_results_come_back_in_input_order(classifier):
@@ -46,8 +64,9 @@ def test_results_come_back_in_input_order(classifier):
     ]
     together = classifier.predict(texts)
     one_by_one = [classifier.predict([text])[0] for text in texts]
-    assert [p.label for p in together] == [p.label for p in one_by_one]
-    assert [p.confidence for p in together] == pytest.approx([p.confidence for p in one_by_one])
+    assert [p.labels for p in together] == [p.labels for p in one_by_one]
+    for a, b in zip(together, one_by_one):
+        assert a.probabilities == pytest.approx(b.probabilities)
 
 
 def test_empty_input(classifier):

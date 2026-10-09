@@ -208,9 +208,53 @@
   background-color: var(--color-lime);
 }
 
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 24px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-ink);
+  list-style: none;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tallyItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .checks {
   list-style: none;
 }
+
+/* one row per requirement the sentence states */
+.requirements {
+  list-style: none;
+  margin-top: 10px;
+}
+
+.requirement {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.requirement > .groupIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.requirementTitle {
+  font-size: 15px;
+  font-weight: 800;
+}
+
 
 .check {
   padding: 14px 0;
@@ -225,9 +269,7 @@
 }
 
 .reason {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
+  margin-top: 2px;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.45;

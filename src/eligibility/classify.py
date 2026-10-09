@@ -1,14 +1,23 @@
 """
 OpenArt — load the RQ1 eligibility classifier and label sentence chunks.
 
-The model is the one exported by notebooks/eligibility_classifier.ipynb:
-a Logistic Regression that reads 768-number sentence embeddings. Text goes
-through two steps: fastembed turns each chunk into a vector, then the
-classifier turns the vector into class probabilities.
+The model is the one exported by notebooks/eligibility_multilabel.ipynb: a
+one-vs-rest Logistic Regression that reads 768-number sentence embeddings,
+one binary model per requirement label. Text goes through two steps:
+fastembed turns each chunk into a vector, then each label's model gives the
+probability that the sentence states a requirement of that type. A label is
+predicted when its probability reaches that label's threshold (tuned in the
+notebook), so one sentence can carry several labels:
 
     clf = EligibilityClassifier()
-    clf.predict(["Applicants must be resident in Scotland."])
-    -> [Prediction(label="RESIDENCE", confidence=0.99, probabilities={...})]
+    clf.predict(["Applicants must be over 18 and reside in Senegal."])
+    -> [Prediction(labels=["RESIDENCE", "AGE"], probabilities={"AGE": 0.93, "RESIDENCE": 0.97, ...})]
+
+No label above its threshold means NONE (labels == []). The single-label
+model of notebooks/eligibility_classifier.ipynb (artifacts/eligibility_classifier.*)
+is kept as the RQ1 part-1 reference but no longer used by the product: it
+had to pick one label per sentence and lost the others (workflow.MD,
+"Multi-label classification").
 """
 
 import json
@@ -21,8 +30,8 @@ import numpy as np
 from fastembed import TextEmbedding
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MODEL_PATH = os.path.join(REPO_ROOT, "artifacts", "eligibility_classifier.joblib")
-META_PATH = os.path.join(REPO_ROOT, "artifacts", "eligibility_classifier.json")
+MODEL_PATH = os.path.join(REPO_ROOT, "artifacts", "eligibility_classifier_multilabel.joblib")
+META_PATH = os.path.join(REPO_ROOT, "artifacts", "eligibility_classifier_multilabel.json")
 
 # same persistent cache as the notebook: fastembed's default is the system temp
 # dir, which macOS clears, forcing a ~0.2 GB re-download
@@ -39,9 +48,15 @@ EMBEDDING_BATCH_SIZE = 8
 
 @dataclass
 class Prediction:
-    label: str                       # most likely class, e.g. "AGE"
-    confidence: float                # its probability, 0-1
-    probabilities: dict[str, float]  # every class -> probability (sums to 1)
+    labels: list[str]                # requirement labels at or above their threshold, most probable
+                                     # first, e.g. ["RESIDENCE", "AGE"]; [] = NONE
+    probabilities: dict[str, float]  # every requirement label -> its own probability, 0-1. Each comes
+                                     # from a separate binary model, so they do NOT sum to 1
+
+    @property
+    def label(self) -> str:
+        """The most probable predicted label, or NONE."""
+        return self.labels[0] if self.labels else "NONE"
 
 
 class EligibilityClassifier:
@@ -53,7 +68,9 @@ class EligibilityClassifier:
         # joblib files are pickles, which can run code when loaded: only ever
         # load our own artifact, never a file from an untrusted source
         self.model = joblib.load(model_path)
-        self.labels = list(self.model.classes_)
+        # predict_proba's column order, and each label's threshold
+        self.labels = self.metadata["labels"]
+        self.thresholds = self.metadata["thresholds"]
 
         # the classifier is only meaningful on vectors from the SAME embedding
         # model it was trained on, which the metadata records
@@ -70,7 +87,7 @@ class EligibilityClassifier:
                 raise RuntimeError(
                     f"{package} {installed} is installed but the eligibility classifier was "
                     f"trained with {trained_with}: re-export the model from "
-                    f"notebooks/eligibility_classifier.ipynb, or install {package}=={trained_with}"
+                    f"notebooks/eligibility_multilabel.ipynb, or install {package}=={trained_with}"
                 )
 
     def embed(self, texts: list[str]) -> np.ndarray:
@@ -99,10 +116,10 @@ class EligibilityClassifier:
 
         predictions = []
         for row in self.model.predict_proba(vectors):
-            best = int(row.argmax())
+            probabilities = {label: float(p) for label, p in zip(self.labels, row)}
+            fired = [label for label, p in probabilities.items() if p >= self.thresholds[label]]
             predictions.append(Prediction(
-                label=self.labels[best],
-                confidence=float(row[best]),
-                probabilities={label: float(p) for label, p in zip(self.labels, row)},
+                labels=sorted(fired, key=lambda label: -probabilities[label]),
+                probabilities=probabilities,
             ))
         return predictions

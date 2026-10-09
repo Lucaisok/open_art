@@ -34,7 +34,7 @@ import pandas as pd
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(REPO_ROOT)
 
-from src.eligibility.engine import REJECT_CLASSES, EligibilityEngine  # noqa: E402
+from src.eligibility.engine import REJECT_CLASSES, EligibilityEngine, find_review  # noqa: E402
 from src.eligibility.profile import ArtistProfile  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
 
@@ -98,7 +98,7 @@ def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedO
     The split uses the inputs (sentences + reviews), never a verdict."""
     def can_reject(opp_id: str) -> bool:
         for chunk in engine.chunks_by_opportunity.get(opp_id, []):
-            review = engine.reviews.get(chunk.text)
+            review = find_review(engine.reviews, chunk.text, chunk.label)
             if chunk.label in REJECT_CLASSES and review and review.decision in ("confirm", "fix"):
                 return True
         return False

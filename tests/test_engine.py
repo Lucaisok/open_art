@@ -27,8 +27,8 @@ def chunk(index, text, label, polarity="REQUIRES", confidence=0.95, **extra) -> 
                            model_trained_on="test", **extra)
 
 
-def reviewed(text, label, value, polarity="REQUIRES", decision="confirm") -> tuple[str, Review]:
-    return text, Review(label=label, decision=decision, polarity=polarity, value=value, reason=None)
+def reviewed(text, label, value, polarity="REQUIRES", decision="confirm") -> tuple[tuple[str, str], Review]:
+    return (text, label), Review(label=label, decision=decision, polarity=polarity, value=value, reason=None)
 
 
 def run(profile, chunks, reviews=(), deadline=None):
@@ -76,7 +76,7 @@ def test_safety_net_sentence_is_a_check():
                     suspected_label="RESIDENCE", safety_net_reason='keyword "based in"')
     verdict = run(BELGIAN, [flagged])
     assert verdict.status == "CHECK"
-    assert verdict.items[0].label == "RESIDENCE" and 'keyword "based in"' in verdict.items[0].reason
+    assert verdict.items[0].label == "RESIDENCE" and verdict.items[0].check_kind == "safety_net"
 
 
 @pytest.mark.parametrize("label", ["DISCIPLINE", "CAREER_STAGE", "EDUCATION", "PRIOR_FUNDING", "OTHER_ELIGIBILITY"])
@@ -90,7 +90,7 @@ def test_check_only_classes_never_reject(label):
 
 def test_unreviewed_sentence_is_a_check():
     verdict = run(BELGIAN, [chunk(0, "Applicants must be based in Norway.", "RESIDENCE")])
-    assert verdict.status == "CHECK" and "not reviewed" in verdict.items[0].reason
+    assert verdict.status == "CHECK" and verdict.items[0].check_kind == "not_reviewed"
 
 
 def test_dropped_review_is_a_check():
@@ -102,10 +102,20 @@ def test_dropped_review_is_a_check():
 
 def test_review_for_a_different_label_does_not_count():
     # the model was retrained and now labels the sentence differently: the review no longer applies
-    text = "Open to artists living in Norway."
-    verdict = run(ArtistProfile(residence_country="BE"), [chunk(0, text, "NATIONALITY")],
-                  [reviewed(text, "RESIDENCE", {"countries": ["NO"]})])
-    assert verdict.status == "CHECK"
+    text = "Open to students under 30."
+    verdict = run(BELGIAN, [chunk(0, text, "STUDENT_STATUS")], [reviewed(text, "AGE", {"max_age": 29})])
+    assert verdict.status == "CHECK" and verdict.items[0].check_kind == "not_reviewed"
+
+
+def test_geo_review_counts_under_either_geo_label():
+    # "citizenship or residence" sentences keep one of the two geo labels (src/eligibility/readings.py);
+    # the review, written under the other one, still applies, with its own label
+    text = "Austrian citizenship or permanent residence in Austria."
+    review = reviewed(text, "RESIDENCE", {"countries": ["AT"], "nationality_or_residence": True})
+    verdict = run(ArtistProfile(nationalities=["AT"], residence_country="BE"), [chunk(0, text, "NATIONALITY")], [review])
+    assert verdict.status == "ELIGIBLE" and verdict.items[0].label == "RESIDENCE"
+    verdict = run(BELGIAN, [chunk(0, text, "NATIONALITY")], [review])
+    assert verdict.status == "LIKELY_NOT_ELIGIBLE"
 
 
 def test_reviewed_sentence_rejects_whatever_the_confidence():
@@ -230,7 +240,7 @@ def test_missing_profile_field_is_a_check_never_a_reject(label, value, polarity)
 def test_empty_profile_is_never_rejected_by_any_reviewed_sentence():
     # every real review row, one sentence at a time: with nothing in the profile, none may reject
     reviews = load_reviews()
-    chunks = [chunk(i, text, review.label) for i, (text, review) in enumerate(reviews.items())]
+    chunks = [chunk(i, text, review.label) for i, ((text, _), review) in enumerate(reviews.items())]
     for c in chunks:
         verdict = run(EMPTY, [c], reviews)
         assert verdict.status != "LIKELY_NOT_ELIGIBLE", c.text
@@ -349,6 +359,53 @@ def test_profile_normalizes_and_validates_countries():
         ArtistProfile(disciplines=["Painting"])            # not a canonical discipline
 
 
+# -- one sentence, several requirements (multi-label) -----------------------------------------------------
+
+SENEGAL = "Applicants must be over 18 years of age and reside in Senegal."
+
+
+def test_each_requirement_of_a_sentence_is_checked():
+    # the production case behind the multi-label model: age passes, residence fails, so the call fails
+    chunks = [chunk(0, SENEGAL, "RESIDENCE"), chunk(0, SENEGAL, "AGE")]
+    reviews = [reviewed(SENEGAL, "RESIDENCE", {"countries": ["SN"]}), reviewed(SENEGAL, "AGE", {"min_age": 18})]
+    verdict = run(BELGIAN, chunks, reviews)
+    assert verdict.status == "LIKELY_NOT_ELIGIBLE"
+    assert {(i.label, i.outcome) for i in verdict.items} == {("RESIDENCE", "FAIL"), ("AGE", "PASS")}
+    assert run(ArtistProfile(birth_date=date(1990, 1, 1), residence_country="SN"), chunks, reviews).status == "ELIGIBLE"
+
+
+def test_a_second_requirement_without_review_is_a_check():
+    # the sentence was reviewed as AGE only (before multi-label): its residence must not be skipped
+    chunks = [chunk(0, SENEGAL, "RESIDENCE"), chunk(0, SENEGAL, "AGE")]
+    verdict = run(BELGIAN, chunks, [reviewed(SENEGAL, "AGE", {"min_age": 18})])
+    assert verdict.status == "CHECK"
+    residence = next(i for i in verdict.items if i.label == "RESIDENCE")
+    assert residence.outcome == "CHECK" and residence.check_kind == "not_reviewed"
+
+
+def test_labels_of_one_sentence_never_form_an_or_group():
+    # applicant type and residence of one sentence are both required, not alternatives
+    text = "Organisations based in Wales."
+    chunks = [chunk(0, text, "APPLICANT_TYPE"), chunk(0, text, "RESIDENCE")]
+    reviews = [reviewed(text, "APPLICANT_TYPE", {"types": ["organisation"]}),
+               reviewed(text, "RESIDENCE", {"countries": ["GB"]})]
+    verdict = run(ArtistProfile(applicant_type="organisation", residence_country="BE"), chunks, reviews)
+    assert verdict.status == "LIKELY_NOT_ELIGIBLE" and all(i.group is None for i in verdict.items)
+
+
+def test_another_label_does_not_break_an_or_group():
+    # "• Citizens of Austria • Over 18 and residents of Austria": the two geo sentences stay an OR group
+    second = "Over 18 and residents of Austria."
+    chunks = [chunk(0, "Citizens of Austria", "NATIONALITY"), chunk(1, second, "RESIDENCE"), chunk(1, second, "AGE")]
+    reviews = [reviewed("Citizens of Austria", "NATIONALITY", {"countries": ["AT"]}),
+               reviewed(second, "RESIDENCE", {"countries": ["AT"]}), reviewed(second, "AGE", {"min_age": 18})]
+    verdict = run(ArtistProfile(birth_date=date(1990, 1, 1), nationalities=["AT"], residence_country="BE"),
+                  chunks, reviews)
+    geo = [i for i in verdict.items if i.label in ("NATIONALITY", "RESIDENCE")]
+    assert geo[0].group is not None and geo[0].group == geo[1].group and geo[0].group_outcome == "PASS"
+    assert verdict.status == "ELIGIBLE"
+
+
 # -- loading the two files --------------------------------------------------------------------------------
 
 def test_engine_reads_the_files(tmp_path):
@@ -371,3 +428,13 @@ def test_engine_reads_the_files(tmp_path):
     assert engine.evaluate(ArtistProfile(residence_country="BE"), opportunity("opp")).status == "ELIGIBLE"
     # a call that was never classified is not silently ELIGIBLE
     assert engine.evaluate(BELGIAN, opportunity("unknown")).status == "CHECK"
+
+
+def test_a_discipline_that_does_not_match_says_what_is_asked():
+    # never a FAIL, but the CHECK tells the artist what the sentence asks for and what their profile says
+    painter = ArtistProfile(disciplines=["Visual Arts"])
+    [item] = run(painter, [chunk(0, "Open to musicians and dancers.", "DISCIPLINE")]).items
+    assert item.outcome == "CHECK"
+    assert item.reason.startswith('asks for Music ("musicians"), Dance ("dancers"); your disciplines: Visual Arts')
+    [item] = run(painter, [chunk(0, "Applicants must work in the field of social innovation.", "DISCIPLINE")]).items
+    assert "can't match to a discipline" in item.reason

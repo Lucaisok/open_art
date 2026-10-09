@@ -263,13 +263,6 @@ export interface components {
             /** File */
             file: string;
         };
-        /** CheckOut */
-        CheckOut: {
-            /** Quote */
-            quote: string;
-            /** Reason */
-            reason: string;
-        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
@@ -452,6 +445,18 @@ export interface components {
             /** Degree Field */
             degree_field?: string | null;
         };
+        /** RequirementOut */
+        RequirementOut: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "FAIL" | "CHECK" | "PASS";
+            /** Topic */
+            topic: string;
+            /** Reason */
+            reason: string;
+        };
         /** ResultOut */
         ResultOut: {
             /** Id */
@@ -530,6 +535,13 @@ export interface components {
             /** Profile Filled */
             profile_filled: boolean;
         };
+        /** SentenceOut */
+        SentenceOut: {
+            /** Quote */
+            quote: string;
+            /** Requirements */
+            requirements: components["schemas"]["RequirementOut"][];
+        };
         /** SignupIn */
         SignupIn: {
             /**
@@ -605,11 +617,13 @@ export interface components {
             /** Summary */
             summary: string;
             /** Fails */
-            fails: components["schemas"]["CheckOut"][];
+            fails: number;
             /** Checks */
-            checks: components["schemas"]["CheckOut"][];
+            checks: number;
             /** Passes */
-            passes: components["schemas"]["CheckOut"][];
+            passes: number;
+            /** Sentences */
+            sentences: components["schemas"]["SentenceOut"][];
         };
     };
     responses: never;

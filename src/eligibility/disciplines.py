@@ -73,3 +73,16 @@ def discipline_match(text: str, disciplines: list[str]) -> tuple[str, str] | Non
             if canonical in _TERM_RES and (found := _TERM_RES[canonical].search(text)):
                 return discipline, found.group(0)
     return None
+
+
+def disciplines_named(text: str) -> list[tuple[str, str]]:
+    """Every discipline the sentence names: (canonical discipline, the words that named it).
+    Used to explain a discipline sentence that doesn't match the artist (the engine's CHECK reason)."""
+    return [(canonical, found.group(0)) for canonical, term_re in _TERM_RES.items()
+            if (found := term_re.search(text))]
+
+
+def narrowing_word(text: str) -> str | None:
+    """The role or venue word that narrows the sentence ("translators", "festivals"), if any."""
+    found = NARROWING_RE.search(text)
+    return found.group(0) if found else None

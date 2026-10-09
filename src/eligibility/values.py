@@ -173,8 +173,9 @@ def parse_countries(text: str, label: str = "RESIDENCE") -> dict | None:
         countries.add(NAME_TO_COUNTRY[found.group(0).lower()])
 
     # a vague region next to the countries ("from Ukraine and across Europe")
-    # means the list is incomplete: rejecting on it could exclude eligible people
-    if not countries or VAGUE_REGION_RE.search(rest):
+    # means the list is incomplete: rejecting on it could exclude eligible people.
+    # Country names are blanked first, so "South Africa" isn't read as vague "Africa"
+    if not countries or VAGUE_REGION_RE.search(COUNTRY_RE.sub(" ", rest)):
         return None
     value = {"countries": sorted(countries)}
     if NATIONALITY_CUE_RE.search(text) and RESIDENCE_CUE_RE.search(text):

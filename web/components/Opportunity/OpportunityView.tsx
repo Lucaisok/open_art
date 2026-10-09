@@ -6,19 +6,22 @@ import BackToResults from "./BackToResults";
 import DraftButton from "./DraftButton";
 import styles from "./OpportunityView.module.css";
 
-type Check = Opportunity["verdict"]["checks"][number];
+type Sentence = Opportunity["verdict"]["sentences"][number];
+type Requirement = Sentence["requirements"][number];
 
-// The verdict's sentences, worst first, each group only if it has any (design: DISCOVER.md →
-// "Can you apply?"). Icon + words for every group, never colour alone.
-const GROUPS: { key: "fails" | "checks" | "passes"; title: string; icon: string; look: string }[] = [
-    { key: "fails", title: "Doesn't pass", icon: "✕", look: styles.iconFail },
-    { key: "checks", title: "To check", icon: "○", look: styles.iconCheck },
-    { key: "passes", title: "Passes", icon: "✓", look: styles.iconPass },
-];
+// What each outcome looks like (design: DISCOVER.md → "Can you apply?"). Icon + words for every
+// outcome, never colour alone. Listed in display order: failures (only if any), then passes, then
+// checks; the API sorts the sentences and their rows the same way.
+const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "passes"; title: string; icon: string; look: string }> = {
+    FAIL: { count: "fails", title: "Doesn't pass", icon: "✕", look: styles.iconFail },
+    PASS: { count: "passes", title: "Passes", icon: "✓", look: styles.iconPass },
+    CHECK: { count: "checks", title: "To check", icon: "○", look: styles.iconCheck },
+};
 
 // One call (design: DISCOVER.md → Opportunity): facts and description on the left, "Can you
-// apply?" on the right, every eligibility sentence quoted verbatim with what it means for the
-// artist. Rendered on the server; only "Back to results" and the draft placeholder run in the browser.
+// apply?" on the right, every eligibility sentence quoted verbatim once, with each requirement it
+// states and what that means for the artist (a sentence can state several: "over 18 ... and reside
+// in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results" and the draft placeholder run in the browser.
 const OpportunityView = ({ call }: { call: Opportunity }) => {
     const place = placeLabel(call.city, call.countries);
     const facts = [
@@ -74,32 +77,54 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                     </h2>
                     <div className={styles.verdict}>
                         <VerdictBadge status={call.verdict.status} large />
-                        <p className={styles.summary}>{call.verdict.summary}</p>
+                        {/* "Likely not eligible: <quote> (<reason>)" only repeats the badge and the ✕ row
+                            below; the other summaries add something (how many checks, no rules found) */}
+                        {call.verdict.status !== "LIKELY_NOT_ELIGIBLE" && (
+                            <p className={styles.summary}>{call.verdict.summary}</p>
+                        )}
                     </div>
 
-                    {GROUPS.filter((group) => call.verdict[group.key].length > 0).map((group) => (
-                        <div key={group.key} className={styles.group}>
-                            <h3 className={styles.groupTitle}>
-                                <span aria-hidden="true" className={`${styles.groupIcon} ${group.look}`}>
-                                    {group.icon}
-                                </span>
-                                <span>
-                                    {group.title} · {call.verdict[group.key].length}
-                                </span>
-                            </h3>
-                            <ul className={styles.checks}>
-                                {call.verdict[group.key].map((check: Check, i: number) => (
-                                    <li key={i} className={styles.check}>
-                                        <blockquote className={styles.quote}>“{check.quote}”</blockquote>
-                                        <p className={styles.reason}>
-                                            <span aria-hidden="true">→</span>
-                                            <span>{check.reason}</span>
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
+                    <ul className={styles.tally} aria-label="Requirements found">
+                        {Object.values(OUTCOMES)
+                            .filter((outcome) => call.verdict[outcome.count] > 0)
+                            .map((outcome) => (
+                                <li key={outcome.count} className={styles.tallyItem}>
+                                    <span aria-hidden="true" className={`${styles.groupIcon} ${outcome.look}`}>
+                                        {outcome.icon}
+                                    </span>
+                                    <span>
+                                        {outcome.title} · {call.verdict[outcome.count]}
+                                    </span>
+                                </li>
+                            ))}
+                    </ul>
+
+                    <ul className={styles.checks}>
+                        {call.verdict.sentences.map((sentence: Sentence, i: number) => (
+                            <li key={i} className={styles.check}>
+                                <blockquote className={styles.quote}>“{sentence.quote}”</blockquote>
+                                <ul className={styles.requirements}>
+                                    {sentence.requirements.map((requirement: Requirement, j: number) => {
+                                        const outcome = OUTCOMES[requirement.outcome];
+                                        return (
+                                            <li key={j} className={styles.requirement}>
+                                                <span aria-hidden="true" className={`${styles.groupIcon} ${outcome.look}`}>
+                                                    {outcome.icon}
+                                                </span>
+                                                <div>
+                                                    <p className={styles.requirementTitle}>
+                                                        {requirement.topic}
+                                                        <span className={styles.visuallyHidden}>: {outcome.title}</span>
+                                                    </p>
+                                                    <p className={styles.reason}>{requirement.reason}</p>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </li>
+                        ))}
+                    </ul>
 
                     <p className={styles.note}>
                         These checks use your saved profile and the call&apos;s own words. Always read the original

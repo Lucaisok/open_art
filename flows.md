@@ -337,6 +337,45 @@ estimate (0.701 ± 0.012 macro-F1, 11 classes; 0.747 on the original 9). The pro
 probabilities, so low-confidence labels can go to human review. Details:
 `workflow.MD`, "Final model artifact".
 
+### Round 4: one sentence, several requirements (2026-10-09)
+
+The model above gives each sentence **one** label. In the live app that
+lost requirements: "Applicants must be over 18 years of age, be
+proficient in French or English, and reside in South Africa, … or
+Senegal" came out as `AGE` only, so the residence rule was never
+checked. Training had hidden the problem: annotators split such
+sentences in two by hand, but the product classifies whole sentences.
+
+```mermaid
+flowchart LR
+    S["one sentence"] --> E["bge-base embedding"]
+    E --> B["10 yes/no models\n(one per requirement label)"]
+    B --> L["every label at p ≥ 0.5\ne.g. AGE + RESIDENCE + OTHER"]
+    L --> R["one constraint per label\n(own polarity + value)"]
+    R --> ENG["eligibility engine:\neach one checked"]
+```
+
+- **Data:** `eligibility_annotations_multilabel.csv`, 692 whole
+  sentences, 145 with two or more labels: split sentences rejoined,
+  second labels added where a sentence states another requirement, and
+  75 compound-looking sentences from the corpus
+  (`scripts/build_multilabel_dataset.py`).
+- **Model:** one-vs-rest Logistic Regression on the same bge-base
+  embeddings (`notebooks/eligibility_multilabel.ipynb`), chosen against
+  the single-label model and TF-IDF / SVM baselines on the same grouped
+  folds, 10 seeds.
+- **Result:** it misses **27% instead of 49%** of the requirements
+  stated, and finds **76% instead of 37%** of the labels of compound
+  sentences (micro-F1 0.715 vs 0.595). Per-label tuned thresholds were
+  tried and lost to a plain 0.5.
+- **In the engine:** each label of a sentence is its own check; a
+  nationality-or-residence pair stays one either/or requirement.
+- **On the call page:** the sentence is quoted once, followed by one
+  row per requirement (✕ Residence / ✓ Age / ○ Other conditions):
+  failures first, then passes, then checks. The
+  model file is `artifacts/eligibility_classifier_multilabel.*`; the
+  single-label one stays as the part-1 reference.
+
 ### Why the baseline scores low — known limitations
 
 The densest error cluster is `NONE` ↔ `DISCIPLINE`. Once the heading

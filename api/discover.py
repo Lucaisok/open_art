@@ -34,7 +34,7 @@ from api.auth import DB, CurrentUser
 from api.knowledge_base import PgKnowledgeBase, get_embedder
 from api.models import Document, Profile
 from api.profile import ProfileValues, to_artist_profile
-from src.eligibility.engine import Status, Verdict
+from src.eligibility.engine import TOPIC, Item, Status, Verdict
 from src.eligibility.profile import ArtistProfile
 from src.matching.filters import ANY_COUNTRY, NOT_FUNDING, MatchFilters, is_funded
 from src.matching.index import EMBEDDING_MODEL, OpportunityIndex, embed_query
@@ -187,17 +187,24 @@ def ranking_vector(db, user_id: uuid.UUID, matcher: Matcher) -> tuple[list[str],
 
 # -- one opportunity ---------------------------------------------------------------------------------
 
-class CheckOut(BaseModel):
-    quote: str                  # the call's own sentence, verbatim
+class RequirementOut(BaseModel):
+    outcome: Literal["FAIL", "CHECK", "PASS"]  # "Doesn't pass" / "To check" / "Passes"
+    topic: str                  # "Age", "Residence", ...
     reason: str
+
+
+class SentenceOut(BaseModel):
+    quote: str                  # the call's own sentence, verbatim, shown once
+    requirements: list[RequirementOut]  # one per requirement the sentence states (multi-label)
 
 
 class VerdictOut(BaseModel):
     status: Status
     summary: str
-    fails: list[CheckOut]       # "Doesn't pass"
-    checks: list[CheckOut]      # "To check"
-    passes: list[CheckOut]      # "Passes"
+    fails: int                  # how many rows don't pass / need a check / pass
+    checks: int
+    passes: int
+    sentences: list[SentenceOut]  # failing sentences first (if any), then passing, then to check
 
 
 class OpportunityOut(BaseModel):
@@ -250,15 +257,49 @@ def fee_label(o: ProcessedOpportunity) -> str:
     return f"{o.application_fee_currency or ''} {o.application_fee_amount_min:,.0f}".strip()
 
 
+def _outcome(item: Item) -> Literal["FAIL", "CHECK", "PASS"]:
+    """A sentence in an OR group ("citizens of X or residents of Y") counts as its group's outcome;
+    "no restriction" is shown as a pass."""
+    outcome = item.group_outcome or item.outcome
+    return "PASS" if outcome == "NO_RESTRICTION" else outcome
+
+
+# CHECK rows that only say "read it": several of them in one sentence become one row. The other kinds
+# (missing_profile_field, uncertain_match, narrower_set, discipline_mismatch) say something specific
+# about the artist, so they keep their own row.
+GENERIC_CHECKS = {"check_only_class", "safety_net", "not_reviewed", "unreadable", "dropped"}
+# passes on top; failures above everything when there are any (author, 2026-10-09)
+RANK = {"FAIL": 0, "PASS": 1, "CHECK": 2}
+
+
+def _rows(items: list[Item]) -> list[RequirementOut]:
+    """One row per requirement of a sentence, generic checks merged into one row."""
+    rows = [RequirementOut(outcome=_outcome(item), topic=TOPIC[item.label].capitalize(), reason=item.reason)
+            for item in items if not (_outcome(item) == "CHECK" and item.check_kind in GENERIC_CHECKS)]
+    generic = [item for item in items if _outcome(item) == "CHECK" and item.check_kind in GENERIC_CHECKS]
+    if len(generic) == 1:
+        rows.append(RequirementOut(outcome="CHECK", topic=TOPIC[generic[0].label].capitalize(),
+                                   reason=generic[0].reason))
+    elif generic:
+        topics = list(dict.fromkeys(TOPIC[item.label] for item in generic))
+        rows.append(RequirementOut(outcome="CHECK", topic=", ".join(topics).capitalize(),
+                                   reason="the app can't check this for you: read it and make sure you meet it"))
+    return sorted(rows, key=lambda row: RANK[row.outcome])
+
+
 def verdict_out(verdict: Verdict) -> VerdictOut:
-    """Every sentence the engine found, grouped by what it means for the artist. A sentence in an
-    OR group ("citizens of X or residents of Y") counts as its group's outcome."""
-    groups: dict[str, list[CheckOut]] = {"FAIL": [], "CHECK": [], "PASS": []}
-    for item in verdict.items:
-        outcome = item.group_outcome or item.outcome
-        groups["PASS" if outcome == "NO_RESTRICTION" else outcome].append(CheckOut(quote=item.text, reason=item.reason))
-    return VerdictOut(status=verdict.status, summary=verdict.summary,
-                      fails=groups["FAIL"], checks=groups["CHECK"], passes=groups["PASS"])
+    """Every sentence the engine found, quoted once, with each requirement it states and what it
+    means for the artist. A sentence can state several (multi-label: "over 18 ... and reside in
+    Senegal"), so the page shows the sentence once with a row per requirement, instead of repeating it."""
+    by_sentence: dict[str, list[Item]] = {}
+    for item in verdict.items:  # in call order
+        by_sentence.setdefault(item.chunk_id, []).append(item)
+
+    sentences = [SentenceOut(quote=items[0].text, requirements=_rows(items)) for items in by_sentence.values()]
+    sentences.sort(key=lambda sentence: RANK[sentence.requirements[0].outcome])  # stable: call order kept
+    outcomes = [row.outcome for sentence in sentences for row in sentence.requirements]
+    return VerdictOut(status=verdict.status, summary=verdict.summary, fails=outcomes.count("FAIL"),
+                      checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences)
 
 
 @router.get("/api/opportunities/{opportunity_id}")

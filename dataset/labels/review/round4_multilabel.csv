@@ -1,0 +1,56 @@
+chunk_id,labels,reason
+kulturdirektoratet_norway_424c960502a7_0,RESIDENCE|APPLICANT_TYPE,publishers = organisations only
+kulturdirektoratet_norway_4cf11f6d8269_0,RESIDENCE|APPLICANT_TYPE,publishers = organisations only
+kulturdirektoratet_norway_25c45f0fbcb7_1,RESIDENCE|APPLICANT_TYPE,publishers = organisations only
+mondriaan_fund_a939eddff305_0,CAREER_STAGE|DISCIPLINE,only visual artists; diploma clause stays a CAREER_STAGE definition (2026-09-24 rule)
+mondriaan_fund_e52bef22781c_5,CAREER_STAGE|DISCIPLINE,professional visual artist; diploma clause is a definition
+mondriaan_fund_bccb4029c0d9_2,CAREER_STAGE|DISCIPLINE,professional visual artist; diploma clause is a definition
+mondriaan_fund_ed1cd841c663_1,CAREER_STAGE|DISCIPLINE,professional visual artist; diploma clause is a definition
+mondriaan_fund_bccb4029c0d9_0,CAREER_STAGE|DISCIPLINE,"visual artists, 1-4 years of practice"
+mondriaan_fund_e52bef22781c_13,CAREER_STAGE|DISCIPLINE,curator/critic in visual art for 2+ years
+mondriaan_fund_3b86b5d4af2f_1,CAREER_STAGE|DISCIPLINE,curator in visual arts/heritage for 2+ years
+kunsten_be_flanders_217b1f327dad_1,STUDENT_STATUS|DISCIPLINE,as a musician
+kunsten_be_flanders_9b6a847d32f1_3,RESIDENCE|APPLICANT_TYPE,organisations from named regions
+national_culture_fund_bulgaria_8fca12fac738_1,RESIDENCE|APPLICANT_TYPE,private cultural organisations
+creative_ireland_b4833a165cef_0,RESIDENCE|APPLICANT_TYPE,local-authority teams
+kunsten_be_flanders_6f9b625b869d_4,CAREER_STAGE|APPLICANT_TYPE,organisation with legal entity status
+kunsten_be_flanders_2fa2a89c4a72_0,CAREER_STAGE|AGE,explicit age waiver
+arts_council_wales_d3407bbb0781_0,DISCIPLINE|APPLICANT_TYPE,individual artists only
+fpu_slovakia_7d1dec061d0c_0,DISCIPLINE|APPLICANT_TYPE|CAREER_STAGE,"theatre collectives, established"
+focuna_luxembourg_65e417572cdc_0,STUDENT_STATUS|AGE,explicit age waiver
+matadero_madrid_bc5ee263b8a9_0,AGE|APPLICANT_TYPE|EDUCATION|DISCIPLINE,individuals of legal age; explicit qualification and discipline waivers
+kunsten_be_flanders_2c5ed7b40a1d_2,CAREER_STAGE|AGE|EDUCATION,explicit age and academic-background waivers
+kunsten_be_flanders_a8b33f98769e_0,NATIONALITY|AGE,explicit nationality and age waivers
+kunsten_be_flanders_3aeeb0c33c84_6,RESIDENCE|NATIONALITY,link by residence or nationality (geo alternatives)
+mondriaan_fund_8e2af8800941_1,RESIDENCE|APPLICANT_TYPE,Dutch museum institutions
+mondriaan_fund_4518b4e5d09e_0,APPLICANT_TYPE|RESIDENCE,Dutch institutions: org descriptor -> RESIDENCE
+nordic_culture_point_9dc9950cca03_5,RESIDENCE|APPLICANT_TYPE,applicant organisation registered in the Nordic Region
+kunsten_be_flanders_29113af76b09_0,CAREER_STAGE|DISCIPLINE,early-career curators: the fused example of the 2026-09-24 entry
+dansateliers_rotterdam_33931cad7e6f_4,EDUCATION|DISCIPLINE,circus or dance trained
+rannis_iceland_a290c26886c6_0,CAREER_STAGE|DISCIPLINE|APPLICANT_TYPE,professional performing art groups
+kunsten_be_flanders_f3813b0a41ba_0,CAREER_STAGE|DISCIPLINE,young musicians
+kunsten_be_flanders_37a488364201_1,AGE|DISCIPLINE,musicians and ensembles
+kulturdirektoratet_norway_1b92a135ec95_2,APPLICANT_TYPE|DISCIPLINE,performing arts institutions
+kunsten_be_flanders_32c6d7691640_0,CAREER_STAGE|DISCIPLINE,emerging drag performers
+kulturdirektoratet_norway_25c45f0fbcb7_0,APPLICANT_TYPE|DISCIPLINE,publishers of fiction
+villa_arson_42e994c13603_0,AGE|DISCIPLINE,"dancers, actors, musicians, circus artists, singers"
+kunsten_be_flanders_f8fe9857ed58_0,CAREER_STAGE|DISCIPLINE,emerging curators
+gasworks_london_356ae5fa0c20_0,CAREER_STAGE|DISCIPLINE,early-career curator
+kunsten_be_flanders_8a41d4765d67_0,CAREER_STAGE|DISCIPLINE,"visual artists, curators, researchers"
+villa_arson_b6ed4d23bced_2,CAREER_STAGE|DISCIPLINE,independent or emerging curators
+kunsten_be_flanders_ab2801ef4c6f_5,CAREER_STAGE|DISCIPLINE,emerging professional musician
+nordic_culture_point_99a3ce7db217_0,DISCIPLINE|CAREER_STAGE,professional artists
+dansateliers_rotterdam_33931cad7e6f_0,DISCIPLINE|CAREER_STAGE,experienced dancers
+kunststiftung_nrw_9fcfea3c0364_0,DISCIPLINE|CAREER_STAGE,"young visual artists, no age number"
+kulturdirektoratet_norway_0829c1124ca4_0,DISCIPLINE|CAREER_STAGE,professional music field
+kulturdirektoratet_norway_90a7593f042e_0,DISCIPLINE|APPLICANT_TYPE,"venues, institutions, organisers only"
+dgartes_portugal_65271b0a7854_1,DISCIPLINE|CAREER_STAGE,professional experience in the areas
+kulturdirektoratet_norway_e1b48f36972d_0,DISCIPLINE|CAREER_STAGE,professional musicians
+kulturdirektoratet_norway_e1b48f36972d_14,DISCIPLINE|CAREER_STAGE,professional actors in music
+kulturdirektoratet_norway_1b92a135ec95_0,DISCIPLINE|CAREER_STAGE|APPLICANT_TYPE,professional performing arts institutions
+kulturdirektoratet_norway_1b92a135ec95_1,DISCIPLINE|CAREER_STAGE|APPLICANT_TYPE,professional performing arts institutions
+kunsten_be_flanders_edb8c38ba1df_0,DISCIPLINE|CAREER_STAGE|RESIDENCE,"young, Europe-based"
+kunsten_be_flanders_edb8c38ba1df_1,DISCIPLINE|CAREER_STAGE|RESIDENCE,"young, European-based"
+kulturdirektoratet_norway_c2fe46c33b4d_0,DISCIPLINE|CAREER_STAGE,professional performing artist
+kunsten_be_flanders_78924c51339e_6,DISCIPLINE|CAREER_STAGE,established professional practice
+kunsten_be_flanders_78924c51339e_2,DISCIPLINE|CAREER_STAGE,established practice

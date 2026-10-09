@@ -1,8 +1,13 @@
-# one sentence chunk of an opportunity's requirements_text_en, as split by
-# src/eligibility/chunking.py and labeled by the RQ1 classifier
-# (src/eligibility/classify.py). Written by scripts/extract_constraints.py to
-# data/processed/eligibility_constraints.jsonl, one row per chunk, so every
-# verdict the engine gives can be traced back to the sentence it came from.
+# one (sentence, label) pair of an opportunity's requirements_text_en: the
+# sentence as split by src/eligibility/chunking.py, the label from the RQ1
+# multi-label classifier (src/eligibility/classify.py). Written by
+# scripts/extract_constraints.py to data/processed/eligibility_constraints.jsonl,
+# so every verdict the engine gives can be traced back to the sentence it came from.
+#
+# A sentence stating two requirements ("over 18 ... and reside in Senegal")
+# gives TWO rows, same chunk_id / chunk_index / text, one per label, each with
+# its own polarity and value: the engine checks each one. A sentence with no
+# requirement gives one NONE row, and so does a bare heading (label None).
 from pydantic import BaseModel
 
 
@@ -17,9 +22,12 @@ class ClassifiedChunk(BaseModel):
     heading: str | None = None  # nearest bare heading above this chunk, if any
 
     # classifier output; all None for a heading
-    label: str | None = None                       # e.g. "AGE", "NONE"
-    confidence: float | None = None                # probability of `label`, 0-1
-    probabilities: dict[str, float] | None = None  # every class -> probability
+    label: str | None = None                       # this row's label, e.g. "AGE", or "NONE"
+    # probability of `label`, 0-1; on a NONE row, 1 - the highest requirement probability
+    confidence: float | None = None
+    # every requirement label -> its own probability (one-vs-rest: they don't sum to 1)
+    probabilities: dict[str, float] | None = None
+    sentence_labels: list[str] | None = None       # every label of the sentence, e.g. ["RESIDENCE", "AGE"]
 
     # safety net (src/eligibility/safety_net.py): set only on NONE chunks that
     # may be a requirement after all; the engine shows them as CHECK items
@@ -35,4 +43,4 @@ class ClassifiedChunk(BaseModel):
     # waives the criterion, or the parser wasn't sure
     value: dict | None = None
 
-    model_trained_on: str  # eligibility_classifier.json "trained_on", to know which model labeled this
+    model_trained_on: str  # eligibility_classifier_multilabel.json "trained_on", to know which model labeled this

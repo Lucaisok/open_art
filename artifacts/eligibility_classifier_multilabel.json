@@ -1,0 +1,66 @@
+{
+  "task": "RQ1 multi-label eligibility classification of requirements_text_en sentences",
+  "embedding_model": "BAAI/bge-base-en-v1.5",
+  "embedding_dim": 768,
+  "classifier": "OneVsRestClassifier(LogisticRegression)",
+  "params": {
+    "C": 100
+  },
+  "class_weight": "balanced",
+  "labels": [
+    "RESIDENCE",
+    "NATIONALITY",
+    "AGE",
+    "DISCIPLINE",
+    "CAREER_STAGE",
+    "EDUCATION",
+    "STUDENT_STATUS",
+    "APPLICANT_TYPE",
+    "PRIOR_FUNDING",
+    "OTHER_ELIGIBILITY"
+  ],
+  "thresholds": {
+    "RESIDENCE": 0.5,
+    "NATIONALITY": 0.5,
+    "AGE": 0.5,
+    "DISCIPLINE": 0.5,
+    "CAREER_STAGE": 0.5,
+    "EDUCATION": 0.5,
+    "STUDENT_STATUS": 0.5,
+    "APPLICANT_TYPE": 0.5,
+    "PRIOR_FUNDING": 0.5,
+    "OTHER_ELIGIBILITY": 0.5
+  },
+  "n_train_chunks": 692,
+  "n_multilabel_chunks": 145,
+  "n_train_opportunities": 273,
+  "training_data": "dataset/labels/eligibility_annotations_multilabel.csv",
+  "cv": "5-fold StratifiedGroupKFold by opportunity_id (stratified on the first label), 10 seeds",
+  "cv_10_seeds": {
+    "micro_f1": {
+      "mean": 0.7148,
+      "std": 0.0046
+    },
+    "macro_f1": {
+      "mean": 0.6812,
+      "std": 0.0068
+    },
+    "subset_acc": {
+      "mean": 0.589,
+      "std": 0.0083
+    },
+    "missed": {
+      "mean": 0.2702,
+      "std": 0.0044
+    },
+    "compound_recall": {
+      "mean": 0.7547,
+      "std": 0.0067
+    }
+  },
+  "trained_on": "2026-10-09",
+  "versions": {
+    "scikit-learn": "1.9.1",
+    "fastembed": "0.8.1"
+  }
+}

@@ -174,10 +174,12 @@ def test_opportunity_page(artist):
     assert body["funding"] == "EUR 1,300 per month + accommodation/housing" and body["funded"] is True
     assert body["fee"] == "None"
     verdict = body["verdict"]
-    assert [c["quote"] for c in verdict["checks"]] == ["Applicants must be under 35."]
-    # a no-restriction sentence passes; a failing sentence in an OR group that passes, passes
-    assert [c["quote"] for c in verdict["passes"]] == ["Open to all nationalities.", "Citizens of Austria"]
-    assert verdict["fails"] == []
+    assert (verdict["fails"], verdict["checks"], verdict["passes"]) == (0, 1, 2)
+    # passes on top when nothing fails; a no-restriction sentence passes; a failing sentence in an OR
+    # group that passes, passes
+    outcomes = [(s["quote"], [r["outcome"] for r in s["requirements"]]) for s in verdict["sentences"]]
+    assert outcomes == [("Open to all nationalities.", ["PASS"]), ("Citizens of Austria", ["PASS"]),
+                        ("Applicants must be under 35.", ["CHECK"])]
 
 
 def test_funding_label_puts_support_first():

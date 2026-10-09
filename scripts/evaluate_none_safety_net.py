@@ -14,10 +14,15 @@ using two plain, deterministic rules:
                        probability >= t -> CHECK (the model was torn)
 
 To measure them honestly the classifier must label sentences it was NOT
-trained on, so this uses cross-validation on the 696 labeled chunks, with the
+trained on, so this uses cross-validation on the labeled sentences, with the
 same model and the same fold scheme as the notebook (5-fold
 StratifiedGroupKFold by opportunity), repeated over 10 fold seeds because the
-counts are small. For each rule it reports:
+counts are small.
+
+Since 2026-10-09 the model is multi-label (notebooks/eligibility_multilabel.ipynb):
+a sentence is NONE when no label reaches its threshold, and the "runner-up" is
+simply the highest label probability. The thresholds are the shipped ones,
+picked on out-of-fold probabilities of the same data, a small optimistic bias. For each rule it reports:
 
   caught       real requirements labeled NONE that the rule turns into CHECK
   false alarms real NONE sentences the rule turns into CHECK
@@ -46,26 +51,26 @@ from src.eligibility.classify import EligibilityClassifier  # noqa: E402
 # the cues live in src/ so the measured rule is exactly the shipped one
 from src.eligibility.safety_net import KEYWORD_CUES, keyword_hits  # noqa: E402
 
-LABELS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_annotations.csv")
+LABELS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_annotations_multilabel.csv")
 CORPUS_CHUNKS_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
 
 SEEDS = range(10)
 RUNNER_UP_THRESHOLDS = [0.2, 0.3, 0.4]
 
 def runner_up(probabilities: np.ndarray, labels: list[str]) -> float:
-    """Highest probability among the non-NONE classes (array version of
-    safety_net.runner_up, for the cross-validation matrices)."""
+    """Highest requirement-label probability (array version of safety_net.runner_up)."""
     return max(p for label, p in zip(labels, probabilities) if label != "NONE")
 
 
-def out_of_fold_probabilities(classifier, X, y, groups) -> list[np.ndarray]:
-    """One probability matrix per seed: every chunk scored by a model that
+def out_of_fold_probabilities(classifier, X, Y, first_label, groups) -> list[np.ndarray]:
+    """One probability matrix per seed: every sentence scored by a model that
     never saw its opportunity during training."""
     results = []
     for seed in SEEDS:
         cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed)
+        folds = list(cv.split(X, first_label, groups))  # stratified on the first label, as in the notebook
         model = clone(classifier.model)  # same pipeline and C as the shipped model, unfitted
-        results.append(cross_val_predict(model, X, y, groups=groups, cv=cv, method="predict_proba", n_jobs=-1))
+        results.append(cross_val_predict(model, X, Y, cv=folds, method="predict_proba", n_jobs=-1))
     return results
 
 
@@ -73,17 +78,22 @@ def main() -> None:
     labeled = pd.read_csv(LABELS_PATH)
     classifier = EligibilityClassifier()
     labels = classifier.labels
-    none_column = labels.index("NONE")
+    thresholds = np.array([classifier.thresholds[label] for label in labels])
 
-    print(f"Embedding {len(labeled)} labeled chunks...")
+    print(f"Embedding {len(labeled)} labeled sentences...")
     X = classifier.embed(labeled["chunk_text"].tolist())
-    y = labeled["label"]
+    label_sets = labeled["labels"].str.split("|")
+    Y = np.array([[label in s for label in labels] for s in label_sets], dtype=int)
+    y = label_sets.str[0]                      # first label: for stratifying, and the per-class table
     gold_requirement = (y != "NONE").to_numpy()
     hits = labeled["chunk_text"].map(keyword_hits)
     has_cue = hits.map(bool).to_numpy()
 
     print(f"Cross-validating over {len(SEEDS)} fold seeds...\n")
-    all_probabilities = out_of_fold_probabilities(classifier, X, y, labeled["opportunity_id"])
+    all_probabilities = out_of_fold_probabilities(classifier, X, Y, y, labeled["opportunity_id"])
+
+    def predicted_none_of(probabilities):
+        return ~(probabilities >= thresholds).any(axis=1)  # no label reached its threshold
 
     # --- 1. how big is the problem, and how well does each rule fix it ---------
     rules = {"keyword": lambda p: has_cue}
@@ -94,7 +104,7 @@ def main() -> None:
     missed_per_seed = []
     table = {name: {"caught": [], "false_alarms": []} for name in rules}
     for probabilities in all_probabilities:
-        predicted_none = probabilities.argmax(axis=1) == none_column
+        predicted_none = predicted_none_of(probabilities)
         missed = predicted_none & gold_requirement           # the wrong-ELIGIBLE cases
         true_none = predicted_none & ~gold_requirement       # NONE, correctly
         missed_per_seed.append(missed.sum())
@@ -123,7 +133,7 @@ def main() -> None:
         is_class = (y == label).to_numpy()
         missed_n, kw_n, both_n = [], [], []
         for probabilities in all_probabilities:
-            missed = (probabilities.argmax(axis=1) == none_column) & is_class
+            missed = (predicted_none_of(probabilities)) & is_class
             runner = np.array([runner_up(row, labels) >= 0.3 for row in probabilities])
             missed_n.append(missed.sum())
             kw_n.append((missed & has_cue).sum())
@@ -136,7 +146,7 @@ def main() -> None:
 
     # --- 2. which keyword cue lists pay off (seed 0, for readability) ----------
     probabilities = all_probabilities[0]
-    predicted_none = probabilities.argmax(axis=1) == none_column
+    predicted_none = predicted_none_of(probabilities)
     missed = predicted_none & gold_requirement
     true_none = predicted_none & ~gold_requirement
     print("\nPer cue list (seed 0): caught misses / false alarms")
@@ -149,13 +159,13 @@ def main() -> None:
     left = labeled[missed & ~any_rule]
     print(f"\nMisses caught by no rule (seed 0): {len(left)}")
     for _, row in left.iterrows():
-        print(f"  {row['label']:17s} | {row['chunk_text'][:100]}")
+        print(f"  {row['labels']:17s} | {row['chunk_text'][:100]}")
 
     # --- 4. cost on the real corpus: extra CHECK items per opportunity ---------
     corpus = pd.read_json(CORPUS_CHUNKS_PATH, lines=True)
     corpus_none = corpus[corpus["label"] == "NONE"]
     corpus_cue = corpus_none["text"].map(keyword_hits).map(bool)
-    print(f"\nFull corpus: {len(corpus_none)} NONE chunks in {corpus['opportunity_id'].nunique()} opportunities")
+    print(f"\nFull corpus: {len(corpus_none)} NONE sentences in {corpus['opportunity_id'].nunique()} opportunities")
     for t in RUNNER_UP_THRESHOLDS:
         corpus_runner_up = corpus_none["probabilities"].map(
             lambda p: max(v for k, v in p.items() if k != "NONE") >= t)
