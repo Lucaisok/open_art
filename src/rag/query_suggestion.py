@@ -5,9 +5,9 @@ OpenArt — suggest the semantic-matching query from the artist's statement (RAG
     suggestion.query      # the statement passages about the practice and its wishes, as written
     suggestion.passages   # where they come from, with citations
 
-The suggestion only fills the search box: the artist edits or clears it, and nothing is
-searched until they submit. Opportunity-type filters are left to the artist (product-owner
-decision, see workflow.MD).
+In the web app the query is not shown as a text box: Discover's "Matched to you" ranks by it
+directly (api/discover.py, workflow.MD step 5b). The artist steers the results with the filters;
+opportunity-type filters are left to the artist (product-owner decision, see workflow.MD).
 
 No LLM: an LLM-written query was compared with the passages themselves and ranked no better
 (workflow.MD, RAG step 4), so the query is the artist's own words. Runs locally, costs nothing.

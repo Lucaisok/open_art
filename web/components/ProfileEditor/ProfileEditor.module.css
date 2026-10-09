@@ -577,6 +577,10 @@
 }
 
 .saveButton {
+  display: inline-flex;   /* also the "Continue to Discover" link */
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   height: 58px;
   padding: 0 28px;
   border: 0;

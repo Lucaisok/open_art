@@ -9,11 +9,12 @@ Routes so far (workflow.MD, "Web app — plan"):
 - step 2: sign up / log in / log out (api/auth.py), change password / delete account (api/account.py)
 - step 3: upload / list / delete the artist's documents (api/documents.py)
 - step 4: the artist's profile and its pre-fill from the CV (api/profile.py)
+- step 5: Discover and the opportunity page (api/discover.py)
 """
 
 from fastapi import APIRouter, Depends, FastAPI
 
-from api import account, auth, documents, profile
+from api import account, auth, discover, documents, profile
 from api.security import check_origin
 
 app = FastAPI(
@@ -38,3 +39,4 @@ app.include_router(auth.router)
 app.include_router(account.router)
 app.include_router(documents.router)
 app.include_router(profile.router)
+app.include_router(discover.router)

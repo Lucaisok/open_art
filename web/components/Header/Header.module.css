@@ -1,11 +1,11 @@
-/* Top bar, in the bold style of the auth pages: ink bar, paper text */
+/* Top bar (design: DISCOVER.md → Global header): ink bar, paper text, the pages as pills */
 .header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 24px;
-  padding: 16px 24px;
+  gap: 14px 24px;
+  padding: 18px clamp(16px, 4vw, 40px);
   background-color: var(--color-ink);
   color: var(--color-paper);
 }
@@ -23,7 +23,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 20px;
+  gap: 6px;
   list-style: none;
 }
 
@@ -37,6 +37,11 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
   text-decoration: none;
 }
 
@@ -46,8 +51,13 @@
   text-underline-offset: 4px;
 }
 
+.link[aria-current="page"] {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
 .logout {
-  height: 36px;
+  height: 38px;
   padding: 0 14px;
   border: 2px solid var(--color-paper);
   border-radius: 999px;
@@ -69,10 +79,4 @@
 /* the ink focus ring would be invisible on the ink bar */
 .header :focus-visible {
   outline-color: var(--color-paper);
-}
-
-@media (max-width: 480px) {
-  .header {
-    padding: 14px 16px;
-  }
 }

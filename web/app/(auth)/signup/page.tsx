@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Sign up · OpenArt" };
 
 export default async function SignupPage() {
     if (await getCurrentUser()) {
-        redirect("/documents");
+        redirect("/"); // already logged in: home decides (Discover or the onboarding)
     }
     return <AuthForm mode="signup" />;
 }

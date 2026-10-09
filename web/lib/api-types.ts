@@ -203,6 +203,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/discover/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Options */
+        get: operations["options_api_discover_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/discover/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search */
+        post: operations["search_api_discover_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/opportunities/{opportunity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opportunity */
+        get: operations["opportunity_api_opportunities__opportunity_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -212,10 +263,26 @@ export interface components {
             /** File */
             file: string;
         };
+        /** CheckOut */
+        CheckOut: {
+            /** Quote */
+            quote: string;
+            /** Reason */
+            reason: string;
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
             password: string;
+        };
+        /** DiscoverOptions */
+        DiscoverOptions: {
+            /** Types */
+            types: string[];
+            /** Disciplines */
+            disciplines: string[];
+            /** Countries */
+            countries: string[];
         };
         /** DocumentOut */
         DocumentOut: {
@@ -266,6 +333,36 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** OpportunityOut */
+        OpportunityOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Organisation */
+            organisation: string | null;
+            /** Types */
+            types: string[];
+            /** City */
+            city: string | null;
+            /** Countries */
+            countries: string[];
+            /** Deadline */
+            deadline: string | null;
+            /** Funding */
+            funding: string;
+            /** Funded */
+            funded: boolean;
+            /** Fee */
+            fee: string;
+            /** Description */
+            description: string | null;
+            /** Source Url */
+            source_url: string;
+            verdict: components["schemas"]["VerdictOut"];
+            /** Profile Filled */
+            profile_filled: boolean;
         };
         /** Option */
         Option: {
@@ -355,6 +452,84 @@ export interface components {
             /** Degree Field */
             degree_field?: string | null;
         };
+        /** ResultOut */
+        ResultOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Organisation */
+            organisation: string | null;
+            /** Types */
+            types: string[];
+            /** City */
+            city: string | null;
+            /** Countries */
+            countries: string[];
+            /** Deadline */
+            deadline: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ELIGIBLE" | "CHECK" | "LIKELY_NOT_ELIGIBLE";
+            /** Reason */
+            reason: string;
+            /** Score */
+            score: number | null;
+        };
+        /** SearchIn */
+        SearchIn: {
+            /**
+             * Mode
+             * @default matched
+             * @enum {string}
+             */
+            mode: "matched" | "all";
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Types
+             * @default []
+             */
+            types: string[];
+            /**
+             * Disciplines
+             * @default []
+             */
+            disciplines: string[];
+            /** Country */
+            country?: string | null;
+            /**
+             * Funded Only
+             * @default false
+             */
+            funded_only: boolean;
+            /**
+             * No Fee
+             * @default false
+             */
+            no_fee: boolean;
+        };
+        /** SearchOut */
+        SearchOut: {
+            /** Results */
+            results: components["schemas"]["ResultOut"][];
+            /** Total */
+            total: number;
+            /**
+             * Order
+             * @enum {string}
+             */
+            order: "match" | "deadline";
+            /** Ranked By */
+            ranked_by: string[];
+            /** Profile Filled */
+            profile_filled: boolean;
+        };
         /** SignupIn */
         SignupIn: {
             /**
@@ -419,6 +594,22 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerdictOut */
+        VerdictOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ELIGIBLE" | "CHECK" | "LIKELY_NOT_ELIGIBLE";
+            /** Summary */
+            summary: string;
+            /** Fails */
+            fails: components["schemas"]["CheckOut"][];
+            /** Checks */
+            checks: components["schemas"]["CheckOut"][];
+            /** Passes */
+            passes: components["schemas"]["CheckOut"][];
         };
     };
     responses: never;
@@ -770,6 +961,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Options"];
+                };
+            };
+        };
+    };
+    options_api_discover_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverOptions"];
+                };
+            };
+        };
+    };
+    search_api_discover_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opportunity_api_opportunities__opportunity_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpportunityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

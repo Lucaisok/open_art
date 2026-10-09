@@ -1,0 +1,300 @@
+/* Opportunity page (design: design_handoff_openart, DISCOVER.md → Opportunity) */
+.main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 40px) 72px;
+  color: var(--color-ink);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border: 3px solid var(--color-ink);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.back:hover {
+  background-color: var(--color-grey-100);
+}
+
+.types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 32px;
+}
+
+.type {
+  padding: 4px 10px;
+  border: 2px solid var(--color-ink);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  max-width: 18ch;
+  margin-top: 16px;
+  font-size: clamp(36px, 5.6vw, 72px);
+  font-weight: 900;
+  font-stretch: 122%;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.byline {
+  margin-top: 14px;
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 700;
+}
+
+/* two columns that stack on narrow screens */
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 32px 48px;
+  margin-top: 40px;
+}
+
+/* Left: facts */
+.facts {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.factList {
+  border-top: 6px solid var(--color-lime);
+}
+
+.fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding: 14px 0;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.factLabel {
+  flex: 0 0 150px;
+  padding-top: 3px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.factValue {
+  flex: 1 1 200px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.aboutHeading {
+  margin-top: 36px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.description {
+  max-width: 62ch;
+  margin-top: 10px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: pre-line;   /* keep the call's own paragraphs */
+}
+
+.original {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background-color: var(--color-ink);
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--color-paper);
+  text-decoration: none;
+}
+
+.original:hover {
+  background-color: var(--color-ink-hover);
+}
+
+/* Right: "Can you apply?" */
+.apply {
+  flex: 1 1 440px;
+  min-width: 0;
+  padding: clamp(18px, 3vw, 28px);
+  border: 3px solid var(--color-ink);
+  border-radius: 16px;
+  background-color: var(--color-white);
+}
+
+.applyTitle {
+  font-size: clamp(28px, 3.4vw, 36px);
+  font-weight: 900;
+  font-stretch: 118%;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.summary {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.group {
+  margin-top: 28px;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-ink);
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.groupIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 13px;
+}
+
+.iconFail {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.iconCheck {
+  background-color: var(--color-grey-100);
+}
+
+.iconPass {
+  background-color: var(--color-lime);
+}
+
+.checks {
+  list-style: none;
+}
+
+.check {
+  padding: 14px 0;
+  border-bottom: 2px solid var(--color-grey-200);
+}
+
+.quote {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
+
+.note {
+  margin-top: 22px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-grey-600);
+}
+
+.noteLink {
+  font-weight: 800;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.draft {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 58px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 12px;
+  background-color: var(--color-ink);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  font-stretch: 110%;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-paper);
+  cursor: pointer;
+}
+
+.draft:hover {
+  background-color: var(--color-ink-hover);
+}
+
+.draft:active {
+  background-color: var(--color-ink-pressed);
+}
+
+.draftArrow {
+  font-size: 22px;
+}
+
+.draftNote {
+  min-height: 20px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

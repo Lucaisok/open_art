@@ -36,12 +36,14 @@ class Match(BaseModel):
     opportunity_types: list[str]
     deadline: date | None       # None = no deadline stated: the artist should check the call
     source_url: str             # always linked, so the artist can read the call itself
-    score: float                # cosine similarity with the query, -1 to 1 (higher = closer)
+    score: float | None         # cosine similarity with the query, -1 to 1 (higher = closer); None by deadline
     verdict: Verdict
 
 
 class Matcher:
     """Loads the corpus, the index, the engine and the embedding model once; search() is then fast.
+    Building one takes about half a second plus the model, so build ONE per process (the API's
+    is api/discover.py get_matcher()), never one per request.
     Each part can be passed in (tests pass small fakes instead of the real files and model)."""
 
     def __init__(self, opportunities: list[ProcessedOpportunity] | None = None,
@@ -53,30 +55,55 @@ class Matcher:
         self.engine = engine or EligibilityEngine()
         self.embedder = embedder or load_embedder(self.index.model)
         self._row = {opp_id: i for i, opp_id in enumerate(self.index.ids)}
+        self._by_id = {o.id: o for o in self.opportunities}
+
+    def get(self, opportunity_id: str) -> ProcessedOpportunity | None:
+        """One call by id (None if there is no such call)."""
+        return self._by_id.get(opportunity_id)
+
+    def kept(self, filters: MatchFilters | None = None, today: date | None = None) -> list[ProcessedOpportunity]:
+        """The calls the artist's filters keep, in corpus order."""
+        filters = filters or MatchFilters()
+        today = today or date.today()
+        return [o for o in self.opportunities if passes(o, filters, today)]
 
     def search(self, query: str, profile: ArtistProfile | None = None, filters: MatchFilters | None = None,
                k: int = 10, today: date | None = None) -> list[Match]:
+        """The kept calls most similar to the query first (not-eligible last)."""
         if not query or not query.strip():
             raise ValueError("query is empty: describe your practice or what you are looking for")
-        profile = profile or ArtistProfile()
-        filters = filters or MatchFilters()
-        today = today or date.today()
+        return self.search_vector(embed_query(self.embedder, query), profile, filters, k, today)
 
-        kept = [o for o in self.opportunities if passes(o, filters, today)]
+    def search_vector(self, query_vector: np.ndarray, profile: ArtistProfile | None = None,
+                      filters: MatchFilters | None = None, k: int = 10, today: date | None = None) -> list[Match]:
+        """search() with the query already embedded (embed_query): the API keeps each artist's
+        query vector, since embedding a whole statement is most of a search's time."""
+        today = today or date.today()
+        kept = self.kept(filters, today)
         if not kept:
             return []
 
         # vectors are normalized, so the dot product is the cosine similarity
-        query_vector = embed_query(self.embedder, query)
         scores = self.index.vectors[[self._row[o.id] for o in kept]] @ query_vector
 
-        matches = [
-            Match(opportunity_id=o.id, title=o.title_en, organisation=o.organisation,
-                  opportunity_types=o.opportunity_type_canonical, deadline=o.deadline_date,
-                  source_url=o.source_url, score=round(float(score), 4),
-                  verdict=self.engine.evaluate(profile, o, today=today))
-            for o, score in zip(kept, scores)
-        ]
+        matches = [self._match(o, float(score), profile, today) for o, score in zip(kept, scores)]
         # not-eligible last, then most similar first; ties keep corpus order (sort is stable)
         matches.sort(key=lambda m: (m.verdict.status == "LIKELY_NOT_ELIGIBLE", -m.score))
         return matches[:k]
+
+    def by_deadline(self, profile: ArtistProfile | None = None, filters: MatchFilters | None = None,
+                    k: int = 10, today: date | None = None) -> list[Match]:
+        """The kept calls, nearest deadline first (no deadline stated after them, not-eligible last).
+        Used when there is nothing to rank by: "All calls", or every matching term turned off."""
+        today = today or date.today()
+        matches = [self._match(o, None, profile, today) for o in self.kept(filters, today)]
+        matches.sort(key=lambda m: (m.verdict.status == "LIKELY_NOT_ELIGIBLE", m.deadline is None,
+                                    m.deadline or today))
+        return matches[:k]
+
+    def _match(self, o: ProcessedOpportunity, score: float | None, profile: ArtistProfile | None,
+               today: date) -> Match:
+        return Match(opportunity_id=o.id, title=o.title_en, organisation=o.organisation,
+                     opportunity_types=o.opportunity_type_canonical, deadline=o.deadline_date,
+                     source_url=o.source_url, score=None if score is None else round(score, 4),
+                     verdict=self.engine.evaluate(profile or ArtistProfile(), o, today=today))

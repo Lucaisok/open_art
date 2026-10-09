@@ -461,14 +461,21 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                         {status}
                     </p>
                 </div>
-                <button
-                    type="submit"
-                    form="profile-form"
-                    className={styles.saveButton}
-                    disabled={!dirty || saveState.kind === "saving"}
-                >
-                    {saveState.kind === "saving" ? "Saving…" : "Save profile"}
-                </button>
+                {/* everything saved: the onboarding is done, on to the calls */}
+                {!dirty && !neverSaved ? (
+                    <Link href="/discover" className={styles.saveButton}>
+                        Continue to Discover →
+                    </Link>
+                ) : (
+                    <button
+                        type="submit"
+                        form="profile-form"
+                        className={styles.saveButton}
+                        disabled={!dirty || saveState.kind === "saving"}
+                    >
+                        {saveState.kind === "saving" ? "Saving…" : "Save profile"}
+                    </button>
+                )}
             </footer>
         </>
     );

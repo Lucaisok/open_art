@@ -56,3 +56,21 @@ def test_unknown_filter_values_are_rejected():
         MatchFilters(disciplines=["Pottery"])
     with pytest.raises(ValidationError):
         MatchFilters(countries=["NO"])  # filters use the corpus's country names, not ISO codes
+
+
+def test_funded_only_needs_stated_money_or_support():
+    grant = opp(funding_components=[{"category": "Grant/Stipend", "amount_min": 1000, "amount_max": 1000,
+                                     "currency": "EUR"}])
+    mentoring = opp(funding_components=[{"category": "Mentorship/Training"}])
+    assert passes(grant, MatchFilters(funded_only=True), TODAY)
+    assert not passes(mentoring, MatchFilters(funded_only=True), TODAY)
+    assert not passes(opp(), MatchFilters(funded_only=True), TODAY)  # not stated: hidden by this filter only
+    assert passes(opp(), MatchFilters(), TODAY)
+
+
+def test_text_searches_title_organisation_place_and_type():
+    call = opp(title="Atelierstipendium", title_en="Studio grant", organisation="Kunsthalle Wien",
+               city_en="Vienna", country_canonical=["Austria"], opportunity_type_canonical=["Residency"])
+    for text in ["studio", "ATELIER", "kunsthalle", "vienna", "austria", "resid", "  grant  "]:
+        assert passes(call, MatchFilters(text=text), TODAY), text
+    assert not passes(call, MatchFilters(text="berlin"), TODAY)

@@ -84,3 +84,19 @@ def test_stale_index_is_refused():
         index = OpportunityIndex(ids=["a"], hashes=["old"], vectors=np.ones((1, 2), dtype=np.float32),
                                  model="fake", fastembed_version=version("fastembed"))
         Matcher(opportunities=[opp("a")], index=index, engine=FakeEngine({}), embedder=FakeEmbedder())
+
+
+def test_by_deadline_nearest_first_then_unknown_then_not_eligible():
+    calls = [opp("none"), opp("late", deadline_date=date(2027, 1, 1)), opp("soon", deadline_date=date(2026, 10, 20)),
+             opp("blocked", deadline_date=date(2026, 10, 6))]
+    m = matcher(calls, [[1, 0]] * 4, {"blocked": "LIKELY_NOT_ELIGIBLE"})
+    results = m.by_deadline(today=TODAY)
+    assert [r.opportunity_id for r in results] == ["soon", "late", "none", "blocked"]
+    assert results[0].score is None
+
+
+def test_get_and_kept():
+    m = matcher([opp("a", opportunity_type_canonical=["Residency"]), opp("b", opportunity_type_canonical=["Grant/Funding"])],
+                [[1, 0], [0, 1]])
+    assert m.get("a").id == "a" and m.get("missing") is None
+    assert [o.id for o in m.kept(MatchFilters(opportunity_types=["Residency"]), TODAY)] == ["a"]

@@ -1,0 +1,269 @@
+/* Discover (design: design_handoff_openart, DISCOVER.md → Discover) */
+.main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 40px) 72px;
+  color: var(--color-ink);
+}
+
+/* 1. Title row */
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+
+.title {
+  font-size: clamp(34px, 4.6vw, 60px);
+  font-weight: 900;
+  font-stretch: 125%;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+}
+
+.stop {
+  color: var(--color-lime);
+}
+
+.modes {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px;
+  border: 3px solid var(--color-ink);
+  border-radius: 14px;
+  background-color: var(--color-white);
+}
+
+.mode {
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mode[aria-pressed="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* 2. Search row */
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: clamp(16px, 2.6vw, 24px);
+}
+
+.search {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px 0 46px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.searchInput::placeholder {
+  color: var(--color-grey-400);
+}
+
+.panelButton {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.panelButton svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.panelButton[aria-expanded="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* results are narrowed: a lime dot on the button (decorative, the panel says what is set) */
+.dot {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 50%;
+  background-color: var(--color-lime);
+}
+
+/* 4. Results */
+.results {
+  margin-top: 32px;
+}
+
+.resultsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 3px solid var(--color-ink);
+}
+
+.resultsTitle {
+  font-size: 28px;
+  font-weight: 900;
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+}
+
+.count {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.banner {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background-color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.bannerLink {
+  color: var(--color-paper);
+  text-decoration: underline;
+  text-decoration-color: var(--color-lime);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* the ink focus ring would be invisible on the ink banner */
+.bannerLink:focus-visible {
+  outline-color: var(--color-lime);
+}
+
+.error {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  list-style: none;
+}
+
+.skeleton {
+  height: 340px;
+  border-radius: 18px;
+  background-color: var(--color-grey-200);
+}
+
+.subheading {
+  margin-top: 40px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--color-ink);
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 40px 24px;
+  border: 3px dashed var(--color-ink);
+  border-radius: 16px;
+}
+
+.emptyTitle {
+  font-size: 26px;
+  font-weight: 900;
+  font-stretch: 115%;
+}
+
+.emptyButton {
+  height: 50px;
+  padding: 0 20px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.emptyButton:hover {
+  background-color: var(--color-grey-100);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

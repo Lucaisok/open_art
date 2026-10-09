@@ -82,6 +82,7 @@ load_dotenv(os.path.join(REPO_ROOT, ".env"))
 from src.collectors.jsonl import load_jsonl, write_jsonl  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
 from src.processing.normalize import load_source_languages  # noqa: E402
+from src.processing.place import correct_places  # noqa: E402
 
 PROCESSED_PATH = os.path.join(REPO_ROOT, "data", "processed", "opportunities.jsonl")
 MAPS_DIR = os.path.join(REPO_ROOT, "data", "processed", "canonical")
@@ -135,15 +136,20 @@ CANONICAL_CAREER_STAGES = [
 # vague regional bucket. Only genuinely un-enumerable cases (a page that
 # just says "Europe" or "international" with no specific countries
 # implied) fall through to the three catch-alls at the end.
+# Argentina, Bulgaria, Israel, Lebanon and Turkey were added 2026-10-09: calls
+# named them and got no country at all. After adding a country here, drop the
+# cache entries in data/processed/canonical/country.json that map to [] so
+# they are judged again against the new list (workflow.MD, step 5c).
 CANONICAL_COUNTRIES = [
-    "Albania", "Armenia", "Austria", "Belgium", "Brazil", "China",
-    "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia",
-    "Faroe Islands", "Finland", "France", "Germany", "Greece",
-    "Greenland", "Hungary", "Iceland", "India", "Ireland", "Italy",
-    "Latvia", "Lithuania", "Luxembourg", "Mexico", "Morocco",
-    "Netherlands", "New Zealand", "Norway", "Poland", "Portugal",
-    "Romania", "Serbia", "Slovakia", "Slovenia", "South Korea", "Spain",
-    "Sweden", "Ukraine", "United Kingdom", "Åland Islands",
+    "Albania", "Argentina", "Armenia", "Austria", "Belgium", "Brazil",
+    "Bulgaria", "China", "Croatia", "Cyprus", "Czech Republic", "Denmark",
+    "Estonia", "Faroe Islands", "Finland", "France", "Germany", "Greece",
+    "Greenland", "Hungary", "Iceland", "India", "Ireland", "Israel",
+    "Italy", "Latvia", "Lebanon", "Lithuania", "Luxembourg", "Mexico",
+    "Morocco", "Netherlands", "New Zealand", "Norway", "Poland",
+    "Portugal", "Romania", "Serbia", "Slovakia", "Slovenia",
+    "South Korea", "Spain", "Sweden", "Turkey", "Ukraine",
+    "United Kingdom", "Åland Islands",
     "Europe (unspecified)", "International/Global", "Other/Unspecified",
 ]  # fmt: skip
 
@@ -405,6 +411,9 @@ def canonicalize_all(processed_path: str = PROCESSED_PATH, maps_dir: str = MAPS_
         )
         counts[raw_field] = new_count
         print(f"{raw_field}: {new_count} new distinct value(s) mapped")
+
+    # country_canonical as extracted can be who may apply; make it where the call takes place
+    print(f"place: {correct_places(records)} country value(s) corrected from the city or by review")
 
     write_jsonl(records, processed_path)
     print(f"Updated {len(records)} record(s) -> {processed_path}")

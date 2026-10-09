@@ -87,15 +87,17 @@ export const sendJson = (method: "POST" | "DELETE", path: string, body?: unknown
         body: body === undefined ? undefined : JSON.stringify(body),
     });
 
-// Like sendJson, but returns the answer's data
+// Like sendJson, but returns the answer's data. `signal` cancels it (a newer search replaces it).
 export const requestJson = async <T>(
     method: "GET" | "POST" | "PUT" | "DELETE",
     path: string,
     body?: unknown,
+    { signal }: { signal?: AbortSignal } = {},
 ): Promise<ApiData<T>> => {
     try {
         const response = await fetch(path, {
             method,
+            signal,
             headers: body === undefined ? undefined : { "Content-Type": "application/json" },
             body: body === undefined ? undefined : JSON.stringify(body),
         });

@@ -36,6 +36,9 @@
   --color-grey-300: #c9c9c5;   /* "Not added" tag border */
   --color-grey-200: #e2e2df;   /* meter track, disabled button */
   --color-grey-100: #ececea;   /* subtle hover */
+  --color-rule: #d6d6d2;       /* row dividers in a fact list */
+  --color-ink-hover: #333333;  /* ink buttons: hover */
+  --color-ink-pressed: #000000;
   --color-ink-line: #4a4a48;      /* borders on ink (upcoming step pill) */
   --color-on-ink-faint: #8a8a86;  /* faint text on ink (upcoming step): 5.4:1 */
   --color-on-ink-muted: #a8a8a4;  /* secondary text on ink */
