@@ -153,3 +153,42 @@ def test_broad_regions_named():
     assert broad_regions_named("open to applicants from all over the world") == ["worldwide"]
     assert broad_regions_named("open to non-European artists") == []
     assert broad_regions_named("artists based in South Africa") == []
+
+
+# -- fixes after the author's review of the page (2026-10-10) -------------------------------------------------
+
+def test_a_reviewers_scope_covers_every_label_of_the_sentence():
+    text = "The presentation events cannot take place in the home city of any of the applicant organisations."
+    reviews = {(text, "RESIDENCE"): review("RESIDENCE", None, polarity="", decision="scope", scope="PROJECT")}
+    verdict = run(BERLIN, [chunk(0, text, "RESIDENCE"), chunk(0, text, "OTHER_ELIGIBILITY")], reviews)
+    assert [i.outcome for i in verdict.items] == ["INFO", "INFO"]
+    assert verdict_out(verdict).about_project == [text]
+
+
+def test_encouraging_every_career_stage_is_a_widening_not_a_preference():
+    verdict = run(BERLIN, [chunk(0, "Both emerging and established artists are encouraged to apply.", "CAREER_STAGE")])
+    assert verdict.items[0].outcome == "NO_RESTRICTION"
+    assert verdict.items[0].reason == "open to artists at any stage of their career"
+
+
+def test_preferences_and_definitions_go_to_good_to_know():
+    verdict = run(BERLIN, [chunk(0, "Students with a minority background are encouraged to apply.", "STUDENT_STATUS"),
+                           chunk(1, "In this context, Norway and Sweden are considered as Nordic countries.",
+                                 "RESIDENCE")])
+    out = verdict_out(verdict)
+    assert out.about_project == [] and len(out.good_to_know) == 2
+
+
+def test_all_disciplines_except_one():
+    text = "All creative and cultural sectors are eligible except audiovisual."
+    item = run(BERLIN, [chunk(0, text, "DISCIPLINE", polarity="UNCLEAR")]).items[0]
+    assert item.outcome == "PASS"
+    filmmaker = ArtistProfile(disciplines=["Film/Video"])
+    assert run(filmmaker, [chunk(0, text, "DISCIPLINE", polarity="UNCLEAR")]).items[0].outcome == "CHECK"
+
+
+def test_countries_are_described_with_region_names():
+    from src.eligibility.geo import EU, describe_countries
+    assert describe_countries(EU) == "the EU"
+    assert describe_countries(EU + ["IS", "LI", "NO", "CH"]) == "the EEA, Switzerland"
+    assert describe_countries(["BE", "NL"]) == "Belgium, Netherlands"

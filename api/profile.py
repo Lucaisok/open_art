@@ -31,6 +31,8 @@ from sqlalchemy import select
 from api.auth import DB, CurrentUser
 from api.models import Document, KnowledgeChunkRow, Profile
 from src.eligibility.geo import COUNTRIES
+from src.eligibility.languages import LANGUAGES
+from src.eligibility.study import EducationEntry
 from src.eligibility.profile import ApplicantType, ArtistProfile
 from src.processing.canonicalize import CANONICAL_DISCIPLINES
 from src.rag.cv_rules import extract_practice, extract_profile
@@ -59,6 +61,8 @@ class ProfileValues(BaseModel):
     graduation_year: int | None = None
     has_degree: bool | None = None
     degree_field: str | None = None
+    languages: list[str] = []               # ISO 639-1 codes: the languages the artist can work in
+    education: list[EducationEntry] = []    # the schools the artist studied at
 
     @field_validator("birth_date")
     @classmethod
@@ -100,6 +104,21 @@ class ProfileValues(BaseModel):
     @classmethod
     def _check_disciplines(cls, value: list[str]) -> list[str]:
         return _artist_profile_check("disciplines", value, "Pick disciplines from the list.")
+
+    @field_validator("languages")
+    @classmethod
+    def _check_languages(cls, value: list[str]) -> list[str]:
+        return _artist_profile_check("languages", value, "Pick languages from the list.")
+
+    @field_validator("education")
+    @classmethod
+    def _check_education(cls, value: list[EducationEntry]) -> list[EducationEntry]:
+        value = [entry for entry in value if entry.institution.strip()]   # an empty card on the form is no school
+        if len(value) > 20:
+            raise ValueError("List at most 20 schools.")
+        if any(len(e.institution) > 200 or len(e.city or "") > 100 for e in value):
+            raise ValueError("Keep names under 200 characters.")
+        return _artist_profile_check("education", value, "Each school needs a name; pick countries from the list.")
 
     @field_validator("degree_field")
     @classmethod
@@ -166,6 +185,7 @@ class Options(BaseModel):
     countries: list[Option]
     disciplines: list[str]
     career_stages: list[str]
+    languages: list[Option]
 
 
 def to_artist_profile(values: ProfileValues, today: date | None = None) -> ArtistProfile:
@@ -242,4 +262,7 @@ def save_profile(body: ProfileIn, user: CurrentUser, db: DB) -> ProfileOut:
 def options() -> Options:
     countries = sorted((Option(code=code, name=names[0]) for code, names in COUNTRIES.items()),
                        key=lambda option: option.name)
-    return Options(countries=countries, disciplines=CANONICAL_DISCIPLINES, career_stages=ARTIST_CAREER_STAGES)
+    languages = sorted((Option(code=code, name=names[0]) for code, names in LANGUAGES.items()),
+                       key=lambda option: option.name)
+    return Options(countries=countries, disciplines=CANONICAL_DISCIPLINES, career_stages=ARTIST_CAREER_STAGES,
+                   languages=languages)

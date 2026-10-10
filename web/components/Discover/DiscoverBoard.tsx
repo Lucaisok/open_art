@@ -133,12 +133,21 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
           ? `Top ${shown} of ${results.total} calls · ${order}`
           : `${results.total} ${results.total === 1 ? "call" : "calls"} · ${order}`;
 
+    // how the list is ordered, always shown under the results heading (eligible calls come first in
+    // every mode, src/matching/matcher.py); without documents it also says how to get a ranking
     const note =
-        state.mode === "all"
-            ? "Every call in OpenArt, nearest deadline first. Filters still apply."
-            : results.ranked_by.length > 0
-              ? `Ranked by how well each call fits what your documents say about your practice (${results.ranked_by.join(", ")}). Filters start from your profile.`
-              : "Upload your statement, CV or portfolio to rank calls by your practice. Until then, nearest deadline first.";
+        state.mode === "all" ? (
+            "Every call in OpenArt: eligible calls first, then nearest deadline. Filters still apply."
+        ) : results.ranked_by.length > 0 ? (
+            "Eligible calls first, then ranked by how well each fits your profile. Filters start from your profile too."
+        ) : (
+            <>
+                <Link href="/documents" className={styles.noteLink}>
+                    Upload your statement, CV or portfolio
+                </Link>{" "}
+                to rank calls by your practice. Until then: eligible calls first, then nearest deadline.
+            </>
+        );
 
     const cards = (list: SearchResults["results"]) => (
         <ol className={styles.grid}>
@@ -212,7 +221,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
             </div>
 
             {state.panelOpen && (
-                <FiltersPanel state={state} options={options} note={note} onChange={update} onClear={clearAll} />
+                <FiltersPanel state={state} options={options} onChange={update} onClear={clearAll} />
             )}
 
             <section aria-labelledby="results-heading" className={styles.results}>
@@ -224,6 +233,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
                         {countLine}
                     </p>
                 </div>
+                <p className={styles.orderNote}>{note}</p>
 
                 {!results.profile_filled && (
                     <p className={styles.banner}>

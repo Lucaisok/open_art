@@ -303,6 +303,18 @@ export interface components {
             /** Items */
             items: components["schemas"]["Suggestion"][];
         };
+        /**
+         * EducationEntry
+         * @description One school in the artist's profile.
+         */
+        EducationEntry: {
+            /** Institution */
+            institution: string;
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+        };
         /** Evidence */
         Evidence: {
             /** Quote */
@@ -372,6 +384,8 @@ export interface components {
             disciplines: string[];
             /** Career Stages */
             career_stages: string[];
+            /** Languages */
+            languages: components["schemas"]["Option"][];
         };
         /** PasswordChangeIn */
         PasswordChangeIn: {
@@ -444,6 +458,16 @@ export interface components {
             has_degree?: boolean | null;
             /** Degree Field */
             degree_field?: string | null;
+            /**
+             * Languages
+             * @default []
+             */
+            languages: string[];
+            /**
+             * Education
+             * @default []
+             */
+            education: components["schemas"]["EducationEntry"][];
         };
         /** RequirementOut */
         RequirementOut: {
@@ -628,6 +652,8 @@ export interface components {
             commitments: string[];
             /** About Project */
             about_project: string[];
+            /** Good To Know */
+            good_to_know: string[];
         };
     };
     responses: never;

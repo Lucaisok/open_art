@@ -31,7 +31,9 @@ def test_ilka_cv():
     assert {f: s.value for f, s in found.items()} == {
         "birth_date": "1994-03-12", "nationalities": ["HU"], "residence_country": "AT",
         "disciplines": ["Visual Arts"], "active_since": 2021, "has_degree": True, "graduation_year": 2021,
-        "degree_field": "Painting and Graphic Arts",
+        "degree_field": "Painting and Graphic Arts", "languages": ["de", "en", "hu"],
+        "education": [{"institution": "Academy of Fine Arts Vienna", "city": None, "country": "AT"},
+                      {"institution": "Hungarian University of Fine Arts", "city": "Budapest", "country": "HU"}],
     }
     assert found["birth_date"].quote == "Born 12 March 1994 in Debrecen, Hungary"
     assert found["birth_date"].citation == "cv.pdf · p. 1 · PERSONAL DETAILS"
@@ -62,6 +64,12 @@ def test_held_out_cvs_have_no_wrong_or_invented_values(name):
             assert expected[0] <= suggestion.value <= expected[1]
         elif field == "degree_field":
             assert suggestion.value.lower() in expected
+        elif field == "education":
+            # every school read is one the CV lists; a country left empty is fine, a wrong one is not
+            schools = {school["institution"]: school["country"] for school in expected}
+            for school in suggestion.value:
+                assert school["institution"] in schools, school
+                assert school["country"] in (None, schools[school["institution"]]), school
         else:
             assert suggestion.value == expected, field
 
@@ -89,7 +97,8 @@ def test_language_lines_are_not_nationalities():
 def test_a_degree_in_progress_is_not_a_finished_degree():
     found = {s.field: s.value for s in extract_profile(
         chunks("2024 - present: MA Fine Art, Royal Academy Schools", section="EDUCATION"), "cv.txt", TODAY)}
-    assert found == {"currently_enrolled": True}
+    assert found == {"currently_enrolled": True,
+                     "education": [{"institution": "Royal Academy Schools", "city": None, "country": None}]}
 
 
 def test_nothing_found_in_an_empty_cv():

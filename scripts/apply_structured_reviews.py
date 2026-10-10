@@ -14,9 +14,14 @@ before anything is written, then updates the matching review row (same chunk_tex
 
 Adds the columns scope and applies_to (empty on older rows = APPLICANT, everyone). Re-runnable.
 
-Usage: uv run python scripts/apply_structured_reviews.py
+Round 6 (2026-10-10, `--round 6`): the reviews about where the artist studied, rewritten with the
+education values (institutions / study_places / study_countries, src/eligibility/study.py) in
+dataset/labels/review/round6/. Unlike round 5 it may also rewrite confirm / fix rows.
+
+Usage: uv run python scripts/apply_structured_reviews.py [--round 5|6]
 """
 
+import argparse
 import csv
 import glob
 import json
@@ -30,11 +35,15 @@ from src.eligibility.engine import REVIEWED_PATH  # noqa: E402
 from src.eligibility.geo import BROAD_REGIONS, COUNTRIES  # noqa: E402
 from src.eligibility.scope import APPLICANT, SCOPES  # noqa: E402
 
-ROUND_GLOB = os.path.join(REPO_ROOT, "dataset", "labels", "review", "round5", "drops_reviewed_batch*.csv")
+ROUNDS = {
+    "5": (os.path.join(REPO_ROOT, "dataset", "labels", "review", "round5", "drops_reviewed_batch*.csv"),
+          "Claude Code (claude-opus-5-5) round 5 structured re-review, no human spot check"),
+    "6": (os.path.join(REPO_ROOT, "dataset", "labels", "review", "round6", "*.csv"),
+          "Claude Code (claude-opus-5-5) round 6 study reviews, no human spot check"),
+}
 TYPES = {"individual", "group", "organisation"}
 LABELS = {"AGE", "NATIONALITY", "RESIDENCE", "APPLICANT_TYPE", "STUDENT_STATUS", "DISCIPLINE", "CAREER_STAGE",
           "EDUCATION", "PRIOR_FUNDING", "OTHER_ELIGIBILITY"}
-REVIEWED_BY = "Claude Code (claude-opus-5-5) round 5 structured re-review, no human spot check"
 REVIEWED_ON = "2026-10-10"
 
 
@@ -49,13 +58,14 @@ def check_value(value: dict, where: str, alternative: bool = False) -> None:
             check_value({k: v for k, v in alt.items() if k != "label"}, where, alternative=True)
         return
     allowed = {"min_age", "max_age", "countries", "nationality_or_residence", "broad_regions", "types",
-               "enrolled", "graduated_within_years", "also_requires"}
+               "enrolled", "graduated_within_years", "also_requires", "institutions", "study_places",
+               "study_countries"}
     if unknown := set(value) - allowed:
         raise ValueError(f"{where}: unknown keys {unknown}")
     for key in ("min_age", "max_age", "graduated_within_years"):
         if key in value and not isinstance(value[key], int):
             raise ValueError(f"{where}: {key} must be an integer")
-    if bad := [c for c in value.get("countries", []) if c not in COUNTRIES]:
+    if bad := [c for c in value.get("countries", []) + value.get("study_countries", []) if c not in COUNTRIES]:
         raise ValueError(f"{where}: unknown country codes {bad}")
     if bad := [r for r in value.get("broad_regions", []) if r not in BROAD_REGIONS]:
         raise ValueError(f"{where}: unknown broad regions {bad}")
@@ -83,8 +93,12 @@ def check_row(row: dict, where: str) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--round", choices=sorted(ROUNDS), default="5")
+    round_ = parser.parse_args().round
+    round_glob, reviewed_by = ROUNDS[round_]
     updates = {}
-    for path in sorted(glob.glob(ROUND_GLOB)):
+    for path in sorted(glob.glob(round_glob)):
         with open(path, encoding="utf-8", newline="") as f:
             for number, row in enumerate(csv.DictReader(f), start=2):
                 check_row(row, f"{os.path.basename(path)} line {number}")
@@ -103,14 +117,14 @@ def main() -> None:
         update = updates.get((review["chunk_text"], review["label"]))
         if update is None:
             continue
-        if review["decision"] != "drop" and review["reviewed_by"] != REVIEWED_BY:
+        if round_ == "5" and review["decision"] != "drop" and review["reviewed_by"] != reviewed_by:
             raise ValueError(f"round 5 only re-reviews drops: {review['chunk_text'][:60]!r} is a {review['decision']}")
         review.update(decision=update["decision"], polarity=update["polarity"], value=update["value"],
                       reason=update["reason"], scope="" if update["scope"] == APPLICANT else update["scope"],
-                      applies_to=update["applies_to"], reviewed_by=REVIEWED_BY, reviewed_on=REVIEWED_ON)
+                      applies_to=update["applies_to"], reviewed_by=reviewed_by, reviewed_on=REVIEWED_ON)
         applied += 1
     if applied != len(updates):
-        raise ValueError(f"{len(updates) - applied} round-5 rows match no review row")
+        raise ValueError(f"{len(updates) - applied} round-{round_} rows match no review row")
     with open(REVIEWED_PATH, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()

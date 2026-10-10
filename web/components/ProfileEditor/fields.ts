@@ -17,6 +17,8 @@ export const FIELD_LABELS: Record<FieldName, string> = {
     graduation_year: "Graduation year",
     has_degree: "Degree",
     degree_field: "Field of most recent degree",
+    languages: "Languages you work in",
+    education: "Schools",
 };
 
 export const APPLICANT_TYPES = [
@@ -52,6 +54,14 @@ export const formatValue = (field: FieldName, value: unknown, options: ProfileOp
             return formatDate(String(value));
         case "nationalities":
             return (value as string[]).map(countryName).join(", ");
+        case "education":
+            return (value as ProfileValues["education"])
+                .map((s) => [s.institution, s.city, s.country && countryName(s.country)].filter(Boolean).join(", "))
+                .join("; ");
+        case "languages":
+            return (value as string[])
+                .map((code) => options.languages.find((l) => l.code === code)?.name ?? code)
+                .join(", ");
         case "residence_country":
             return countryName(String(value));
         case "disciplines":

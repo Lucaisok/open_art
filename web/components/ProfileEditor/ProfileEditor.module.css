@@ -22,7 +22,6 @@
 }
 
 .intro {
-  max-width: 56ch;
   margin-top: 18px;
   font-size: 17px;
   font-weight: 500;
@@ -630,5 +629,50 @@
 
   .saveButton {
     flex: 1;
+  }
+}
+
+/* the schools list (Education): one card per school */
+.schools {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.schoolList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.school {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 3px solid var(--color-grey-200);
+  border-radius: 14px;
+}
+
+.schoolLabel {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.schoolPlace {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .schoolPlace {
+    grid-template-columns: 1fr;
   }
 }

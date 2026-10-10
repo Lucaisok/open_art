@@ -6,6 +6,7 @@ import { requestJson } from "@/lib/api";
 import type { ProfileData, ProfileOptions, ProfileValues, Suggestion } from "@/lib/types";
 import { MultiChoice, SingleChoice } from "./Choices";
 import CountryChips from "./CountryChips";
+import SchoolsEditor from "./SchoolsEditor";
 import CvBanner from "./CvBanner";
 import DateParts from "./DateParts";
 import Field, { describedBy } from "./Field";
@@ -34,6 +35,7 @@ const HELPERS: Partial<Record<FieldName, string>> = {
     birth_date: "Many calls have age limits.",
     nationalities: "Some calls are only for citizens of certain countries. Add every citizenship you hold.",
     residence_country: "Many calls require living in a country or region.",
+    languages: "Languages you can work in at a fluent or professional level. Some calls require one.",
     disciplines: "Calls are usually for one or a few disciplines.",
     career_stage: "Your own call. Some calls are only for emerging artists, others for established ones.",
     active_since: "The year of your first public professional work: an exhibition, performance, residency or award.",
@@ -41,6 +43,7 @@ const HELPERS: Partial<Record<FieldName, string>> = {
     has_degree: "Some calls ask for a degree in the arts.",
     graduation_year: "Some calls are for recent graduates.",
     currently_enrolled: "Some calls are only for students, others exclude them.",
+    education: "Some calls are for alumni of a school, or for people who studied in a country or region.",
 };
 
 // "" in a number field means "not said"
@@ -300,6 +303,17 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     ))}
                                 </select>
                             </Field>
+
+                            <Field {...field("languages")}>
+                                <CountryChips
+                                    id="field-languages"
+                                    noun="language"
+                                    codes={values.languages ?? []}
+                                    countries={options.languages}
+                                    onChange={(codes) => set("languages", codes)}
+                                    describedBy={ariaFor("languages")["aria-describedby"]}
+                                />
+                            </Field>
                             </div>
                         </section>
 
@@ -430,6 +444,16 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                                     </Field>
                                 </>
                             )}
+
+                            <Field {...field("education")} group>
+                                <SchoolsEditor
+                                    id="field-education"
+                                    schools={values.education ?? []}
+                                    countries={options.countries}
+                                    onChange={(schools) => set("education", schools)}
+                                    describedBy={ariaFor("education")["aria-describedby"]}
+                                />
+                            </Field>
 
                             <Field {...field("currently_enrolled")} group>
                                 <SingleChoice

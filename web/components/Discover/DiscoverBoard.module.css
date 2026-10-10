@@ -166,6 +166,23 @@
   font-weight: 700;
 }
 
+/* how the list is ordered: always visible, the full width of the results */
+.orderNote {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
+
+.noteLink {
+  font-weight: 800;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
 .banner {
   margin-top: 16px;
   padding: 16px 18px;

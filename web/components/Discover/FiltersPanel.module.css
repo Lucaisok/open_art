@@ -6,14 +6,6 @@
   margin-top: clamp(16px, 2.6vw, 28px);
 }
 
-.note {
-  max-width: 60ch;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--color-grey-600);
-}
-
 /* Type and Discipline side by side, Country full width, the two pills in one row */
 .filters {
   display: grid;

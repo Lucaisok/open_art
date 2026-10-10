@@ -207,7 +207,8 @@ class VerdictOut(BaseModel):
     sentences: list[SentenceOut]  # failing sentences first (if any), then passing, then to check
     # sentences that aren't about who can apply (scope, src/eligibility/scope.py): never a check
     commitments: list[str]      # "What you'd commit to": what a selected artist has to do
-    about_project: list[str]    # "About the project": project conditions, preferences, notes
+    about_project: list[str]    # "About the project": conditions on the project, its partners, events
+    good_to_know: list[str]     # "Good to know": preferences ("women are encouraged") and definitions
 
 
 class OpportunityOut(BaseModel):
@@ -295,11 +296,11 @@ def verdict_out(verdict: Verdict) -> VerdictOut:
     means for the artist. A sentence can state several (multi-label: "over 18 ... and reside in
     Senegal"), so the page shows the sentence once with a row per requirement, instead of repeating it."""
     by_sentence: dict[str, list[Item]] = {}
-    commitments: dict[str, None] = {}   # dicts as ordered sets: a sentence with two labels is listed once
-    about_project: dict[str, None] = {}
+    # dicts as ordered sets: a sentence with two labels is listed once
+    boxes: dict[str, dict[str, None]] = {"OBLIGATION": {}, "PROJECT": {}, "PREFERENCE": {}, "NOT_A_CONDITION": {}}
     for item in verdict.items:  # in call order
         if item.outcome == "INFO":
-            (commitments if item.scope == "OBLIGATION" else about_project)[item.text] = None
+            boxes[item.scope][item.text] = None
         else:
             by_sentence.setdefault(item.chunk_id, []).append(item)
 
@@ -308,7 +309,8 @@ def verdict_out(verdict: Verdict) -> VerdictOut:
     outcomes = [row.outcome for sentence in sentences for row in sentence.requirements]
     return VerdictOut(status=verdict.status, summary=verdict.summary, fails=outcomes.count("FAIL"),
                       checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences,
-                      commitments=list(commitments), about_project=[t for t in about_project if t not in commitments])
+                      commitments=list(boxes["OBLIGATION"]), about_project=list(boxes["PROJECT"]),
+                      good_to_know=list({**boxes["PREFERENCE"], **boxes["NOT_A_CONDITION"]}))
 
 
 @router.get("/api/opportunities/{opportunity_id}")

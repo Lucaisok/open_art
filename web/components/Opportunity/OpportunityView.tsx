@@ -152,6 +152,19 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         </details>
                     )}
 
+                    {call.verdict.good_to_know.length > 0 && (
+                        <details className={styles.extra}>
+                            <summary className={styles.extraSummary}>
+                                Good to know · {call.verdict.good_to_know.length}
+                            </summary>
+                            <ul className={styles.extraList}>
+                                {call.verdict.good_to_know.map((text: string, i: number) => (
+                                    <li key={i}>“{text}”</li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+
                     <p className={styles.note}>
                         These checks use your saved profile and the call&apos;s own words. Always read the original
                         call before applying.

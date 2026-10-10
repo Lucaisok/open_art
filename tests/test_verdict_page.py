@@ -33,7 +33,7 @@ def test_the_page_shows_the_sentence_once_with_one_row_per_requirement():
     assert sentence.quote == SENEGAL
     # a failure first, then passes, then checks
     assert [(r.outcome, r.topic) for r in sentence.requirements] == [
-        ("FAIL", "Residence"), ("PASS", "Age"), ("CHECK", "Other conditions")]
+        ("FAIL", "Residence"), ("PASS", "Age"), ("CHECK", "Language")]  # "proficient in French or English"
 
 
 def item(index, text, label, outcome="CHECK", kind="check_only_class", reason="read it"):

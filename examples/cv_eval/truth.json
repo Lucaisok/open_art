@@ -1,5 +1,5 @@
 {
-  "_about": "Held-out CVs for the rule-based profile extractor (src/rag/cv_rules.py). FICTIONAL people. Written, with these answers, BEFORE the rules, and not used to develop them. null = the CV doesn't state it. A list for disciplines = any non-empty subset is right; [min, max] for active_since = any year in it is right (where a career 'starts' is a judgement call). degree_field: any of the listed strings (lower-case) is right.",
+  "_about": "Held-out CVs for the rule-based profile extractor (src/rag/cv_rules.py). FICTIONAL people. Written, with these answers, BEFORE the rules, and not used to develop them. null = the CV doesn't state it. A list for disciplines = any non-empty subset is right; [min, max] for active_since = any year in it is right (where a career 'starts' is a judgement call). degree_field: any of the listed strings (lower-case) is right. education (added 2026-10-10, AFTER the education rule was written, so not blind): every school the CV lists, with the country it is in; a school read with no country is fine, a wrong one is not.",
   "nadia_okafor.md": {
     "birth_date": "1990-11-03",
     "nationalities": ["GB", "NG"],
@@ -10,7 +10,11 @@
     "currently_enrolled": null,
     "graduation_year": 2016,
     "has_degree": true,
-    "degree_field": ["fine art (sculpture)", "fine art"]
+    "degree_field": ["fine art (sculpture)", "fine art"],
+    "education": [
+      {"institution": "Goldsmiths, University of London", "country": "GB"},
+      {"institution": "University of Lagos", "country": "NG"}
+    ]
   },
   "jonas_lindqvist.txt": {
     "birth_date": null,
@@ -22,7 +26,11 @@
     "currently_enrolled": true,
     "graduation_year": 2019,
     "has_degree": true,
-    "degree_field": ["contemporary dance"]
+    "degree_field": ["contemporary dance"],
+    "education": [
+      {"institution": "HZT Berlin (Inter-University Centre for Dance)", "country": "DE"},
+      {"institution": "University of Dance and Circus", "country": "SE"}
+    ]
   },
   "bruit_blanc.md": {
     "birth_date": null,
@@ -34,7 +42,8 @@
     "currently_enrolled": null,
     "graduation_year": null,
     "has_degree": null,
-    "degree_field": null
+    "degree_field": null,
+    "education": []
   },
   "mei_tanaka.txt": {
     "birth_date": null,
@@ -46,7 +55,10 @@
     "currently_enrolled": null,
     "graduation_year": 2008,
     "has_degree": true,
-    "degree_field": ["photography"]
+    "degree_field": ["photography"],
+    "education": [
+      {"institution": "Tokyo Polytechnic University", "country": "JP"}
+    ]
   },
   "lucia_romero.md": {
     "birth_date": "1979-05-21",
@@ -58,6 +70,10 @@
     "currently_enrolled": null,
     "graduation_year": 2012,
     "has_degree": true,
-    "degree_field": ["art history"]
+    "degree_field": ["art history"],
+    "education": [
+      {"institution": "Universidad Complutense de Madrid", "country": "ES"},
+      {"institution": "Universidad de Buenos Aires", "country": "AR"}
+    ]
   }
 }

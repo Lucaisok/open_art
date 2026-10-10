@@ -80,6 +80,17 @@ def test_save_normalises_and_reads_back(artist):
     assert values["birth_date"] == "1994-03-12" and values["active_since"] == 2021
 
 
+def test_languages_and_schools_are_saved_tidied(artist):
+    values = {**FULL, "languages": ["EN", "hu", "en"],
+              "education": [{"institution": " Academy of Fine Arts Vienna ", "city": "", "country": "at"},
+                            {"institution": "  ", "city": None, "country": None}]}   # an empty card on the form
+    assert save(artist, values).status_code == 200
+    saved = artist.get("/api/profile").json()["values"]
+    assert saved["languages"] == ["en", "hu"]
+    assert saved["education"] == [{"institution": "Academy of Fine Arts Vienna", "city": None, "country": "AT"}]
+    assert save(artist, {**FULL, "languages": ["xx"]}).status_code == 422
+
+
 def test_save_replaces_the_whole_profile(artist):
     save(artist, FULL)
     save(artist, {"disciplines": ["Music"]})

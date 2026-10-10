@@ -16,6 +16,8 @@ from typing import Literal
 from pydantic import BaseModel, field_validator
 
 from src.eligibility.geo import COUNTRIES
+from src.eligibility.languages import LANGUAGES
+from src.eligibility.study import EducationEntry
 from src.processing.canonicalize import CANONICAL_CAREER_STAGES, CANONICAL_DISCIPLINES
 
 ApplicantType = Literal["individual", "group", "organisation"]
@@ -40,6 +42,28 @@ class ArtistProfile(BaseModel):
     graduation_year: int | None = None      # year of the most recent graduation
     has_degree: bool | None = None
     degree_field: str | None = None
+    education: list[EducationEntry] = []    # the schools the artist studied at; [] = not given
+    languages: list[str] = []               # ISO 639-1 codes of the languages the artist can work in
+                                            # (fluent / professional level); [] = not given
+
+    @field_validator("education")
+    @classmethod
+    def _check_education(cls, entries: list[EducationEntry]) -> list[EducationEntry]:
+        for entry in entries:
+            entry.institution = entry.institution.strip()
+            if not entry.institution:
+                raise ValueError("every school needs a name")
+            entry.city = (entry.city or "").strip() or None
+            entry.country = None if not entry.country else _country_code(entry.country)
+        return entries
+
+    @field_validator("languages")
+    @classmethod
+    def _check_languages(cls, codes: list[str]) -> list[str]:
+        codes = sorted({code.strip().lower() for code in codes})
+        if unknown := [code for code in codes if code not in LANGUAGES]:
+            raise ValueError(f"unknown language code(s) {unknown} (expected ISO 639-1, e.g. 'en')")
+        return codes
 
     @field_validator("nationalities")
     @classmethod

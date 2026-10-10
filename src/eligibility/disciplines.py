@@ -73,6 +73,25 @@ _TERM_RES = {canonical: re.compile(r"\b(" + "|".join(terms) + r")\b", re.IGNOREC
              for canonical, terms in TERMS.items()}
 
 
+# "all creative sectors are eligible except audiovisual": everything is open but the disciplines named
+# after the exception word
+ALL_EXCEPT_RE = re.compile(r"\b(all|any|every)\b.{0,80}?\b(except|excluding|other than|apart from|"
+                           r"with the exception of)\b(?P<excluded>.*)", re.IGNORECASE | re.DOTALL)
+
+
+def excluded_disciplines(text: str) -> set[str] | None:
+    """For an "all ... except X" sentence, the canonical disciplines X it leaves out; None otherwise.
+    An umbrella that is left out takes its members with it ("except performing arts" -> dance too)."""
+    found = ALL_EXCEPT_RE.search(text)
+    if not found:
+        return None
+    excluded = {canonical for canonical, _ in disciplines_named(found.group("excluded"))}
+    for umbrella, members in UMBRELLAS.items():
+        if umbrella in excluded:
+            excluded.update(members)
+    return excluded or None
+
+
 def discipline_match(text: str, disciplines: list[str]) -> tuple[str, str] | None:
     """(the artist's discipline that matched, the words that named it), or None."""
     if not disciplines or NARROWING_RE.search(text):

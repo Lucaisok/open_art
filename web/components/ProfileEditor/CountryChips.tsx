@@ -10,11 +10,12 @@ type CountryChipsProps = {
     countries: ProfileOptions["countries"];
     onChange: (codes: string[]) => void;
     describedBy?: string;
+    noun?: string;          // what is picked, in the messages: "country" (default) or "language"
 };
 
-// Several countries (nationalities): removable chips, and a text field with the country
+// Several countries (nationalities) or languages: removable chips, and a text field with the
 // names as suggestions (<datalist>) plus an Add button. Enter in the field adds too.
-const CountryChips = ({ id, codes, countries, onChange, describedBy }: CountryChipsProps) => {
+const CountryChips = ({ id, codes, countries, onChange, describedBy, noun = "country" }: CountryChipsProps) => {
     const [text, setText] = useState("");
     const [problem, setProblem] = useState<string | null>(null);
     const nameOf = (code: string) => countries.find((c) => c.code === code)?.name ?? code;
@@ -26,7 +27,7 @@ const CountryChips = ({ id, codes, countries, onChange, describedBy }: CountryCh
         }
         const match = countries.find((c) => c.name.toLowerCase() === typed || c.code.toLowerCase() === typed);
         if (!match) {
-            setProblem("Pick a country from the suggestions.");
+            setProblem(`Pick a ${noun} from the suggestions.`);
             return;
         }
         if (!codes.includes(match.code)) {
@@ -38,7 +39,7 @@ const CountryChips = ({ id, codes, countries, onChange, describedBy }: CountryCh
 
     const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Enter") {
-            event.preventDefault(); // add the country, don't submit the form
+            event.preventDefault(); // add it, don't submit the form
             add();
         }
     };
@@ -68,7 +69,7 @@ const CountryChips = ({ id, codes, countries, onChange, describedBy }: CountryCh
                     type="text"
                     list={`${id}-list`}
                     className={styles.input}
-                    placeholder={codes.length ? "Add another country" : "Start typing a country"}
+                    placeholder={codes.length ? `Add another ${noun}` : `Start typing a ${noun}`}
                     value={text}
                     onChange={(event) => {
                         setText(event.target.value);

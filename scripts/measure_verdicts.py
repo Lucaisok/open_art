@@ -40,7 +40,7 @@ CORPUS_PERSONAS = {
     "berlin_multidisciplinary": ArtistProfile(
         birth_date=date(1990, 3, 1), nationalities=["IT"], residence_country="DE", applicant_type="individual",
         disciplines=["Visual Arts", "Music", "Film/Video", "Literature/Writing"], career_stage="Mid-Career",
-        years_active=12, currently_enrolled=False, graduation_year=2014, has_degree=True),
+        years_active=12, currently_enrolled=False, graduation_year=2014, has_degree=True, languages=["en", "it"]),
 }
 
 

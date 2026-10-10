@@ -21,6 +21,10 @@ CV section each line sits in ("Education", "Exhibitions"). Per field:
   disciplines         discipline words (the engine's table) in the CV's opening lines
   active_since        the earliest year of an exhibition / performance / residency / award /
                       publication line, or "founded in YYYY"
+  languages           the languages under a "Languages" heading or on a "Languages:" line, except those
+                      marked basic / beginner / A1-B1 (the profile holds working languages only)
+  education           one school per degree line: the institution after the degree and subject, the city
+                      and country after it ("MFA in Painting, Academy of Fine Arts Vienna, Austria")
   has_degree, graduation_year, degree_field, currently_enrolled
                       degree entries (MFA, BA, PhD...) in the Education section: their dates on
                       the same line or the next few (templates often put "09/2013 – 06/2016" on
@@ -38,6 +42,7 @@ from typing import Any
 
 from src.eligibility.disciplines import TERMS
 from src.eligibility.geo import COUNTRIES, COUNTRY_RE, NAME_TO_COUNTRY, SUBNATIONAL_LOOKUP, SUBNATIONAL_RE
+from src.eligibility.languages import LANGUAGE_RE, NAME_TO_LANGUAGE
 from src.rag.documents import Chunk
 
 
@@ -147,6 +152,44 @@ def _nationalities(lines: list[_Line]) -> tuple[list[str], _Line] | None:
             if codes := _countries_in(text):
                 return sorted(codes), line
     return None
+
+
+# -- languages ------------------------------------------------------------------------------------
+
+LANGUAGES_SECTION = re.compile(r"^\W*languages?\b", re.I)          # a "LANGUAGES" heading
+LANGUAGES_LINE = re.compile(r"^\W*languages?\s*[:\-–]", re.I)      # "Languages: Italian (native), ..."
+# a level below working level: the language is left out ("German (basic)", "Spanish A2")
+BELOW_WORKING = re.compile(r"\b(basic|beginner|elementary|notions?|some|school|a1|a2|b1|learning)\b", re.I)
+
+
+def _working_languages(text: str) -> list[str]:
+    """Each language is judged on its own stretch of text, up to the next language:
+    "Hungarian (native), German (basic)" -> Hungarian only."""
+    found = list(LANGUAGE_RE.finditer(text))
+    codes = []
+    for i, match in enumerate(found):
+        stretch = text[match.end():found[i + 1].start() if i + 1 < len(found) else len(text)]
+        code = NAME_TO_LANGUAGE[match.group(0).lower()]
+        if not BELOW_WORKING.search(stretch) and code not in codes:
+            codes.append(code)
+    return codes
+
+
+def _languages(lines: list[_Line]) -> tuple[list[str], _Line] | None:
+    """The working languages on a "Languages:" line, or on every line under a Languages heading (one
+    language per line is common). The quote shown is every line that named one, joined with " · "."""
+    for line in lines:
+        if LANGUAGES_LINE.search(line.text) and (codes := _working_languages(line.text)):
+            return sorted(codes), line
+    section = [line for line in lines if line.section and LANGUAGES_SECTION.search(line.section)]
+    codes, read = [], []
+    for line in section:
+        if LANGUAGE_RE.search(line.text):
+            read.append(line)
+            codes += [code for code in _working_languages(line.text) if code not in codes]
+    if not codes:
+        return None
+    return sorted(codes), _Line(" · ".join(line.text for line in read), read[0].section, read[0].page)
 
 
 # country NAMES, not adjectives: a contact line "Germany" is a place, "German" is a language or nationality
@@ -286,6 +329,44 @@ def _continues(line: str, following: str) -> bool:
     return bool(CONNECTOR_END.search(line.strip())) or (len(following.split()) <= 3 and following.endswith("."))
 
 
+SCHOOL_WORD = re.compile(r"\b(academ\w*|universit\w*|universidad\w*|universidade|école|ecole|school|college|"
+                         r"conservato\w*|institut\w*|hochschule|kunsthochschule|polytechnic|hzt)\b", re.I)
+YEAR_ONLY = re.compile(r"^\W*(19|20)\d\d(\s*[-–—]\s*((19|20)\d\d|present|now))?\W*$", re.I)
+
+
+def _place_code(text: str) -> str | None:
+    """The country a short place names: a country ("Austria") or a known city ("Vienna", "London")."""
+    found = PLACE_RE.search(text)
+    if not found:
+        return None
+    name = found.group(0).lower()
+    return NAME_TO_COUNTRY.get(name) or SUBNATIONAL_LOOKUP.get(name)
+
+
+def _school(text: str, degree_end: int) -> dict | None:
+    """The school of a degree line: what follows the degree and its subject, split on commas.
+    A segment that is only a country is the country; a short one before it, the city; years are
+    skipped; the rest is the institution. The country can also come from a city in the name
+    ("Academy of Fine Arts Vienna" -> AT)."""
+    segments = [seg.strip(" .:") for seg in re.split(r",|\s[-–—|]\s", text[degree_end:])]
+    segments = [seg for seg in segments[1:] if seg and not YEAR_ONLY.match(seg)]   # [0] is the subject
+    institution, city, country = [], None, None
+    for seg in segments:
+        code = NAME_TO_COUNTRY.get(seg.lower()) if seg.lower() in PLACE_NAMES else None
+        if code:
+            country = code
+        elif institution and not SCHOOL_WORD.search(seg) and len(seg.split()) <= 3 and seg[:1].isupper() \
+                and not re.search(r"\d", seg):
+            city = seg
+        else:
+            institution.append(seg)
+    if not institution:
+        return None
+    name = ", ".join(institution)
+    country = country or _place_code(city or "") or _place_code(name)
+    return {"institution": name, "city": city, "country": country}
+
+
 def _education(lines: list[_Line], today: date) -> list[tuple[str, Any, _Line]]:
     found: list[tuple[str, Any, _Line]] = []
     finished = []        # (end year, field, line)
@@ -296,12 +377,16 @@ def _education(lines: list[_Line], today: date) -> list[tuple[str, Any, _Line]]:
         if NOT_ENROLLED.search(line.text):
             found.append(("currently_enrolled", False, line))
 
+    schools, school_lines = [], []
     for i, line in enumerate(education):
         if STILL_RUNNING.search(line.text) and not NOT_ENROLLED.search(line.text):
             in_progress = in_progress or line           # any programme still running: enrolled
         degree = DEGREE.search(line.text)
         if not degree:
             continue
+        if (school := _school(line.text, degree.end())) and school not in schools:
+            schools.append(school)
+            school_lines.append(line)
         # this degree's lines: its own, then the next few up to the next degree (dates on their own line)
         entry = [line]
         for following in education[i + 1:i + 1 + LOOKAHEAD]:
@@ -320,6 +405,9 @@ def _education(lines: list[_Line], today: date) -> list[tuple[str, Any, _Line]]:
         year = max(int(y) for y in YEAR.findall(dated.text))
         finished.append((year, _degree_field(text, degree.end()), line))
 
+    if schools:
+        quoted = _Line(" · ".join(line.text for line in school_lines), school_lines[0].section, school_lines[0].page)
+        found.append(("education", schools, quoted))
     if in_progress and not any(f == "currently_enrolled" for f, _, _ in found):
         found.append(("currently_enrolled", True, in_progress))
     if finished:
@@ -417,6 +505,7 @@ def extract_profile(chunks: list[Chunk], document: str, today: date | None = Non
     add("disciplines", _disciplines(intro))
     add("active_since", _active_since(lines, intro, today),
         note="the earliest dated exhibition, performance, residency, award or publication in your CV")
+    add("languages", _languages(lines))
     for field, value, line in _education(lines, today):
         add(field, (value, line))
     return suggestions

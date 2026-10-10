@@ -261,3 +261,24 @@ def broad_regions_named(text: str) -> list[str]:
     if OUTSIDE_REGION_RE.search(text):
         return []
     return [name for name, pattern in BROAD_REGION_RE.items() if pattern.search(text)]
+
+
+# -- countries in words, for the reasons shown to the artist ----------------------------------------------
+# A region is named when all its members are in the list ("the EU" instead of 27 codes); largest first,
+# so the EEA wins over the EU. The rest are country names.
+NAMED_REGIONS = [("the EEA", REGIONS["EEA"]), ("the EU", EU), ("the Nordic countries", NORDIC),
+                 ("the Baltic countries", BALTIC), ("the Benelux", REGIONS["Benelux"]),
+                 ("the Dutch Caribbean", REGIONS["Dutch Caribbean"])]
+
+
+def describe_countries(codes: list[str], limit: int = 8) -> str:
+    """'the EU, Norway, Switzerland' for a list of ISO codes."""
+    rest, parts = set(codes), []
+    for name, members in NAMED_REGIONS:
+        if set(members) <= rest:
+            parts.append(name)
+            rest -= set(members)
+    names = sorted(COUNTRIES[code][0] if code in COUNTRIES else code for code in rest)
+    if len(names) > limit:
+        names = names[:limit] + [f"… ({len(rest)} countries)"]
+    return ", ".join(parts + names)

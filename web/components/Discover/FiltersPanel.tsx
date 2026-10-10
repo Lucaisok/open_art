@@ -5,7 +5,6 @@ import styles from "./FiltersPanel.module.css";
 type FiltersPanelProps = {
     state: DiscoverState;
     options: DiscoverOptions;
-    note: string;                                 // how the results are ordered, in words
     onChange: (next: DiscoverState) => void;
     onClear: () => void;
 };
@@ -13,9 +12,9 @@ type FiltersPanelProps = {
 type ListKey = "types" | "disciplines";
 
 // The options panel under the search row (design: DISCOVER.md → 3. Options panel), without the
-// matching terms (dropped in step 5b): a note on the order, then the filters. Native controls
+// matching terms (dropped in step 5b). The note on the order sits under the results heading. Native controls
 // only: <details> lists of checkboxes, a <select>, and two checkboxes styled as pills.
-const FiltersPanel = ({ state, options, note, onChange, onClear }: FiltersPanelProps) => {
+const FiltersPanel = ({ state, options, onChange, onClear }: FiltersPanelProps) => {
     const toggleIn = (key: ListKey, value: string) =>
         onChange({
             ...state,
@@ -51,8 +50,6 @@ const FiltersPanel = ({ state, options, note, onChange, onClear }: FiltersPanelP
 
     return (
         <div id="search-options" className={styles.panel}>
-            <p className={styles.note}>{note}</p>
-
             <section aria-labelledby="filters-heading" className={styles.filters}>
                 <div className={styles.filtersHead}>
                     <h2 id="filters-heading" className={styles.heading}>
