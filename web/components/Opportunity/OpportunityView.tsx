@@ -126,6 +126,32 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         ))}
                     </ul>
 
+                    {/* sentences that aren't about who can apply: listed apart, never a check (scope) */}
+                    {call.verdict.commitments.length > 0 && (
+                        <details className={styles.extra}>
+                            <summary className={styles.extraSummary}>
+                                What you&apos;d commit to · {call.verdict.commitments.length}
+                            </summary>
+                            <ul className={styles.extraList}>
+                                {call.verdict.commitments.map((text: string, i: number) => (
+                                    <li key={i}>“{text}”</li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+                    {call.verdict.about_project.length > 0 && (
+                        <details className={styles.extra}>
+                            <summary className={styles.extraSummary}>
+                                About the project · {call.verdict.about_project.length}
+                            </summary>
+                            <ul className={styles.extraList}>
+                                {call.verdict.about_project.map((text: string, i: number) => (
+                                    <li key={i}>“{text}”</li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+
                     <p className={styles.note}>
                         These checks use your saved profile and the call&apos;s own words. Always read the original
                         call before applying.

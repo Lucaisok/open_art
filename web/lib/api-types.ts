@@ -624,6 +624,10 @@ export interface components {
             passes: number;
             /** Sentences */
             sentences: components["schemas"]["SentenceOut"][];
+            /** Commitments */
+            commitments: string[];
+            /** About Project */
+            about_project: string[];
         };
     };
     responses: never;

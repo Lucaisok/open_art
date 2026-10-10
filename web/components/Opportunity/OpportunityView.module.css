@@ -276,6 +276,31 @@
   color: var(--color-grey-600);
 }
 
+/* "What you'd commit to" / "About the project": collapsed, so they don't compete with the checks */
+.extra {
+  margin-top: 16px;
+  border-bottom: 2px solid var(--color-grey-200);
+  padding-bottom: 12px;
+}
+
+.extraSummary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.extraList {
+  list-style: none;
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+  overflow-wrap: anywhere;
+}
+
 .note {
   margin-top: 22px;
   font-size: 14px;

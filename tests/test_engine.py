@@ -72,11 +72,20 @@ def test_a_call_with_no_requirements_says_so():
 
 
 def test_safety_net_sentence_is_a_check():
-    flagged = chunk(0, "for artists based in Ukraine and across Europe", "NONE", polarity="REQUIRES",
+    flagged = chunk(0, "for artists based in the region of the festival", "NONE", polarity="REQUIRES",
                     suspected_label="RESIDENCE", safety_net_reason='keyword "based in"')
     verdict = run(BELGIAN, [flagged])
     assert verdict.status == "CHECK"
     assert verdict.items[0].label == "RESIDENCE" and verdict.items[0].check_kind == "safety_net"
+
+
+def test_safety_net_sentence_resolves_only_in_the_artists_favour():
+    # step 5: a broad region the artist is clearly in passes; being outside it is never a fail
+    flagged = chunk(0, "for artists based in Ukraine and across Europe", "NONE", polarity="REQUIRES",
+                    suspected_label="RESIDENCE", safety_net_reason='keyword "based in"')
+    assert run(BELGIAN, [flagged]).status == "ELIGIBLE"
+    outside = ArtistProfile(nationalities=["BR"], residence_country="BR")
+    assert run(outside, [flagged]).status == "CHECK"
 
 
 @pytest.mark.parametrize("label", ["DISCIPLINE", "CAREER_STAGE", "EDUCATION", "PRIOR_FUNDING", "OTHER_ELIGIBILITY"])

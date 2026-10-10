@@ -205,6 +205,9 @@ class VerdictOut(BaseModel):
     checks: int
     passes: int
     sentences: list[SentenceOut]  # failing sentences first (if any), then passing, then to check
+    # sentences that aren't about who can apply (scope, src/eligibility/scope.py): never a check
+    commitments: list[str]      # "What you'd commit to": what a selected artist has to do
+    about_project: list[str]    # "About the project": project conditions, preferences, notes
 
 
 class OpportunityOut(BaseModel):
@@ -292,14 +295,20 @@ def verdict_out(verdict: Verdict) -> VerdictOut:
     means for the artist. A sentence can state several (multi-label: "over 18 ... and reside in
     Senegal"), so the page shows the sentence once with a row per requirement, instead of repeating it."""
     by_sentence: dict[str, list[Item]] = {}
+    commitments: dict[str, None] = {}   # dicts as ordered sets: a sentence with two labels is listed once
+    about_project: dict[str, None] = {}
     for item in verdict.items:  # in call order
-        by_sentence.setdefault(item.chunk_id, []).append(item)
+        if item.outcome == "INFO":
+            (commitments if item.scope == "OBLIGATION" else about_project)[item.text] = None
+        else:
+            by_sentence.setdefault(item.chunk_id, []).append(item)
 
     sentences = [SentenceOut(quote=items[0].text, requirements=_rows(items)) for items in by_sentence.values()]
     sentences.sort(key=lambda sentence: RANK[sentence.requirements[0].outcome])  # stable: call order kept
     outcomes = [row.outcome for sentence in sentences for row in sentence.requirements]
     return VerdictOut(status=verdict.status, summary=verdict.summary, fails=outcomes.count("FAIL"),
-                      checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences)
+                      checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences,
+                      commitments=list(commitments), about_project=[t for t in about_project if t not in commitments])
 
 
 @router.get("/api/opportunities/{opportunity_id}")

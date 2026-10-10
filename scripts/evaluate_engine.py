@@ -44,6 +44,9 @@ GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts.c
 # step 6c: a second, fresh sample (seed 2027, none of the step 6 calls), judged and scored once,
 # after the engine was frozen, so it gives an estimate the step 6b changes were not tuned on
 FRESH_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts_fresh.csv")
+# "Conclusive verdicts" step 6: a third sample (seed 2028, none of the step 6 / 6c calls), judged before the
+# engine was run on it, for the final number: the fresh set was iterated against, so it is no longer blind
+BLIND_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts_blind.csv")
 
 TODAY = date(2026, 10, 1)  # fixed, so ages and the results are reproducible
 SEED = 2026
@@ -230,19 +233,24 @@ def main() -> None:
     parser.add_argument("--packet", help="write the judging packet to this JSON file instead of evaluating")
     parser.add_argument("--fresh", action="store_true",
                         help="the fresh sample (step 6c): seed 2027, excluding every call in the step 6 gold file")
+    parser.add_argument("--blind", action="store_true",
+                        help="the blind sample of the conclusive-verdicts plan: seed 2028, excluding both earlier sets")
     args = parser.parse_args()
 
     engine = EligibilityEngine()
     opportunities = load_opportunities()
     if args.packet:
-        if args.fresh:
+        if args.blind:
+            judged = set(pd.read_csv(GOLD_PATH)["opportunity_id"]) | set(pd.read_csv(FRESH_GOLD_PATH)["opportunity_id"])
+            sample = select_sample(engine, opportunities, seed=2028, exclude=judged)
+        elif args.fresh:
             judged = set(pd.read_csv(GOLD_PATH)["opportunity_id"])
             sample = select_sample(engine, opportunities, seed=2027, exclude=judged)
         else:
             sample = select_sample(engine, opportunities)
         write_packet(args.packet, sample, opportunities)
     else:
-        evaluate(engine, opportunities, FRESH_GOLD_PATH if args.fresh else GOLD_PATH)
+        evaluate(engine, opportunities, BLIND_GOLD_PATH if args.blind else FRESH_GOLD_PATH if args.fresh else GOLD_PATH)
 
 
 if __name__ == "__main__":

@@ -22,21 +22,30 @@ import re
 # canonical discipline (CANONICAL_DISCIPLINES) -> the words that name it
 TERMS = {
     "Visual Arts": [r"visual arts?", r"visual artists?", r"fine arts?", r"paint(ing|ings|ers?)", r"sculpt\w*",
-                    r"drawings?", r"printmak\w*", r"graphic arts?"],
-    "Performing Arts": [r"performing arts?", r"performance arts?", r"performers?"],
-    "Music": [r"music\w*", r"composers?", r"sound arts?"],
+                    r"drawings?", r"printmak\w*", r"graphic arts?", r"contemporary arts?", r"visual cultures?",
+                    r"plastic arts?", r"illustrat(ion|ions|ors?)", r"installations?", r"print techniques?"],
+    "Performing Arts": [r"performing arts?", r"performance arts?", r"performers?", r"performance",
+                        r"performance artists?", r"live arts?"],
+    "Music": [r"music\w*", r"composers?", r"sound arts?", r"sound artists?", r"bands?", r"singers?", r"vocal\w*",
+              r"instrumental\w*", r"songwrit\w*", r"orchestra\w*", r"opera", r"pop-rock", r"jazz", r"concerts?"],
     "Dance": [r"danc\w*", r"choreograph\w*"],
-    "Theatre": [r"theat(re|er)s?", r"theatrical", r"drama", r"playwrights?", r"actors?", r"puppet\w*"],
-    "Film/Video": [r"films?", r"filmmak\w*", r"cinema\w*", r"video", r"moving images?", r"animation"],
-    "Literature/Writing": [r"literature", r"literary", r"writers?", r"authors?", r"poetry", r"poets?", r"fiction"],
-    "Design/Architecture": [r"design(ers?)?", r"architect\w*"],
-    "Digital/New Media Arts": [r"digital arts?", r"new media", r"media arts?"],
-    "Craft": [r"crafts?", r"craftspe\w*", r"ceramic\w*", r"textile\w*", r"applied arts?"],
+    "Theatre": [r"theat(re|er)s?", r"theatrical", r"drama", r"playwrights?", r"actors?", r"puppet\w*",
+                r"stage works?"],
+    "Film/Video": [r"films?", r"filmmak\w*", r"cinema\w*", r"video\w*", r"moving[- ]images?", r"animation",
+                   r"audiovisual", r"documentar(y|ies)", r"short films?", r"film-makers?"],
+    "Literature/Writing": [r"literature", r"literary", r"writers?", r"authors?", r"poetry", r"poets?", r"fiction",
+                           r"writing", r"novels?", r"essay\w*", r"comics?", r"storytell\w*", r"prose"],
+    "Design/Architecture": [r"design(ers?)?", r"architect\w*", r"urbanism"],
+    "Digital/New Media Arts": [r"digital arts?", r"new media", r"media arts?", r"digital media", r"multimedia",
+                               r"digital and computational", r"computational", r"data visuali[sz]ation"],
+    "Craft": [r"crafts?", r"craftspe\w*", r"ceramic\w*", r"textile\w*", r"applied arts?", r"artisans?"],
     "Photography": [r"photograph\w*"],
-    "Curating/Art Criticism": [r"curat\w*", r"art critic\w*"],
+    "Curating/Art Criticism": [r"curat\w*", r"art critic\w*", r"critics?", r"art observers?", r"theorists?",
+                               r"art writ(ers?|ing)"],
     "Cultural Heritage": [r"cultural heritage"],
     "Circus/Street Arts": [r"circus\w*", r"street arts?"],
-    "Multidisciplinary": [r"multidisciplinary", r"interdisciplinary", r"transdisciplinary"],
+    "Multidisciplinary": [r"multidisciplinary", r"interdisciplinary", r"transdisciplinary", r"trans\W*disciplinary",
+                          r"cross-?disciplinary", r"multi-?art", r"across disciplines"],
 }
 
 # umbrella terms: "performing arts" also names dance, theatre and circus; "visual arts" names photography
@@ -46,7 +55,15 @@ UMBRELLAS = {
 }
 
 # open to every discipline: passes anyone with a discipline in their profile
-ANY_DISCIPLINE_RE = re.compile(r"\b(all|any) (artistic |art )?(disciplines?|art forms?|fields of art)\b", re.IGNORECASE)
+ANY_DISCIPLINE_RE = re.compile(r"\b((all|any|every) (artistic |art |creative )?(disciplines?|art forms?|fields of art|"
+                               r"artistic fields?|forms of (art|artistic expression))|regardless of (their )?discipline)\b",
+                               re.IGNORECASE)
+
+# any artistic practice, no discipline named ("a recognised professional artistic practice", "one or more of the
+# artistic areas"): mined from the discipline sentences the term table didn't read (step 4)
+GENERIC_PRACTICE_RE = re.compile(r"\b(recogni[sz]ed|professional) (artistic|creative) practice\b"
+                                 r"|\bone or more of the artistic areas\b|\bartists of all\b"
+                                 r"|\b(cultural and artistic|artistic and cultural) (field|sector)s?\b", re.IGNORECASE)
 
 # a role or venue that narrows the discipline to something other than making the art
 NARROWING_RE = re.compile(r"\b(translat\w*|teach\w*|educat\w*|festivals?|publish\w*|producers?|venues?|"
@@ -63,7 +80,7 @@ def discipline_match(text: str, disciplines: list[str]) -> tuple[str, str] | Non
     # "all disciplines" only counts if the sentence names no specific one: "all disciplines and genres of
     # the independent performing arts" is open to performing arts only, not to everyone
     names_specific = any(term_re.search(text) for term_re in _TERM_RES.values())
-    if not names_specific and (found := ANY_DISCIPLINE_RE.search(text)):
+    if not names_specific and (found := ANY_DISCIPLINE_RE.search(text) or GENERIC_PRACTICE_RE.search(text)):
         return disciplines[0], found.group(0)
     for discipline in disciplines:
         # the artist's own discipline, or an umbrella that covers it

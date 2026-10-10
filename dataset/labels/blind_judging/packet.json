@@ -1,0 +1,334 @@
+{
+  "today": "2026-10-01",
+  "personas": {
+    "belgian_painter": {
+      "profile": {
+        "birth_date": "1998-03-01",
+        "nationalities": [
+          "BE"
+        ],
+        "residence_country": "BE",
+        "applicant_type": "individual",
+        "disciplines": [
+          "Visual Arts"
+        ],
+        "career_stage": "Emerging/Early-Career",
+        "years_active": 5,
+        "currently_enrolled": false,
+        "graduation_year": 2021,
+        "has_degree": true,
+        "degree_field": "Fine Arts"
+      },
+      "note": ""
+    },
+    "norwegian_dance_company": {
+      "profile": {
+        "residence_country": "NO",
+        "applicant_type": "organisation",
+        "disciplines": [
+          "Dance"
+        ],
+        "career_stage": "Established/Professional",
+        "years_active": 12
+      },
+      "note": "A dance company (an organisation) based in Norway."
+    },
+    "vienna_music_student": {
+      "profile": {
+        "birth_date": "2001-05-15",
+        "nationalities": [
+          "IT"
+        ],
+        "residence_country": "AT",
+        "applicant_type": "individual",
+        "disciplines": [
+          "Music"
+        ],
+        "career_stage": "Student",
+        "years_active": 2,
+        "currently_enrolled": true,
+        "graduation_year": 2024,
+        "has_degree": true,
+        "degree_field": "Music (bachelor)"
+      },
+      "note": ""
+    },
+    "ukrainian_writer_in_germany": {
+      "profile": {
+        "birth_date": "1974-09-20",
+        "nationalities": [
+          "UA"
+        ],
+        "residence_country": "DE",
+        "applicant_type": "individual",
+        "disciplines": [
+          "Literature/Writing"
+        ],
+        "career_stage": "Established/Professional",
+        "years_active": 25,
+        "currently_enrolled": false,
+        "graduation_year": 1998,
+        "has_degree": true,
+        "degree_field": "Philology"
+      },
+      "note": ""
+    },
+    "dutch_photo_duo": {
+      "profile": {
+        "nationalities": [
+          "NL"
+        ],
+        "residence_country": "NL",
+        "applicant_type": "group",
+        "disciplines": [
+          "Photography"
+        ],
+        "career_stage": "Mid-Career",
+        "years_active": 8
+      },
+      "note": "Two photographers applying together as a duo; they left several fields empty."
+    }
+  },
+  "calls": [
+    {
+      "opportunity_id": "kunsten_be_flanders_eb5a557cfc39",
+      "title": "Open Call – BBA Artist Prize 2026",
+      "organisation": "BBA",
+      "deadline": "2026-01-12",
+      "description": "We invite artists from around the world to apply for the BBA Artist Prize 2026. All mediums and themes are welcome, and the competition is open to anyone 18+, regardless of experience, education, or background.",
+      "requirements": "open to anyone 18+, regardless of experience, education, or background."
+    },
+    {
+      "opportunity_id": "nordic_culture_point_9dc9950cca03",
+      "title": "Demos",
+      "organisation": "Nordic Culture Point",
+      "deadline": "2027-09-24",
+      "description": "The aim with Demos is to facilitate networks and meetings between civil society organisations in the Nordics. A strong and dynamic civil society is a cornerstone of Nordic democracy. The funding programme promotes the ability of stakeholders in Nordic civil society to work together, to influence, and to strengthen their voice. The partnerships will help the Nordic Region on its way to becoming the most sustainable and integrated region in the world by 2030.",
+      "requirements": "Please note that only civil society organisations can apply for funding.\n\nFunding can be applied for by non-profit civil society organisations in all areas of society . These organisations include associations, foundations, charities, citizens organisations, interest groups, labour market organisations, religious communities, social enterprises, and NGOs. Demos funds projects with participation from at least three (3) different Nordic countries. Denmark, the Faroe Islands, Finland, Greenland, Iceland, Norway, Sweden, and Åland are considered as separate countries in this context. To be eligible, the applicant organisation must be established and registered in the Nordic Region. Denmark, the Faroe Islands, Finland, Greenland, Iceland, Norway, Sweden, and Åland are considered as Nordic countries in this context. Although the project may cover additional partners who do not operate in the Nordic Region, at least three Nordic countries must be represented. The partner is considered to represent the country or area in which the organisation is registered. The organisation and partners must have a democratic structure and operations. The organisation and partners must not pursue making a profit. The organisation must not owe taxes or fees to the state and must not have applied for bankruptcy or be in liquidation. Please note that individuals cannot apply for funding."
+    },
+    {
+      "opportunity_id": "kunsten_be_flanders_d4dcb3347320",
+      "title": "iMAL iPO call for residencies 2026",
+      "organisation": "iMAL",
+      "deadline": "2025-12-22",
+      "description": "iMAL Project Office is an open call aimed at artists and creators based in Belgium. Through residencies of maximum one month at iMAL, we seek to provide production & research assistance to support and develop new artistic projects. The 2026 iPO programme: LABOR-atorium – a co-creation research residency with LABoral (Gijón, SP) Stages – a residency co-organised with A Two Dogs Company (Brussels) Fablab Experiments – two residencies at Fablab iMAL",
+      "requirements": "an open call aimed at artists and creators based in Belgium."
+    },
+    {
+      "opportunity_id": "villa_arson_184a7d44f070",
+      "title": "Université Côte d’Azur x Villa Arson Residency",
+      "organisation": "La Villa Arson et Université Côte d’Azur",
+      "deadline": "2026-08-30",
+      "description": "Villa Arson and Université Côte d’Azur are offering a three-month photographic creation residency intended for a young photographer who has recently graduated or been recommended by a cultural or artistic structure, in response to the policy of support for emerging creation shared by the two institutions.",
+      "requirements": "It is intended for a photographic artist, under 30 years old, living and working in the Caribbean region."
+    },
+    {
+      "opportunity_id": "dgartes_portugal_79348e4c8ca7",
+      "title": "SUSTAINED SUPPORT PROGRAMME FOR THE ARTS CROSS-DISCIPLINARY, CIRCUS, STREET ARTS AND DIGITAL ARTS (CREATION, EDITION, TRAINING, STRATEGIC MEDIATION ACTIONS)",
+      "organisation": "Direção-Geral das Artes (DGARTES)",
+      "deadline": null,
+      "description": "The Directorate-General for the Arts (DGARTES) makes public, through this notice, the opening of the competition for the submission of applications within the scope of the Sustained Support Program in the areas of Cross-disciplinary, Circus, Street Arts and Digital Arts, as provided for in Decree-Law No. 103/2017, of 24 August, in its current wording, and in the Regulation of the Arts Support Programs, approved in annex to Ordinance No. 345-A/2026/1, of 14 August, under the following terms:",
+      "requirements": "1. Private legal persons with headquarters in Portugal, who here carry out, on a predominant basis, professional activities in one or more of the artistic areas provided for in Article 1(2) of Decree-Law No. 103/2017, of 24 August, in its current wording, according to the following access conditions: a) Biennial support modality: have at least four years of continuous professional activity; b) Quadriennial support modality: have at least six years of continuous professional activity; have benefited, at least once in the last six years, from State financial support through DGARTES under the sustained support typology, provided that the sanction provided for in point c) of paragraph 1 of Article 23 has not been applied to them, nor is the sanction provided for in point a) of paragraph 1 of the same article being applied, regardless of their legal nature or institutional model; have a creation and/or presentation space suitable for pursuing the supported activity.\n\n2. For the purposes of access to the modality provided for in point b) of paragraph 1, the last two cycles of sustained support (2018-2022 and 2023-2026), in the quadriennial and biennial modality, awarded under Decree-Law No. 103/2017, of 24 August, in its current wording, are considered.\n3. Private foundations or private law public foundations that have another type of continuous funding, ensured by the budget programme of the culture area, as well as associations made up mostly of public entities and companies in the state business sector and of the autonomous regions, are not admitted to the tender procedure.\n4. Entities that have signed an addendum to renew the sustained support contract in the quadriennial modality are not admitted to the tender procedure.\n5. Entities must frame their activity in only one application and, in the event of support being granted, the respective contract constitutes the sole support instrument for the period for which it is intended, except as provided for in Article 26(4) of Decree-Law No. 103/2017, of 24 August, in its current wording."
+    },
+    {
+      "opportunity_id": "kulturdirektoratet_norway_249e90c0e25b",
+      "title": "New Norwegian fiction for adults – automatic acquisition scheme",
+      "organisation": "Kulturrådet",
+      "deadline": "2026-10-15",
+      "description": "The scheme shall contribute to new Norwegian fiction for adults being created, published, distributed and read.",
+      "requirements": "Publishers and other publishers with a Norwegian organisation number can submit books to this scheme. It is not possible to submit books to both the automatic and the selective acquisition scheme for new Norwegian fiction for the same target group within the same publication year. It is important that you as the publisher have entered into an agreement with the author and any other rights holders (such as illustrators or translators) before you apply. The Arts Council of Norway can decide that a publisher is not allowed to submit books for a period if they have not complied with the conditions for the scheme previously. For example, this may be because the publisher has not repaid money by the stated deadlines. Remember that an author can usually only have one book for adults and one book for children and young people submitted to the acquisition schemes for fiction each calendar year. This is called the “one-book rule.” The one-book rule applies to this scheme and the selective acquisition scheme for fiction for adults together. This means that the author cannot have more than one book submitted to the acquisition schemes for fiction for adults in the same year. You can apply for an exemption from the one-book rule on behalf of the author. You must do this before the first book is published. The application must be justified. The book must be new Norwegian fiction for adults. By fiction we mean novels, short stories, short prose, poetry, drama and picture books. Under this scheme, we classify drama in metrical form as poetry. We also classify books with mainly fact-based and professional content as fiction if the books have a sufficiently literary character. The book must either be written in Norwegian (Bokmål, Nynorsk or dialect) or translated into Norwegian from Sámi or a national minority language or translated into Norwegian from another language if it is an original work that has not been published previously, or a translation of poetry into Norwegian. By new we mean that the book is published as an original work in the same year that you apply. Translations of poetry into Norwegian are considered new literary works. Collections of poems and short stories are considered new if less than half of the content has been printed previously. In any case, the collection must be assessed as a unified literary work. If the author of the book is deceased, you can apply for up to five years after the author passed away. If the book is translated from Sámi or a national minority language, the original work cannot be more than five years old when you apply."
+    },
+    {
+      "opportunity_id": "kulturdirektoratet_norway_c2fe46c33b4d",
+      "title": "Independent performing arts – project (theatre)",
+      "organisation": "Kulturrådet",
+      "deadline": null,
+      "description": "Grants for the artistic production and presentation of theatre, both individual projects and multi-year projects.",
+      "requirements": "You may apply for this scheme if you are a professional performing artist, producer, part of a production environment, or another entity within the performing arts field. Private individuals, private and public institutions, organizations, and other businesses may apply. Applicants who receive fixed annual state grants are normally not awarded grants from this scheme."
+    },
+    {
+      "opportunity_id": "fonds_darstellende_kuenste_354ab8e6e2a1",
+      "title": "Production Funding",
+      "organisation": "Fonds Darstellende Künste",
+      "deadline": "2026-09-15",
+      "description": "With production funding, the Fonds Darstellende Künste enables artists/groups who have been producing professionally and independently for many years to find and further develop new aesthetics and expressive formal languages for the artistic questioning of social developments, to implement production projects and to show these productions to the public for the first time.",
+      "requirements": "Professionally producing artists/groups from the independent performing arts (including performance, drama, dance, music theater, puppet and object theater, theater in public space, contemporary circus) based and working in Germany."
+    },
+    {
+      "opportunity_id": "kunsten_be_flanders_4aedc4760cc0",
+      "title": "Open Call Zoöp Connections II: Kunstfort Vijfhuizen & Czech Centre Brussels Call for Artist-in-Residence 2026",
+      "organisation": "Czech Centre Brussels, Kunstfort Vijfhuizen, EUNIC Netherlands, Zoöp, and DutchCulture",
+      "deadline": "2026-04-30",
+      "description": "This residency and open call have been developed in collaboration with the Czech Centre Brussels, Kunstfort Vijfhuizen, EUNIC Netherlands, Zoöp, and DutchCulture, and are intended for artists, researchers, and creative practitioners with a connection to the Czech Republic or Czech cultural practice.",
+      "requirements": "Creative professionals and artists aged 18+, based in a Creative Europe country outside the Netherlands, with a demonstrable connection to Czech culture. Residents may come from a wide range of creative fields, including visual arts, design, research, literature, performance, music, technology, or other interdisciplinary practices."
+    },
+    {
+      "opportunity_id": "dgartes_portugal_9e53fc497124",
+      "title": "Sustained Support Programme for the Arts – Music and Opera (Creation, Publishing, Training, Strategic Mediation Actions)",
+      "organisation": "Direção-Geral das Artes (DGARTES)",
+      "deadline": "2027-08-24",
+      "description": "The Directorate-General for the Arts (DGARTES) hereby makes public, through this notice, the opening of the call for the submission of applications under the Sustained Support Programme in the area of Music and Opera, pursuant to Decree-Law No. 103/2017, of 24 August, in its current wording, and the Regulation of the Arts Support Programmes, approved in annex to Ministerial Order No. 345-A/2026/1, of 14 August, under the following terms:",
+      "requirements": "1. Private legal entities with registered office in Portugal, which carry out, on a predominant basis, professional activities in one or more of the artistic areas provided for in Article 1(2) of Decree-Law No. 103/2017 of 24 August, as currently amended, under the following access conditions: a) Biennial support modality: have at least four years of continuous professional activity; b) Quadriennial support modality: have at least six years of continuous professional activity; have benefited, at least once in the last six years, from financial support from the State through DGARTES under the sustained support type, provided that they have not been subject to the sanction provided for in point c) of paragraph 1 of Article 23, nor is the sanction provided for in point a) of paragraph 1 of the same article being applied, regardless of their legal nature or institutional model; have suitable creation and/or presentation space for the pursuit of the supported activity.\n\n2. For the purposes of access to the modality provided for in point b) of paragraph 1, the last two sustained support cycles (2018-2022 and 2023-2026), in the quadriennial and biennial modalities, granted under Decree-Law No. 103/2017 of 24 August, as currently amended, are considered.\n3. Private foundations or private-law public foundations that have other types of continuous funding, ensured by the budget programme of the culture area, as well as associations mainly constituted by public entities and companies in the State enterprise sector and in the autonomous regions, are not admitted to the tender procedure.\n4. Entities that have signed an addendum renewing the sustained support contract in the quadriennial modality are not admitted to the tender procedure.\n5. Entities must frame their activity in only one application and, in the event of the granting of support, the respective contract constitutes the sole support instrument for the period to which it is intended, except as provided for in Article 26(4) of Decree-Law No. 103/2017 of 24 August, as currently amended."
+    },
+    {
+      "opportunity_id": "national_culture_fund_bulgaria_b9b7ce861aa9",
+      "title": "MOBILITY Program 2026 FIRST SESSION",
+      "organisation": "Национален фонд „Култура“",
+      "deadline": null,
+      "description": "The Mobility Program 2026 is aimed at providing financial support to Bulgarian cultural organizations, individual artists and creative groups for participation in international cultural and educational forums in Bulgaria and abroad, with the aim of further development and creation of international contacts and partnerships.",
+      "requirements": "1. Eligible applicants\n1.1. Bulgarian private cultural organizations within the meaning of Art. 10, para. 1 of the ZZRK;\n1.2. Organizations registered under the Law on People’s Community Centers;\n1.3. Natural persons with Bulgarian citizenship or the right to reside in Bulgaria.\n\n2. Ineligible applicants\n2.1. Persons and organizations sanctioned under Art. 37 of the ZZRK and/or the application conditions under the respective procedure for a period of up to two years from the imposition of the sanction;\n2.2. Persons and organizations in which a member of a management or control body, as well as a person temporarily performing such a position, including a procurator or commercial attorney, is a related person within the meaning of § 1, item 9 of the additional provisions of the Anti-Corruption Act with the executive director or with members of the management board;\n2.3. Persons and organizations that have not submitted a report within the deadline under a contract for the provision of funds from the Fund or against which there is a court dispute regarding the performance of a contract financed by the Fund;\n2.4. Projects that were not approved in previous competitions organized by the Fund, excluding projects that were not approved due to a shortage of the funds specified in the order for the respective competition;\n2.5. Persons and organizations, donors to the Fund;\n2.6. Employees of the Fund;\n2.7. Members of the expert commission only for competitions for which they are assigned to participate in the respective commissions under the procedure of this ordinance;\n2.8. Persons and organizations with two concluded contracts for the provision of funds from the Fund during the same calendar year;\n2.9. Legal entities that are bankrupt or are in bankruptcy proceedings, or in liquidation proceedings;\n2.10. Other persons restricted under the regime applicable to the competition, in accordance with the rules in the field of state aid;\n2.11. Persons who have due public obligations, with the exception of obligations under acts that have not entered into force, as well as deferred, postponed or secured obligations."
+    },
+    {
+      "opportunity_id": "fpu_slovakia_ea20c0b78bce",
+      "title": "1.4.1 Creation and realization of works – fine and visual art",
+      "organisation": "Fond na podporu umenia",
+      "deadline": "2026-07-27",
+      "description": "Subprogram 1.4 – Fine and visual art is focused on supporting professional art (classical media, new media, photography, design and architecture) with the aim of maintaining the continuity of fine and visual culture, supporting the creation of new artistic forms and activities of a non-commercial character.",
+      "requirements": "Support is intended exclusively for entities that demonstrably operate in the field of fine and visual art. The applicant must have one of the following legal forms: a) budgetary organization or contributory organization founded by a higher territorial unit, b) budgetary organization or contributory organization founded by a municipality, c) non-profit organization providing generally beneficial services, d) commercial company, e) civic association, f) non-investment fund, g) foundation, h) association of legal persons with a special interest."
+    },
+    {
+      "opportunity_id": "deutscher_uebersetzerfonds_49495ded0037",
+      "title": "Radial-Brockes Scholarship",
+      "organisation": "Deutscher Übersetzerfonds e.V.",
+      "deadline": "2026-09-24",
+      "description": "The Barthold-Heinrich-Brockes scholarship enables experienced translators of German-language literature living in Germany to take a »sabbatical«",
+      "requirements": "experienced translators of German-language literature living in Germany"
+    },
+    {
+      "opportunity_id": "fpu_slovakia_df1a50b7b76a",
+      "title": "9.1 Incubator – creation",
+      "organisation": "Fond na podporu umenia",
+      "deadline": "2026-08-04",
+      "description": "Subprogramme 9.1 Incubator – creation is focused on supporting the creation of an artwork by beginning artists and groups operating in areas such as theatre, dance, music, fine and visual arts, literature, traditional folk culture and folklore.",
+      "requirements": "Eligible applicants are legal entities and natural persons active in the field of art and culture aged 18–26 years. The applicant must have one of the following legal forms: a) natural person – sole trader, b) association of natural persons, c) civic association, d) business company"
+    },
+    {
+      "opportunity_id": "dansateliers_rotterdam_e3404a6adf78",
+      "title": "Open Call Choreographic Encounters",
+      "organisation": "Dansateliers and choreographer Amparo González Sola",
+      "deadline": "2026-09-15",
+      "description": "Dansateliers and choreographer Amparo González Sola invite choreographers to apply for the first edition of the Choreographic Encounters Laboratory. This edition will explore choreographic procedures and strategies of attention in a peer-to-peer environment.",
+      "requirements": "Who can apply? The application is open to artists with a grounded artistic movement practice and an established body of work. Artists are interested in choreographic procedures, tools and audience strategies in relation to their own work. They have experience with peer-to-peer feedback and are interested in and comfortable with sharing their practice and work with others. Please note: We are open to artists with specific access needs. The Dansateliers building is currently not wheelchair accessible. Participants need to be able to climb stairs to reach the studios.\n\nWe are looking for\n• 1 artist residing in Europe\n• 1 artist residing in The Netherlands"
+    },
+    {
+      "opportunity_id": "cite_internationale_des_arts_faaa6d16811c",
+      "title": "Hessische Kulturstiftung 2027/2028 travel and residency grants",
+      "organisation": "Hessische Kulturstiftung",
+      "deadline": "2026-10-15",
+      "description": "The application portal for the Hessische Kulturstiftung 2027/2028 travel and residency grants is open through 15 October 2026 .",
+      "requirements": "Visual artists who … were born in Hesse or have lived in Hesse (primary residence) since no later than 1 January 2025 or have completed a degree at an art academy or a comparable course of study/training in Hesse can apply. There is no age limit. Artist duos may submit a joint application. Applications are not accepted from persons who … have been awarded a Hessische Kulturstiftung travel or residency grant in the past (does not apply to State of Hesse work, project, or gap grants) are still in the process of pursuing a degree vocational training programme at the time of the application are related to one of the jury members, are employed by the Hessische Kulturstiftung, or are related to a Hessische Kulturstiftung employee."
+    },
+    {
+      "opportunity_id": "mondriaan_fund_927ae2095ba6",
+      "title": "Artist Basic",
+      "organisation": "Mondriaan Fund",
+      "deadline": null,
+      "description": "Artist Basic grant is for visual artists, to help them make new work and for the further development of their professional practice.",
+      "requirements": "Applications may only be submitted by artists who have been working as professional visual artists for at least 4 years:"
+    },
+    {
+      "opportunity_id": "creative_ireland_f8a67b51b5d1",
+      "title": "Ciste um Ghníomhú Cruthaitheach ar son na hAeráide III",
+      "organisation": "An Clár Éire Ildánach, tríd an Roinn Cultúir, Cumarsáide agus Spóirt (RCCS) i gcomhar leis an Roinn Aeráide, Fuinnimh agus Comhshaoil (RAFC) agus Roinn an Taoisigh",
+      "deadline": "2026-09-24",
+      "description": "T á áthas ar An gClár Éire Ildánach, tríd an Roinn Cultúir, Cumarsáide agus Spóirt (RCCS) i gcomhar leis an Roinn Aeráide, Fuinnimh agus Comhshaoil (RAFC) agus Roinn an Taoisigh, iarratais a lorg chuig Ciste um Ghníomhú Cruthaitheach ar son na hAeráide III, ciste iomaíoch €6.5 milliún do thionscadail chruthaitheacha ar féidir leo daoine a nascadh leis na hathruithe móra atá ag tarlú inár dtimpeallacht, inár sochaí agus inár ngeilleagar a eascraíonn as an athrú aeráide, agus ar féidir leo an nasc sin a aistriú ina thuiscint agus ina ghníomh.",
+      "requirements": "Táimid ag lorg tionscadail nuálacha uaillmhianacha agus ar scála mór a bhfuil cur chuige láidir ealaíonta, cultúrtha nó cruthaitheach ag gabháil leo chun gníomhú ar son na haeráide a chumasú i bpobal áite nó cleachtais."
+    },
+    {
+      "opportunity_id": "kulturdirektoratet_norway_0524a2291eba",
+      "title": "State Artist Grant",
+      "organisation": "Statens kunstnerstipend",
+      "deadline": null,
+      "description": "The State Artist Grant shall contribute to the state art policy by facilitating that individual artists, through direct grants from the state, can contribute to a diverse and innovative art life of high quality. The grants shall give artists the opportunity to develop their artistic activity and have artistic activity as their main occupation.",
+      "requirements": "The grant is primarily for artists who live and work in Norway\nArtists who primarily live and work in Norway may receive a grant from the State Artist Grant. Exceptions may be made to the requirement that you must primarily live and work in Norway if your artistic activity has an impact on the arts and cultural life in Norway. Your artistic practice may have an impact on Norwegian arts and cultural life if, through your artistic work, you have particular connections to Norway or Norwegian arts and cultural life. The artistic practice must be significant for the arts field.\n\nThe grant is for professionally active artists\nYou must be a professionally active artist to receive the grant. You are considered a professionally active artist if the relevant art field is your professional occupation. What constitutes having art as a professional occupation may vary between art fields, but involves work creating or performing art for professional purposes. The term “professional” also indicates that the artist has competence, either based on education or on documented practice. Normally, professional professional activity will involve income from the work.\n\nRestrictions related to education and employment\nYou cannot receive the grant if you are undertaking education equivalent to more than 15 ECTS credits per semester.\nYou cannot receive the grant if you have employment relationships totaling more than 50 percent of a full-time position during the calendar year in which you receive the grant. This applies to work grants, work grants for newly established artists, grants for established artists, and grants for senior artists.\nYou may be employed in a position exceeding 50 percent and receive miscellaneous grants and start-up grants for young artists.\nBeing employed in a “position” means all types of employment relationships, including temporary and short-term positions. Freelance work or other short-term commission agreements do not count as a “position.” That the position may not exceed 50 percent in total for the calendar year means that the average percentage of the position for the entire year in which you receive the grant may not be over 50 percent. If you have a position exceeding 50 percent at the start of the year, the position must be reduced so that the total workload in employment relationships for the entire calendar year does not exceed 50 percent. The purpose of the rule is that you should have at least 50 percent free working time in the year you receive the grant, so that you can use the grant to develop your artistic practice.\n\nCombination of different grants\nYou cannot receive more than one grant of the type work grant, work grant for newly established artists, grant for established artists, or grant for senior artists at the same time. If you receive one of these grants, you may still receive a miscellaneous grant or a start-up grant for young artists in addition. Recipients of state grants cannot receive a grant from the State Artist Grant."
+    },
+    {
+      "opportunity_id": "villa_arson_2040c24c9c02",
+      "title": "CALL FOR APPLICATIONS — SOUND PIECE: Festival Versus Manifesto",
+      "organisation": "Villa Arson",
+      "deadline": "2026-05-15",
+      "description": "As part of the first edition of the contemporary art festival Versus Manifesto (Ramatuelle, Var), an open call is launched to Alumni of Villa Arson for the production of an original sound piece. This piece will be presented as part of the exhibition, alongside established artists. Artists who wish to do so may propose an edition to accompany their sound creation.",
+      "requirements": "An application call is launched for Villa Arson alumni for the production of an original sound piece."
+    },
+    {
+      "opportunity_id": "european_cultural_foundation_a246059c820a",
+      "title": "Culture Helps Solidarity: Open Call for Individual Grants (4th Round)",
+      "organisation": "European Cultural Foundation",
+      "deadline": "2026-06-29",
+      "description": "The fourth round of Culture Helps Solidarity Individual Grants is now open . The programme offers flexible grants of up to €1,200 to Ukrainian cultural professionals working with displaced people, refugees and other vulnerable communities, including veterans, in Ukraine and across Creative Europe countries. Rather than funding projects, these grants are designed to support the individuals behind the work.",
+      "requirements": "to Ukrainian cultural professionals working with displaced people, refugees and other vulnerable communities, including veterans, in Ukraine and across Creative Europe countries."
+    },
+    {
+      "opportunity_id": "deutscher_uebersetzerfonds_c207b387a453",
+      "title": "DÜF scholarships",
+      "organisation": "DÜF",
+      "deadline": null,
+      "description": "Work grant (target language German) Work grants enable longer and more intensive work on a project, research and post-processing",
+      "requirements": "Work grant (target language German)"
+    },
+    {
+      "opportunity_id": "dgartes_portugal_4fe806b71e57",
+      "title": "Sustained Support Programme for the Arts — Cross-disciplinary, Circus, Street Arts and Digital Arts (Creation, Edition, Training, Strategic Mediation Actions)",
+      "organisation": "DGARTES",
+      "deadline": "2026-10-06",
+      "description": "The Directorate-General for the Arts makes public, through Notice no. 20875-D/2026/2, the opening of the call for the submission of applications within the scope of the Sustained Support Programme in the areas of Disciplinary Crossing, Circus, Street Arts and Digital Arts, as provided for in Decree-Law no. 103/2017, of 24 August, in its current wording, and in the Regulations of the Arts Support Programmes, approved in an annex to Order no. 345-A/2026/1, of 14 August.",
+      "requirements": "Applications close at 5:59:59 p.m. on 6 October 2026"
+    },
+    {
+      "opportunity_id": "konstepidemin_df24847c1417",
+      "title": "Application form – studio at Konstepidemin",
+      "organisation": "Konstepidemin",
+      "deadline": null,
+      "description": "Apply for a studio at Konstepidemin",
+      "requirements": "Have you applied for a studio at Konstepidemin before? Yes No\n\nApplicant information\nName *\nBorn year *\nPhone Number *\nE-mail *\nCounty *\nZip Code *\nArt field *\nWebsite *\nLink to the Open Web - not closed services like Instagram.\n\nRequests\nCheck desired size of studio:\nSmaller than 20 sqm\n20–40 sqm\n40–80 sqm\nLarger than 80 sqm\n\nCommunity organisation duties\nAs an artist at\tKonstepidemin you are required to\ttake\tpart\tin the board, the culture committee, or\t\none of our work sections: gallery, studio, stage, kids\tand youths, the international group, outdoor/gardening. Check area of\tinterest (more\tthan\tone is allowed).\nGroups *\nThe board\nCulture committee\nGallery group\nStudio group\nStage group\nKids and youth group\nInternational group\nOutdoor/gardening group\n\nCV & Personal letter\nCV and a personal letter describing yourself, your art practice, reasons for wanting a studio at Konstepidemin, and documentation of your artistic practice."
+    },
+    {
+      "opportunity_id": "deutscher_uebersetzerfonds_859edc58a65e",
+      "title": "Radial Initiative Grant",
+      "organisation": "Deutscher Übersetzerfonds e.V.",
+      "deadline": "2026-09-24",
+      "description": "Radial initiative grants are awarded for the dissemination and development of promising, literarily high-quality projects or for a personal further training project (source language German)",
+      "requirements": "Source language: German\n\nThe application is complete when, in addition to the online application in the next step, the following documents have been uploaded together in a PDF file: short biography, professional career (in German), list of publications and, if applicable, awards (in German), a description of the project and the intended outreach activities. The legal status of the original must be clarified. Or explanation of the continuing-education project (total max. 3 pages, in German). A short sample translation (5 manuscript pages). Copy of the relevant section of the original"
+    },
+    {
+      "opportunity_id": "min_kulture_croatia_2fe7ed5dcd74",
+      "title": "Public call for financing sample translations of works by Croatian authors into foreign languages in 2025",
+      "organisation": "Ministarstvo kulture i medija Republike Hrvatske",
+      "deadline": "2025-11-10",
+      "description": "The Ministry of Culture and Media, on the basis of the Act on Cultural Councils and Financing Public Needs in Culture (NN83/22), announces a Public Call for financing sample translations of works by Croatian authors into foreign languages in 2025.",
+      "requirements": "Physical and legal persons registered for publishing activities, representation/intermediation and/or the sale of copyright who have so far concluded at least 5 contracts for the sale of publishing rights of Croatian authors may apply to the Public Call. Applicants must be holders of the copyright to the works they submit to this Public Call, or they must possess a written statement from the copyright holder that they agree to the creation and use of a sample translation in accordance with the objectives of the Public Call."
+    },
+    {
+      "opportunity_id": "vkkf_konkursu_grafiks_9d2acff9e4e1",
+      "title": "Improving the material and technical base of music education institutions",
+      "organisation": "Valsts kultūrkapitāla fonds",
+      "deadline": null,
+      "description": "Improvement of the material and technical base of music educational institutions",
+      "requirements": "The objectives, tasks, eligible applicants, and other matters related to the conduct of the program competition are set out in the regulations of each target program competition."
+    },
+    {
+      "opportunity_id": "fpu_slovakia_7d1dec061d0c",
+      "title": "1.1.1 Creation and staging of a stage work – theatre",
+      "organisation": "Fond na podporu umenia",
+      "deadline": "2026-07-27",
+      "description": "Subprogramme 1.1 – Theatre is focused on supporting drama theatre, musical-dramatic theatre, puppet theatre, theatre for children and youth, and other alternative forms of theatre, with the aim of maintaining the continuity of theatre culture, supporting new artistic forms and non-commercial activities.",
+      "requirements": "Support is intended for theatre collectives defined in the description of programme 1.1, which are established on the Slovak art scene and active on it. Support in this subprogramme is intended exclusively for: the creation and staging of a stage work that will be publicly presented in the 2026/2027 season; a condition for the granting of support is also repeated performances in the following 2027/2028 season. Support is not intended for: separate repeated performances of a stage work that has already been staged, writing a theatre work, creation without being linked to a specific stage performance of the work. The substantive output must in the future be staged as a stage work, which the applicant confirms by an acceptance letter from the institution in which the work will be realised, rehearsal of an individual performance, ordinary operating expenses of the theatre, stage works presented exclusively online. Within the subprogramme, the applicant may submit a maximum of three applications for the allocation of financial resources. In the event that the applicant submits more than three applications, the fund will consider only the first three delivered applications, or the first three applications with a lower serial number, as complete, and the others will be excluded. An application for support may be submitted only by an applicant who has, by the deadline of the call for applications, completed the implementation of their project, if they were supported in previous years of the FPU support activity. A project is considered completed if the recipient submitted the substantive evaluation of the project to the fund after the expiration of the entire period for which the support was granted. If multiple entities participate in the implementation of the project, the application is submitted exclusively by the entity that initiated the work or is responsible for its implementation. Only one entity may apply for support for the implementation of the identical work. In the event that more than one application is submitted for the identical work (the content is decisive, not the title), the fund will consider only the first delivered application, or the application with a lower serial number, as complete, and the others will be excluded."
+    },
+    {
+      "opportunity_id": "kunst_dk_denmark_64e7cbaea368",
+      "title": "Craft and design projects in Denmark and abroad",
+      "organisation": "Danish Arts Foundation",
+      "deadline": "2027-01-03",
+      "description": "Funding for projects for and with Danish craft and design in Denmark and abroad.",
+      "requirements": "The Committee for Craft and Design Project Funding funds artists, designers, curators, authors, promoters, museums, galleries and others with an interest in developing and promoting craft and design in Denmark and Danish craft and design abroad in the form of projects. You can read more about how the committee defines a project under the \"What is the purpose of the programme\" section of this page. Examples of projects that the committee may fund include: Exhibitions and dissemination projects as well as exhibition series and annual programmes that involve works by contemporary artists and designers in Denmark and/or abroad. Residencies and exchange/work stays Production of works Projects that show aesthetic potential and a thorough understanding of a craft, materials and sensuousness Projects that are centered on concrete design solutions to specific problems or projects that are more immaterial or critical in nature. Presentations and all types of dissemination (verbal, written, visual, digital and printed) of the works of contemporary Danish artists and designers to a relevant audience, this includes travel funding and residencies in connection with specific exhibitions and tasks Funding for establishing a business and international cooperation on the production of new types of Danish craft and design products that contribute to demonstrating the special identity and profile of the craft or design Editorial content production for different media: reviews, articles, dissemination of academic research projects etc. Find out more about how to apply if your project combines different art forms. You cannot receive funding for: Activities completed before the application deadline Courses of study/training courses Projects that the committee have previously supported Capital investments and operating expenses Expenses from previous calendar years. That is, only expenses from either the same or upcoming calendar year can be entered into the budget"
+    },
+    {
+      "opportunity_id": "kunst_dk_denmark_091f95df035c",
+      "title": "Nordic translations",
+      "organisation": "Danish Arts Foundation",
+      "deadline": "2027-12-02",
+      "description": "Funding for Nordic publishers to cover fees for translators, translating a work from Danish into another Nordic language.",
+      "requirements": "Who may apply? Nordic publishers wishing to publish a work translated from Danish into another Nordic language. Non-Nordic publishers: please apply to the fund ‘Literary production and translation’. Applications should be made in the Nordic country in which the work was originally published. For the translation of works from Danish, you should therefore submit your application to the Danish Arts Foundation's Committee for Literary Project Funding. Before submitting the application, the applicant must have acquired the copyrights for the literary work and signed a contract with a translator. Projects may not be finished before the expiry of the application deadline. You can apply for: Fiction for adults, children and young adults General cultural literature and non-fiction Essays Comics and graphic novels You cannot receive funding for: translation of works within the areas of research, education, regional and local history, handbooks, hobby books, self-help books, and catalogues translation of your own works and text revision Furthermore, funding is typically not awarded to Danish publishers for publication of Danish works in translation."
+    }
+  ]
+}

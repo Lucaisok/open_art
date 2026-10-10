@@ -224,3 +224,40 @@ REGION_RE = _names_pattern(list(REGIONS))
 REGION_LOOKUP = {name.lower(): members for name, members in REGIONS.items()}
 SUBNATIONAL_RE = _names_pattern(list(SUBNATIONAL))
 SUBNATIONAL_LOOKUP = {name.lower(): code for name, code in SUBNATIONAL.items()}
+
+
+# -- broad regions ("Conclusive verdicts" step 5) --------------------------------------------------------
+# Regions with no agreed member list ("Europe") can never reject an artist. They can only let one in,
+# so each list holds just the countries clearly inside the region; borderline ones (TR, RU, GE, ...)
+# are left out, which keeps them a check. "international" and "foreign" are not here: in a call they
+# often mean "not from this country", the opposite of "everyone".
+EUROPE = sorted(set(EU) | {"AD", "AL", "BA", "CH", "GB", "IS", "LI", "MC", "MD", "ME", "MK", "NO", "RS", "SM",
+                           "UA", "VA", "XK", "AX", "FO"})
+AFRICA = ["AO", "BF", "BI", "BJ", "BW", "CD", "CF", "CG", "CI", "CM", "CV", "DJ", "DZ", "EG", "ER", "ET", "GA",
+          "GH", "GM", "GN", "GQ", "GW", "KE", "KM", "LR", "LS", "LY", "MA", "MG", "ML", "MR", "MU", "MW", "MZ",
+          "NA", "NE", "NG", "RW", "SC", "SD", "SL", "SN", "SO", "SS", "ST", "SZ", "TD", "TG", "TN", "TZ", "UG",
+          "ZA", "ZM", "ZW"]
+LATIN_AMERICA = ["AR", "BO", "BR", "BZ", "CL", "CO", "CR", "CU", "DO", "EC", "GT", "HN", "HT", "MX", "NI", "PA",
+                 "PE", "PY", "SV", "UY", "VE"]
+BROAD_REGIONS = {
+    "Europe": EUROPE,
+    "Africa": AFRICA,
+    "Latin America": LATIN_AMERICA,
+    "worldwide": sorted(COUNTRIES),
+}
+BROAD_REGION_RE = {
+    "Europe": re.compile(r"\b(Europe|European)\b(?! (Union|Economic Area))", re.IGNORECASE),
+    "Africa": re.compile(r"(?<!South )\b(Africa|African)\b", re.IGNORECASE),
+    "Latin America": re.compile(r"\bLatin(o|x)? America\w*", re.IGNORECASE),
+    "worldwide": re.compile(r"\b(worldwide|world-wide|from (all over|around|across) the world|from (all|any) "
+                            r"countr(y|ies)|all nationalities|global(ly)?)\b", re.IGNORECASE),
+}
+# "non-European", "outside Europe": the region is excluded, not required
+OUTSIDE_REGION_RE = re.compile(r"\b(non-|outside|excluding|except|other than|not (from|in|based))", re.IGNORECASE)
+
+
+def broad_regions_named(text: str) -> list[str]:
+    """The broad regions a sentence names as places applicants may come from; [] when it negates one."""
+    if OUTSIDE_REGION_RE.search(text):
+        return []
+    return [name for name, pattern in BROAD_REGION_RE.items() if pattern.search(text)]

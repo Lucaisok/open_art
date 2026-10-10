@@ -62,8 +62,14 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from src.eligibility.career import career_check, education_check, parse_career, parse_education
 from src.eligibility.disciplines import discipline_match, disciplines_named, narrowing_word
+from src.eligibility.geo import BROAD_REGIONS, broad_regions_named
+from src.eligibility.polarity import polarity as parse_polarity
+from src.eligibility.scope import APPLICANT, WIDENING, scope as sentence_scope
+from src.eligibility.values import parse_value
 from src.eligibility.profile import ArtistProfile
+from src.eligibility.safety_net import keyword_hits
 from src.models.classified_chunk import ClassifiedChunk
 from src.models.processed_opportunity import ProcessedOpportunity
 
@@ -95,7 +101,8 @@ CHECK_ONLY_HINT = {
     "OTHER_ELIGIBILITY": "read it and make sure you meet this condition",
 }
 
-Outcome = Literal["PASS", "FAIL", "CHECK", "NO_RESTRICTION"]
+# INFO: a sentence that isn't about who can apply (scope, src/eligibility/scope.py); shown apart, never counted
+Outcome = Literal["PASS", "FAIL", "CHECK", "NO_RESTRICTION", "INFO"]
 Status = Literal["ELIGIBLE", "CHECK", "LIKELY_NOT_ELIGIBLE"]
 
 
@@ -106,6 +113,8 @@ class Review(BaseModel):
     polarity: str | None       # final polarity; None on a drop
     value: dict | None         # final value; None on a drop
     reason: str | None
+    scope: str = APPLICANT     # ANNOTATION_GUIDELINES.md §10: only APPLICANT reviews count
+    applies_to: list[str] = [] # the applicant types the condition concerns; [] = everyone
 
 
 class Item(BaseModel):
@@ -118,6 +127,7 @@ class Item(BaseModel):
     polarity: str | None
     outcome: Outcome
     reason: str
+    scope: str = APPLICANT     # ANNOTATION_GUIDELINES.md §9; anything else has outcome INFO or NO_RESTRICTION
     review: str | None = None  # the review decision this outcome rests on, if any
     # why a CHECK is a check (None otherwise): safety_net, check_only_class, discipline_mismatch, not_reviewed,
     # dropped, unreadable, narrower_set (also_requires), missing_profile_field, uncertain_match
@@ -166,6 +176,8 @@ def load_reviews(path: str = REVIEWED_PATH) -> dict[tuple[str, str], Review]:
                 polarity=row["polarity"] or None,
                 value=json.loads(row["value"]) if row["value"] else None,
                 reason=row["reason"] or None,
+                scope=row.get("scope") or APPLICANT,
+                applies_to=json.loads(row["applies_to"]) if row.get("applies_to") else [],
             )
     return reviews
 
@@ -222,7 +234,11 @@ def _country_membership(label: str, value: dict, profile: ArtistProfile):
     detail = "; ".join(f"your {name}: {', '.join(codes) or 'not in your profile'}" for name, codes in fields)
     if any(code in countries for _, codes in fields for code in codes):
         return True, detail
-    if all(codes for _, codes in fields):
+    # a broad region ("and across Europe") can let the artist in, never keep them out (step 5)
+    broad = {code for region in value.get("broad_regions", []) for code in BROAD_REGIONS.get(region, [])}
+    if any(code in broad for _, codes in fields for code in codes):
+        return True, detail
+    if all(codes for _, codes in fields) and not value.get("broad_regions"):
         return False, detail
     return None, detail
 
@@ -253,6 +269,25 @@ def _student_membership(value: dict, profile: ArtistProfile, dates):
 
 
 def _membership(label: str, value: dict, profile: ArtistProfile, deadline: date | None, today: date):
+    if "any_of" in value:
+        # alternatives (§10): in if the artist meets any one, out only if they certainly meet none.
+        # An alternative with also_requires can't be certain either way when the artist is inside it.
+        results = []
+        for alternative in value["any_of"]:
+            alt_label = alternative.get("label", label)
+            inside, detail = _membership(alt_label, alternative, profile, deadline, today)
+            if inside and alternative.get("also_requires"):
+                inside = None
+            results.append((inside, detail))
+        details = "; ".join(dict.fromkeys(detail for _, detail in results))
+        if any(inside is True for inside, _ in results):
+            return True, details
+        if all(inside is False for inside, _ in results):
+            return False, details
+        return None, details
+    if label not in REJECT_CLASSES:
+        # an alternative the profile can't check ("studies in Belgium"): never certain either way
+        return None, f"{TOPIC[label]}: {value.get('also_requires', 'not checked')}"
     dates = _reference_dates(deadline, today)
     if label == "AGE":
         return _age_membership(value, profile, dates, deadline is not None)
@@ -265,6 +300,8 @@ def _membership(label: str, value: dict, profile: ArtistProfile, deadline: date 
 
 def _describe(label: str, value: dict) -> str:
     """The set S in words, e.g. 'age 18-34', 'residence in NO, SE'."""
+    if "any_of" in value:
+        return " or ".join(_describe(alt.get("label", label), alt) for alt in value["any_of"])
     if label == "AGE":
         low, high = value.get("min_age"), value.get("max_age")
         if low is not None and high is not None:
@@ -274,7 +311,8 @@ def _describe(label: str, value: dict) -> str:
         codes = sorted(value.get("countries", []))
         shown = ", ".join(codes) if len(codes) <= 8 else ", ".join(codes[:8]) + f", … ({len(codes)} countries)"
         topic = "nationality or residence" if value.get("nationality_or_residence") else TOPIC[label]
-        return f"{topic} in {shown}"
+        regions = value.get("broad_regions", [])
+        return f"{topic} in " + ", ".join(([shown] if codes else []) + regions)
     if label == "APPLICANT_TYPE":
         return "applicants of type " + " / ".join(value.get("types", []))
     if "graduated_within_years" in value:
@@ -332,6 +370,76 @@ def _assess_discipline(chunk: ClassifiedChunk, profile: ArtistProfile) -> Item:
                  f"disciplines ({yours}) fit", check_kind="discipline_mismatch")
 
 
+# what a sentence that isn't about who can apply means for the artist (scope, step 1)
+SCOPE_REASON = {
+    "OBLIGATION": "what the selected artist will have to do, not a condition to apply",
+    "PROJECT": "about the project, not about who can apply",
+    "PREFERENCE": "a preference, not a condition",
+    "NOT_A_CONDITION": "not a condition on who can apply",
+}
+
+
+def _scope_item(chunk: ClassifiedChunk, label: str, found: str) -> Item | None:
+    """The item for a sentence whose scope isn't APPLICANT; None when it is about the applicant."""
+    if found == APPLICANT:
+        return None
+    if found == WIDENING:
+        return _item(chunk, label, "NO_RESTRICTION", "opens the call wider; it doesn't limit who can apply",
+                     scope=found)
+    return _item(chunk, label, "INFO", SCOPE_REASON[found], scope=found)
+
+
+def _met_in_favour(chunk: ClassifiedChunk, label: str, profile: ArtistProfile,
+                   deadline: date | None, today: date) -> Item | None:
+    """A PASS for an unreviewed sentence whose condition the profile clearly meets, else None (step 5).
+    Only ever resolves in the artist's favour: whatever isn't clearly met stays a CHECK, never a FAIL.
+    The sentence must state one requirement only (no keyword of another class), since only that one
+    is checked."""
+    topics = {name for name in keyword_hits(chunk.text) if name != "GENERIC"}
+    if topics - {label}:
+        return None
+    direction = parse_polarity(chunk.text, chunk.heading, label)
+    if direction != "REQUIRES":
+        return None
+    if label == "DISCIPLINE":
+        if match := discipline_match(chunk.text, profile.disciplines):
+            return _item(chunk, label, "PASS", f'names your discipline ({match[0]}: "{match[1]}")')
+        return None
+    if label in ("CAREER_STAGE", "EDUCATION"):
+        check = career_check if label == "CAREER_STAGE" else education_check
+        parse = parse_career if label == "CAREER_STAGE" else parse_education
+        value = parse(chunk.text)
+        met, reason = check(value, profile)
+        return _item(chunk, label, "PASS", reason) if value is not None and met else None
+    if label not in REJECT_CLASSES:
+        return None
+    value = chunk.value if chunk.label == label and chunk.value else parse_value(label, chunk.text)
+    if value is None and label in GEO_LABELS and (regions := broad_regions_named(chunk.text)):
+        value = {"countries": [], "broad_regions": regions}
+    if not value or value.get("also_requires"):
+        return None
+    inside, detail = _membership(label, value, profile, deadline, today)
+    if inside is True:
+        return _item(chunk, label, "PASS", f"requires {_describe(label, value)}; {detail}")
+    return None
+
+
+def _assess_check_only(chunk: ClassifiedChunk, label: str, profile: ArtistProfile) -> Item:
+    """CAREER_STAGE and EDUCATION are compared with the profile (step 3): PASS when clearly met,
+    otherwise a CHECK that says what the call asks. PRIOR_FUNDING, OTHER_ELIGIBILITY stay a check."""
+    if label in ("CAREER_STAGE", "EDUCATION") and chunk.polarity == "REQUIRES":
+        check = career_check if label == "CAREER_STAGE" else education_check
+        value = (parse_career if label == "CAREER_STAGE" else parse_education)(chunk.text)
+        met, reason = check(value, profile)
+        if met:
+            return _item(chunk, label, "PASS", reason)
+        if value is not None:
+            kind = "missing_profile_field" if "not in your profile" in reason else "uncertain_match"
+            return _item(chunk, label, "CHECK", reason, check_kind=kind)
+    return _item(chunk, label, "CHECK", f"the app can't check this for you: {CHECK_ONLY_HINT[label]}",
+                 check_kind="check_only_class")
+
+
 def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[tuple[str, str], Review],
                  deadline: date | None, today: date) -> Item | None:
     """What one sentence means for this artist; None if the engine ignores it."""
@@ -341,23 +449,37 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[t
         if chunk.suspected_label is None:
             return None
         # the cue that raised the flag (chunk.safety_net_reason) stays in the data for audits, not in the text
-        return _item(chunk, chunk.suspected_label, "CHECK", "this may be a condition on who can apply; read it",
-                     check_kind="safety_net")
+        label = chunk.suspected_label
+        return (_scope_item(chunk, label, sentence_scope(chunk.text, chunk.heading))
+                or _met_in_favour(chunk, label, profile, deadline, today)
+                or _item(chunk, label, "CHECK", "this may be a condition on who can apply; read it",
+                         check_kind="safety_net"))
     label = chunk.label
     if chunk.polarity == "WAIVES":
         return _item(chunk, label, "NO_RESTRICTION", f"no restriction on {TOPIC[label]}")
+    review = find_review(reviews, chunk.text, label) if label in REJECT_CLASSES else None
+
+    # an unreviewed sentence: the scope rules decide whether it is about the applicant at all.
+    # A review carries its own scope (§10), so the rules never overrule a reviewer.
+    if review is None and (item := _scope_item(chunk, label, sentence_scope(chunk.text, chunk.heading))):
+        return item
     if label == "DISCIPLINE":
         return _assess_discipline(chunk, profile)
     if label in CHECK_ONLY_CLASSES:
-        return _item(chunk, label, "CHECK", f"the app can't check this for you: {CHECK_ONLY_HINT[label]}",
-                     check_kind="check_only_class")
+        return _assess_check_only(chunk, label, profile)
 
     # a class the engine may reject on: only through a reviewed sentence
-    review = find_review(reviews, chunk.text, label)
     if review is None:
-        return _item(chunk, label, "CHECK", f"may limit who can apply by {TOPIC[label]}; not checked yet, read it",
-                     check_kind="not_reviewed")
+        return (_met_in_favour(chunk, label, profile, deadline, today)
+                or _item(chunk, label, "CHECK", f"may limit who can apply by {TOPIC[label]}; not checked yet, "
+                         "read it", check_kind="not_reviewed"))
     label = review.label  # the same, or the other geo label (find_review)
+    if review.scope != APPLICANT:
+        return _scope_item(chunk, label, review.scope)
+    if review.applies_to and profile.applicant_type and profile.applicant_type not in review.applies_to:
+        return _item(chunk, label, "NO_RESTRICTION", f"only concerns applicants of type "
+                     f"{' / '.join(review.applies_to)}; you apply as: {profile.applicant_type}",
+                     review=review.decision)
     if review.decision == "drop":
         return _item(chunk, label, "CHECK", f"may limit who can apply by {TOPIC[label]}, but not in a way the app "
                      "can check" + (f" ({review.reason})" if review.reason else "") + "; read it",
@@ -425,7 +547,7 @@ def form_or_groups(items: list[Item]) -> None:
     runs: list[list[Item]] = []
     open_run: dict[str, list[Item]] = {}  # family -> its latest run
     for item in items:
-        if item.label not in GROUPED_CLASSES or item.outcome == "NO_RESTRICTION":
+        if item.label not in GROUPED_CLASSES or item.outcome in ("NO_RESTRICTION", "INFO"):
             continue
         run = open_run.get(_family(item.label))
         if run is not None and item.chunk_index == run[-1].chunk_index + 1:
@@ -466,8 +588,8 @@ def evaluate_chunks(profile: ArtistProfile, chunks: list[ClassifiedChunk], revie
     elif checks:
         status = "CHECK"
         summary = f"Nothing found rules you out, but {len(checks)} point(s) need your own check before applying."
-    elif not items:
-        # no requirement sentence at all: usually the rules live elsewhere ("the range of applicants
+    elif all(item.outcome == "INFO" for item in items):
+        # no requirement sentence at all (only project notes and obligations, if anything): usually the rules live elsewhere ("the range of applicants
         # is set out in the regulations"), so "nothing rules you out" would be a guess -> CHECK
         status = "CHECK"
         summary = "No eligibility requirements were found in this call; read it to check who can apply."
