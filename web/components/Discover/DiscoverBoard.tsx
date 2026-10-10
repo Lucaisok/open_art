@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { requestJson } from "@/lib/api";
 import {
     clearFilters,
     filterCount,
     LAST_SEARCH_KEY,
+    PAGE_SIZE,
     SCROLL_KEY,
     startMode,
     toQueryString,
@@ -33,19 +34,24 @@ const MODES: { mode: Mode; label: string }[] = [
 
 const SEARCH_DELAY_MS = 250;     // wait for a pause in typing before searching
 const SKELETON_DELAY_MS = 300;   // a fast answer replaces the results without a flash of placeholders
+const LOAD_AHEAD_PX = 800;       // start loading the next page this far before the end of the list
 
 // The same search, in words: the request depends on everything but the panel being open
 const searchKey = (state: DiscoverState) => JSON.stringify(toSearchBody(state));
 
 // Discover (design: DISCOVER.md). Every change is written to the page address (lib/discover.ts),
 // then searched; "Back to results" from a call returns to the same address and scroll position.
+// The results arrive one page at a time (PAGE_SIZE): nearing the end of the list loads the next page.
 const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplines }: DiscoverBoardProps) => {
     const [state, setState] = useState(initialState);
     const [results, setResults] = useState(initialResults);
     const [searching, setSearching] = useState(false);
     const [showSkeletons, setShowSkeletons] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
     const lastSearched = useRef(searchKey(initialState));
+    const loadingMoreRef = useRef(false);       // one page request at a time
+    const endOfList = useRef<HTMLDivElement>(null);
 
     const update = (next: DiscoverState) => {
         setState(next);
@@ -98,22 +104,86 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
         };
     }, [key]);
 
-    // Back from a call: return to where the artist was in the list
-    useEffect(() => {
-        try {
-            const saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null") as { search: string; y: number } | null;
-            if (saved && saved.search === window.location.search) {
-                window.scrollTo(0, saved.y);
+    // The next `limit` calls of the current search, added under the ones shown. Returns whether
+    // they were added (a search that changed meanwhile, or a failed request, adds nothing)
+    const loadMore = useCallback(
+        async (limit: number = PAGE_SIZE): Promise<boolean> => {
+            if (loadingMoreRef.current || key !== lastSearched.current || results.results.length >= results.total) {
+                return false;
             }
+            loadingMoreRef.current = true;
+            setLoadingMore(true);
+            const body = { ...JSON.parse(key), offset: results.results.length, limit };
+            const response = await requestJson<SearchResults>("POST", "/api/discover/search", body);
+            loadingMoreRef.current = false;
+            setLoadingMore(false);
+            if (key !== lastSearched.current) {
+                return false;
+            }
+            if (!response.ok) {
+                setError(response.error);
+                return false;
+            }
+            setError(null);
+            // keyed by id: a call already shown is never shown twice
+            setResults((current) => {
+                const seen = new Set(current.results.map((r) => r.id));
+                const added = response.data.results.filter((r) => !seen.has(r.id));
+                return { ...response.data, results: [...current.results, ...added] };
+            });
+            return true;
+        },
+        [key, results],
+    );
+
+    // Infinite scroll: when the end of the list comes near the screen, load the next page
+    useEffect(() => {
+        const sentinel = endOfList.current;
+        if (!sentinel) {
+            return;
+        }
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    void loadMore();
+                }
+            },
+            { rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` },
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [loadMore]);
+
+    // Back from a call: reload every call that was shown, then return to where the artist was
+    useEffect(() => {
+        let saved: { search: string; y: number; shown?: number } | null = null;
+        try {
+            saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null");
             sessionStorage.removeItem(SCROLL_KEY);
         } catch {
             // storage blocked: the page simply opens at the top
         }
+        if (!saved || saved.search !== window.location.search) {
+            return;
+        }
+        const { y, shown = 0 } = saved;
+        const missing = shown - initialResults.results.length;
+        if (missing > 0) {
+            // scroll once the extra calls are on the page
+            void loadMore(missing).then(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+        } else {
+            window.scrollTo(0, y);
+        }
+        // only on arrival: loadMore changes with every page, this must not run again
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const rememberScroll = () => {
         try {
-            sessionStorage.setItem(SCROLL_KEY, JSON.stringify({ search: window.location.search, y: window.scrollY }));
+            sessionStorage.setItem(
+                SCROLL_KEY,
+                JSON.stringify({ search: window.location.search, y: window.scrollY, shown: results.results.length }),
+            );
         } catch {
             // storage blocked: nothing to remember
         }
@@ -129,9 +199,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
     const shown = results.results.length;
     const countLine = searching
         ? "Searching…"
-        : shown < results.total
-          ? `Top ${shown} of ${results.total} calls · ${order}`
-          : `${results.total} ${results.total === 1 ? "call" : "calls"} · ${order}`;
+        : `${results.total} ${results.total === 1 ? "call" : "calls"} · ${order}`;
 
     // how the list is ordered, always shown under the results heading (eligible calls come first in
     // every mode, src/matching/matcher.py); without documents it also says how to get a ranking
@@ -270,6 +338,17 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
                                 <h3 className={styles.subheading}>Likely not eligible · {notEligible.length}</h3>
                                 {cards(notEligible)}
                             </>
+                        )}
+                        {/* infinite scroll: coming near this loads the next page */}
+                        <div ref={endOfList} />
+                        {loadingMore && (
+                            <div role="status" className={styles.loadingMore}>
+                                <span className={styles.visuallyHidden}>Loading more calls…</span>
+                                {/* three bouncing lime dots: decoration only */}
+                                <span aria-hidden="true" className={styles.loaderDot} />
+                                <span aria-hidden="true" className={`${styles.loaderDot} ${styles.loaderDotMiddle}`} />
+                                <span aria-hidden="true" className={`${styles.loaderDot} ${styles.loaderDotLast}`} />
+                            </div>
                         )}
                     </>
                 )}

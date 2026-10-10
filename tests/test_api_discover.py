@@ -117,6 +117,15 @@ def test_all_calls_nearest_deadline_first_not_eligible_last_closed_hidden(artist
     assert body["results"][2]["reason"] == "summary of blocked"
 
 
+def test_pages_follow_the_same_ranking(artist):
+    # infinite scroll asks for the next page; together the pages are the whole list, in order
+    first, second = search(artist, mode="all", limit=2), search(artist, mode="all", offset=2, limit=2)
+    assert ids(first) + ids(second) == ["near", "far", "blocked"]
+    assert first["total"] == second["total"] == 3
+    assert ids(search(artist, mode="all", offset=3)) == []
+    assert artist.post("/api/discover/search", json={"limit": 0}).status_code == 422
+
+
 def test_matched_without_documents_orders_by_deadline(artist):
     body = search(artist, mode="matched")
     assert body["order"] == "deadline" and body["ranked_by"] == []

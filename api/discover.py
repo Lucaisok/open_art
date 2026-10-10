@@ -2,13 +2,14 @@
 Discover and the opportunity page (web app step 5).
 
     GET  /api/discover/options          the filter lists (types, disciplines, countries)
-    POST /api/discover/search           filters -> up to 30 calls, each with its verdict
+    POST /api/discover/search           filters -> one page of calls (30 by default), each with its verdict
     GET  /api/opportunities/{id}        one call's facts and its full verdict, every sentence quoted
 
 Verdicts use the artist's SAVED profile only (to_artist_profile), never unsaved form values or
 unreviewed document suggestions: nothing the artist hasn't saved decides anything. Checking every
 open call takes ~50 ms, so verdicts are worked out on each request, not stored. Searches are not
-stored either.
+stored either: the page asks for the next page (offset, limit) as the artist scrolls, and the whole
+list is ranked again each time. The ranking is deterministic, so pages line up.
 
 "Matched to you" ranks by the artist's own words: from each of their documents (statement, portfolio,
 CV), the passages about their practice and wishes (suggest_query, RAG step 4), averaged; no
@@ -45,7 +46,8 @@ from src.rag.query_suggestion import suggest_query
 
 router = APIRouter(tags=["discover"])
 
-MAX_RESULTS = 30
+PAGE_SIZE = 30       # calls per page: the board asks for the next page as the artist scrolls
+MAX_PAGE = 2000      # a page can be longer: "Back to results" reloads every call shown before
 RANKING_KINDS = ["statement", "portfolio", "cv"]   # all of them rank "Matched to you" (listed in this order)
 
 # document id -> its embedded ranking query (None: nothing to rank by). Building one takes ~1 s
@@ -109,6 +111,8 @@ class SearchIn(BaseModel):
     country: str | None = None
     funded_only: bool = False
     no_fee: bool = False
+    offset: int = Field(0, ge=0)                   # paging: skip the first `offset` calls of the ranking
+    limit: int = Field(PAGE_SIZE, ge=1, le=MAX_PAGE)
 
 
 class ResultOut(BaseModel):
@@ -125,7 +129,7 @@ class ResultOut(BaseModel):
 
 
 class SearchOut(BaseModel):
-    results: list[ResultOut]    # at most MAX_RESULTS; not-eligible calls last, never hidden
+    results: list[ResultOut]    # calls offset .. offset+limit of the ranking; not-eligible calls last, never hidden
     total: int                  # every call the filters keep
     order: Literal["match", "deadline"]
     ranked_by: list[str]        # the documents "Matched to you" ranks by (file names); []: none
@@ -151,12 +155,14 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
     matcher = get_matcher()
     profile, filled = saved_profile(db, user.id)
     ranked_by, vector = ranking_vector(db, user.id, matcher) if body.mode == "matched" else ([], None)
+    k = body.offset + body.limit   # rank everything up to the end of this page, then keep the page
     if vector is not None:
-        matches, order = matcher.search_vector(vector, profile, filters, k=MAX_RESULTS), "match"
+        matches, order = matcher.search_vector(vector, profile, filters, k=k), "match"
     else:
-        matches, order = matcher.by_deadline(profile, filters, k=MAX_RESULTS), "deadline"
+        matches, order = matcher.by_deadline(profile, filters, k=k), "deadline"
 
-    return SearchOut(results=[_result(m, matcher.get(m.opportunity_id)) for m in matches],
+    page = matches[body.offset:]
+    return SearchOut(results=[_result(m, matcher.get(m.opportunity_id)) for m in page],
                      total=len(matcher.kept(filters)), order=order, ranked_by=ranked_by, profile_filled=filled)
 
 

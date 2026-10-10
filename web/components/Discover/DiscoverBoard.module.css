@@ -284,3 +284,56 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Infinite scroll loader: three lime dots bouncing in a wave */
+.loadingMore {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px;
+  height: 72px;
+  margin-top: 28px;
+}
+
+.loaderDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-lime);
+  animation: loaderBounce 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.loaderDotMiddle {
+  animation-delay: 0.15s;
+}
+
+.loaderDotLast {
+  animation-delay: 0.3s;
+}
+
+@keyframes loaderBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  15% {
+    transform: translateY(2px) scale(1.2, 0.8);   /* squash before the jump */
+  }
+  35% {
+    transform: translateY(-28px) scale(0.9, 1.1);
+  }
+}
+
+/* No bouncing for people who asked for less motion: a slow fade instead */
+@media (prefers-reduced-motion: reduce) {
+  .loaderDot {
+    animation: loaderFade 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes loaderFade {
+  50% {
+    opacity: 0.35;
+  }
+}

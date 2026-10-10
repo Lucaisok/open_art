@@ -542,6 +542,16 @@ export interface components {
              * @default false
              */
             no_fee: boolean;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 30
+             */
+            limit: number;
         };
         /** SearchOut */
         SearchOut: {

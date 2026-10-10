@@ -71,6 +71,9 @@ export const clearFilters = (state: DiscoverState): DiscoverState => ({
 export const filterCount = (state: DiscoverState): number =>
     state.types.length + state.disciplines.length + (state.country ? 1 : 0) + (state.fundedOnly ? 1 : 0) + (state.noFee ? 1 : 0);
 
+// Calls per page (api/discover.py PAGE_SIZE): the board loads the next page as the artist scrolls
+export const PAGE_SIZE = 30;
+
 export const toSearchBody = (state: DiscoverState): SearchBody => ({
     mode: state.mode,
     text: state.text.trim(),
@@ -79,6 +82,8 @@ export const toSearchBody = (state: DiscoverState): SearchBody => ({
     country: state.country || null,
     funded_only: state.fundedOnly,
     no_fee: state.noFee,
+    offset: 0,
+    limit: PAGE_SIZE,
 });
 
 // -- how a call is shown -------------------------------------------------------------------------
