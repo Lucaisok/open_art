@@ -55,10 +55,18 @@ def test_most_similar_first():
     assert results[0].score == pytest.approx(1.0)
 
 
-def test_not_eligible_goes_last_but_is_not_hidden():
+def test_eligible_first_not_eligible_last_but_not_hidden():
     results = matcher(CALLS, VECTORS, {"close": "LIKELY_NOT_ELIGIBLE", "far": "ELIGIBLE"}).search("x", today=TODAY)
-    assert [m.opportunity_id for m in results] == ["middle", "far", "close"]  # CHECK and ELIGIBLE share one order
+    # three tiers: ELIGIBLE, CHECK, LIKELY_NOT_ELIGIBLE, whatever the similarity
+    assert [m.opportunity_id for m in results] == ["far", "middle", "close"]
     assert results[-1].verdict.status == "LIKELY_NOT_ELIGIBLE"
+
+
+def test_by_deadline_also_puts_eligible_first():
+    calls = [opp("soon", deadline_date=date(2026, 10, 20)), opp("later", deadline_date=date(2026, 12, 1)),
+             opp("none")]
+    m = matcher(calls, [[1, 0], [1, 1], [0, 1]], {"later": "ELIGIBLE", "soon": "LIKELY_NOT_ELIGIBLE"})
+    assert [r.opportunity_id for r in m.by_deadline(today=TODAY)] == ["later", "none", "soon"]
 
 
 def test_filters_run_before_ranking_and_k_limits():

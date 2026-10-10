@@ -10,10 +10,11 @@ Three steps, each kept separate so each stays auditable:
 1. filters  - the artist's preferences (src/matching/filters.py), plain field checks
 2. ranking  - cosine similarity between the query and each call's embedding (src/matching/index.py)
 3. verdict  - the eligibility engine runs on every kept call. Its status is shown,
-               never changed: LIKELY_NOT_ELIGIBLE calls go to the bottom with their
-               reason, but are not hidden. ELIGIBLE and CHECK are not split into
-               tiers, they share one similarity order (nearly every call is CHECK,
-               see workflow.MD step 6d, so a tier would carry no information).
+               never changed, and orders the list in three tiers: ELIGIBLE first, then
+               CHECK, then LIKELY_NOT_ELIGIBLE (at the bottom with its reason, never
+               hidden). Inside a tier, the similarity (or deadline) order. ELIGIBLE was
+               merged with CHECK while nearly every call was CHECK; since the
+               "conclusive verdicts" work it carries information (author, 2026-10-10).
 """
 
 from datetime import date
@@ -23,6 +24,9 @@ from pydantic import BaseModel
 
 from src.eligibility.engine import EligibilityEngine, Verdict
 from src.eligibility.profile import ArtistProfile
+
+# the tier a verdict puts a call in: eligible first, not eligible last
+STATUS_ORDER = {"ELIGIBLE": 0, "CHECK": 1, "LIKELY_NOT_ELIGIBLE": 2}
 from src.matching.corpus import load_opportunities
 from src.matching.filters import MatchFilters, passes
 from src.matching.index import OpportunityIndex, embed_query, load_embedder
@@ -87,18 +91,17 @@ class Matcher:
         scores = self.index.vectors[[self._row[o.id] for o in kept]] @ query_vector
 
         matches = [self._match(o, float(score), profile, today) for o, score in zip(kept, scores)]
-        # not-eligible last, then most similar first; ties keep corpus order (sort is stable)
-        matches.sort(key=lambda m: (m.verdict.status == "LIKELY_NOT_ELIGIBLE", -m.score))
+        # eligible first, not eligible last, then most similar first; ties keep corpus order (sort is stable)
+        matches.sort(key=lambda m: (STATUS_ORDER[m.verdict.status], -m.score))
         return matches[:k]
 
     def by_deadline(self, profile: ArtistProfile | None = None, filters: MatchFilters | None = None,
                     k: int = 10, today: date | None = None) -> list[Match]:
-        """The kept calls, nearest deadline first (no deadline stated after them, not-eligible last).
+        """The kept calls in the three verdict tiers, nearest deadline first in each (no deadline stated after them).
         Used when there is nothing to rank by: "All calls", or every matching term turned off."""
         today = today or date.today()
         matches = [self._match(o, None, profile, today) for o in self.kept(filters, today)]
-        matches.sort(key=lambda m: (m.verdict.status == "LIKELY_NOT_ELIGIBLE", m.deadline is None,
-                                    m.deadline or today))
+        matches.sort(key=lambda m: (STATUS_ORDER[m.verdict.status], m.deadline is None, m.deadline or today))
         return matches[:k]
 
     def _match(self, o: ProcessedOpportunity, score: float | None, profile: ArtistProfile | None,
