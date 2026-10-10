@@ -9,7 +9,8 @@ export const metadata: Metadata = { title: "Your profile · OpenArt" };
 
 // Onboarding step 3: the facts calls are checked against, by hand or from the CV
 export default async function ProfilePage() {
-    if (!(await getCurrentUser())) {
+    const user = await getCurrentUser();
+    if (!user) {
         redirect("/"); // private page: logged-out visitors go to the login form
     }
     const [profile, options, documents] = await Promise.all([
@@ -19,5 +20,5 @@ export default async function ProfilePage() {
     ]);
     const cv = documents.find((d) => d.kind === "cv");
 
-    return <ProfileEditor initial={profile} options={options} cvName={cv?.file_name ?? null} />;
+    return <ProfileEditor initial={profile} options={options} cvName={cv?.file_name ?? null} email={user.email} />;
 }

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import DocumentsBoard from "@/components/DocumentsBoard/DocumentsBoard";
 import { apiGet } from "@/lib/server-api";
 import { getCurrentUser } from "@/lib/session";
-import type { DocumentInfo } from "@/lib/types";
+import type { DocumentInfo, ProfileData } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Your documents · OpenArt" };
 
@@ -12,6 +12,10 @@ export default async function DocumentsPage() {
     if (!(await getCurrentUser())) {
         redirect("/"); // private page: logged-out visitors go to the login form
     }
-    const documents = await apiGet<DocumentInfo[]>("/api/documents");
-    return <DocumentsBoard initialDocuments={documents} />;
+    const [documents, profile] = await Promise.all([
+        apiGet<DocumentInfo[]>("/api/documents"),
+        apiGet<ProfileData>("/api/profile"),
+    ]);
+    // onboarding until the profile is first saved (the same rule as the header, app/(onboarding)/layout.tsx)
+    return <DocumentsBoard initialDocuments={documents} onboarding={profile.updated_at === null} />;
 }

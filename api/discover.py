@@ -126,6 +126,7 @@ class ResultOut(BaseModel):
     status: Status              # ELIGIBLE / CHECK / LIKELY_NOT_ELIGIBLE
     reason: str                 # the verdict's one-line summary
     score: float | None         # None when ordered by deadline
+    funding: str | None         # "EUR 18,000", only when clear and significant (headline_funding)
 
 
 class SearchOut(BaseModel):
@@ -140,7 +141,7 @@ def _result(match: Match, o: ProcessedOpportunity) -> ResultOut:
     city, countries = _place(o)
     return ResultOut(id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
                      city=city, countries=countries, deadline=o.deadline_date, status=match.verdict.status,
-                     reason=match.verdict.summary, score=match.score)
+                     reason=match.verdict.summary, score=match.score, funding=headline_funding(o))
 
 
 @router.post("/api/discover/search")
@@ -255,6 +256,36 @@ def funding_label(o: ProcessedOpportunity) -> str:
         label = " + ".join(with_amount + [category.lower() for category in without])
         return label[0].upper() + label[1:]
     return o.funding or "Not stated"
+
+
+# What a result card highlights in green: one clear, significant sum of money for the artist.
+# Clear: exactly one money component with a figure, and a fixed figure (a range like "1,000–300,000"
+# is a programme's band, several figures are prize tiers or fee scales). Significant: worth at least
+# EUR 1,000 one-off (or per year) or EUR 500 per month; per day / per week allowances never are.
+# Above EUR 150,000 it is a programme's budget, not what one artist receives.
+HEADLINE_CATEGORIES = {"Grant/Stipend", "Materials/Production Costs"}
+HEADLINE_MIN_EUR = {"one-time": 1_000, "per year": 1_000, "per month": 500}
+HEADLINE_MAX_EUR = 150_000
+# Approximate EUR value of each currency in the corpus (2026-10): only to decide "significant",
+# never shown. An unlisted currency is never highlighted.
+EUR_RATE = {"EUR": 1.0, "GBP": 1.17, "USD": 0.90, "NOK": 0.085, "SEK": 0.088, "DKK": 0.134,
+            "PLN": 0.23, "HUF": 0.0025, "UAH": 0.022}
+
+
+def headline_funding(o: ProcessedOpportunity) -> str | None:
+    """The call's money for the artist ("EUR 1,300 per month") when it is one clear, significant
+    figure (rules above), else None: the card then shows no amount."""
+    money = [c for c in o.funding_components if c.amount_min is not None and c.category in HEADLINE_CATEGORIES]
+    if len(money) != 1:
+        return None
+    c = money[0]
+    period = c.period or "one-time"
+    if c.amount_max not in (None, c.amount_min) or c.currency not in EUR_RATE or period not in HEADLINE_MIN_EUR:
+        return None
+    eur = c.amount_min * EUR_RATE[c.currency]
+    if not HEADLINE_MIN_EUR[period] <= eur <= HEADLINE_MAX_EUR:
+        return None
+    return _amount(c)
 
 
 def fee_label(o: ProcessedOpportunity) -> str:

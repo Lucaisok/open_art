@@ -5,6 +5,7 @@
 }
 
 .card {
+  position: relative;   /* the title's link covers the whole card */
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -14,11 +15,16 @@
   border-radius: 18px;
   background-color: var(--color-white);
   color: var(--color-ink);
-  text-decoration: none;
 }
 
 .card:hover {
   background-color: var(--color-grey-100);
+}
+
+/* the focus ring goes around the whole card, not just the title */
+.card:has(.title:focus-visible) {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
 }
 
 .types {
@@ -39,6 +45,8 @@
 
 .title {
   margin-top: 16px;
+  color: inherit;
+  text-decoration: none;
   font-size: 25px;
   font-weight: 900;
   font-stretch: 115%;
@@ -46,6 +54,18 @@
   letter-spacing: -0.025em;
   text-wrap: balance;
   overflow-wrap: anywhere;   /* long one-word titles must not push the card wider */
+}
+
+.title:focus-visible {
+  outline: none;   /* shown on the card instead */
+}
+
+/* stretched link: the title's click area covers the whole card */
+.title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
 }
 
 .organisation {
@@ -65,7 +85,8 @@
   font-weight: 800;
 }
 
-.deadlineHighlight {
+/* the deadline, and the funding when it is a clear, significant sum */
+.highlight {
   padding: 1px 9px;
   border-radius: 999px;
   background-color: var(--color-lime);

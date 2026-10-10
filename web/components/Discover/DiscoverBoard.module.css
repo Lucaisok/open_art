@@ -224,12 +224,6 @@
   list-style: none;
 }
 
-.skeleton {
-  height: 340px;
-  border-radius: 18px;
-  background-color: var(--color-grey-200);
-}
-
 .subheading {
   margin-top: 40px;
   padding-bottom: 12px;

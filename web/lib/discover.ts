@@ -24,6 +24,16 @@ const list = (value: string | string[] | undefined): string[] =>
 
 const one = (value: string | string[] | undefined): string => list(value)[0] ?? "";
 
+// A query string ("mode=all&type=Residency&type=Grant") as Next's searchParams record
+export const paramsFromQuery = (query: string): ParamRecord => {
+    const record: ParamRecord = {};
+    new URLSearchParams(query).forEach((value, key) => {
+        const current = record[key];
+        record[key] = current === undefined ? value : [...list(current), value];
+    });
+    return record;
+};
+
 export const parseState = (params: ParamRecord): DiscoverState => ({
     mode: one(params.mode) === "all" ? "all" : "matched",
     text: one(params.q),
@@ -122,6 +132,20 @@ export const deadlineFact = (deadline: string | null | undefined): string => {
 // The last Discover address, kept per browser tab so the opportunity page's "Back to results"
 // returns to that search (DiscoverBoard writes it, BackToResults reads it)
 export const LAST_SEARCH_KEY = "discover-last-search";
+
+// The last Discover search, also kept in a cookie so the server can read it: a bare /discover (the
+// header, the logo, after login) opens the artist's last search instead of a fresh one. A session
+// cookie (gone when the browser closes), cleared on logout and when the profile is saved (the
+// profile's disciplines are "Matched to you"'s starting filters, so a new profile starts afresh).
+export const LAST_SEARCH_COOKIE = "openart_discover";
+
+export const rememberSearch = (query: string) => {
+    document.cookie = `${LAST_SEARCH_COOKIE}=${encodeURIComponent(query)}; path=/; SameSite=Lax`;
+};
+
+export const forgetSearch = () => {
+    document.cookie = `${LAST_SEARCH_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+};
 
 // The scroll position to return to: { search, y }, written when a result is opened,
 // read and removed by DiscoverBoard when it opens on that same search

@@ -506,6 +506,8 @@ export interface components {
             reason: string;
             /** Score */
             score: number | null;
+            /** Funding */
+            funding: string | null;
         };
         /** SearchIn */
         SearchIn: {

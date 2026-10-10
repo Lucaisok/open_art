@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClampedText from "@/components/ClampedText/ClampedText";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
 import { deadlineFact, placeLabel } from "@/lib/discover";
 import type { Opportunity } from "@/lib/types";
@@ -21,7 +22,8 @@ const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "pa
 // One call (design: DISCOVER.md → Opportunity): facts and description on the left, "Can you
 // apply?" on the right, every eligibility sentence quoted verbatim once, with each requirement it
 // states and what that means for the artist (a sentence can state several: "over 18 ... and reside
-// in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results" and the draft placeholder run in the browser.
+// in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results", the
+// quotes' "Show more" and the draft placeholder run in the browser.
 const OpportunityView = ({ call }: { call: Opportunity }) => {
     const place = placeLabel(call.city, call.countries);
     const facts = [
@@ -102,7 +104,10 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                     <ul className={styles.checks}>
                         {call.verdict.sentences.map((sentence: Sentence, i: number) => (
                             <li key={i} className={styles.check}>
-                                <blockquote className={styles.quote}>“{sentence.quote}”</blockquote>
+                                {/* long sentences: a three-line preview, "Show more" for the rest */}
+                                <ClampedText as="blockquote" className={styles.quote}>
+                                    “{sentence.quote}”
+                                </ClampedText>
                                 <ul className={styles.requirements}>
                                     {sentence.requirements.map((requirement: Requirement, j: number) => {
                                         const outcome = OUTCOMES[requirement.outcome];

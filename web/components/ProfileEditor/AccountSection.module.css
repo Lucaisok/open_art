@@ -1,0 +1,149 @@
+/* Account: a quiet box below the profile's groups (Log out, Delete account), red only on the delete button */
+.section {
+  margin-top: 48px;
+  padding: 28px 36px;
+  border: 3px dashed var(--color-ink);
+  border-radius: 16px;
+}
+
+.heading {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* one action per row: what it is on the left, its button on the right; stacked when narrow */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 32px;
+  padding: 18px 0;
+}
+
+.row + .row {
+  border-top: 2px solid var(--color-rule);
+}
+
+.row:last-of-type {
+  padding-bottom: 0;
+}
+
+.email {
+  font-weight: 800;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 900;
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+}
+
+.text {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-grey-600);
+}
+
+.dangerButton,
+.cancelButton {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dangerButton {
+  background-color: var(--color-error);
+  color: var(--color-white);
+}
+
+.dangerButton:hover:not(:disabled) {
+  background-color: var(--color-error-hover);
+}
+
+.cancelButton {
+  background-color: var(--color-white);
+  color: var(--color-ink);
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: var(--color-grey-100);
+}
+
+.dangerButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dialog {
+  width: min(28rem, calc(100% - 32px));
+  margin: auto;
+  padding: 28px;
+  border: 3px solid var(--color-ink);
+  border-radius: 16px;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.dialog::backdrop {
+  background-color: rgb(17 17 17 / 0.6);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background-color: var(--color-error-bg);
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.input {
+  height: 48px;
+  padding: 0 14px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--color-ink);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding: 22px;
+  }
+}

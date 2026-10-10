@@ -68,19 +68,6 @@
   gap: 20px;
 }
 
-.back {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
-
-.back:hover {
-  color: var(--color-grey-600);
-}
-
 .progress {
   font-size: 15px;
   font-weight: 700;

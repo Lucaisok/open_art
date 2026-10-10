@@ -144,6 +144,8 @@ def build_extraction_system_prompt(today: str) -> str:
         "If is_open_call is true, extract:\n"
         "- title: the specific opportunity's title\n"
         "- organisation: the organisation/institution running it\n"
+        # TODO before the next collection run (workflow.MD "Known open items"): one excerpt
+        # makes "About this call" a sentence or two; ask for the full descriptive text
         "- description: a verbatim excerpt describing what the opportunity "
         "actually is or offers (theme, format, activity) - copy the wording, "
         "do not paraphrase or summarize; null if the page gives no descriptive "

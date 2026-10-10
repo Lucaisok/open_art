@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./OnboardingHeader.module.css";
 
-// The onboarding steps, in order. Account is the sign-up the artist already did; its
-// pill links to /account (password, log out, delete account).
+// The onboarding steps, in order. Account is the sign-up the artist already did: always done,
+// and not a page (deleting the account is at the bottom of the profile).
 const STEPS = [
-    { label: "Account", href: "/account" },
+    { label: "Account", href: null },
     { label: "Documents", href: "/documents" },
     { label: "Profile", href: "/profile" },
 ];
@@ -16,7 +16,7 @@ const STEPS = [
 // (done / current / upcoming, design: design_handoff_openart 2, DOCUMENTS.md → Header)
 const OnboardingHeader = () => {
     const pathname = usePathname();
-    const current = STEPS.findIndex((step) => pathname.startsWith(step.href));
+    const current = STEPS.findIndex((step) => step.href !== null && pathname.startsWith(step.href));
 
     return (
         <header className={styles.header}>
@@ -29,8 +29,10 @@ const OnboardingHeader = () => {
                         const state = i < current ? styles.done : i === current ? styles.current : styles.upcoming;
                         const text = `${i + 1}  ${step.label}`; // two non-breaking spaces, as in the design
                         return (
-                            <li key={step.href}>
-                                {i === current ? (
+                            <li key={step.label}>
+                                {step.href === null ? (
+                                    <span className={`${styles.pill} ${state}`}>{text}</span>
+                                ) : i === current ? (
                                     <span className={`${styles.pill} ${state}`} aria-current="step">
                                         {text}
                                     </span>

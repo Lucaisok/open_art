@@ -27,8 +27,7 @@
   list-style: none;
 }
 
-.link,
-.logout {
+.link {
   font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
@@ -54,26 +53,6 @@
 .link[aria-current="page"] {
   background-color: var(--color-paper);
   color: var(--color-ink);
-}
-
-.logout {
-  height: 38px;
-  padding: 0 14px;
-  border: 2px solid var(--color-paper);
-  border-radius: 999px;
-  background: none;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.logout:hover {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-}
-
-.logout:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* the ink focus ring would be invisible on the ink bar */

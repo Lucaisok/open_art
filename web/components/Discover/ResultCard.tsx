@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClampedText from "@/components/ClampedText/ClampedText";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
 import { deadlineLabel, placeLabel } from "@/lib/discover";
 import type { SearchResult } from "@/lib/types";
@@ -6,15 +7,16 @@ import styles from "./ResultCard.module.css";
 
 type ResultCardProps = {
     result: SearchResult;
-    highlightDeadline: boolean;   // "All calls" is ordered by deadline, so the deadline stands out
     onOpen: () => void;           // remembers the scroll position before leaving
 };
 
-// One call in the results. The whole card is a link to the call's page (a link, not the
-// prototype's button: it navigates, so it can also be opened in a new tab).
-const ResultCard = ({ result, highlightDeadline, onOpen }: ResultCardProps) => (
+// One call in the results. The whole card opens the call's page: the title is a link (not the
+// prototype's button: it navigates, so it can also be opened in a new tab) stretched over the card,
+// so the reason's "Show more" can sit above it without opening the call. A stated deadline and,
+// when it is one clear, significant sum (api/discover.py headline_funding), the money stand out in lime.
+const ResultCard = ({ result, onOpen }: ResultCardProps) => (
     <li className={styles.item}>
-        <Link href={`/opportunities/${encodeURIComponent(result.id)}`} className={styles.card} onClick={onOpen}>
+        <div className={styles.card}>
             {result.types.length > 0 && (
                 <span className={styles.types}>
                     {result.types.map((type) => (
@@ -24,21 +26,26 @@ const ResultCard = ({ result, highlightDeadline, onOpen }: ResultCardProps) => (
                     ))}
                 </span>
             )}
-            <span className={styles.title}>{result.title}</span>
+            <Link
+                href={`/opportunities/${encodeURIComponent(result.id)}`}
+                className={styles.title}
+                onClick={onOpen}
+            >
+                {result.title}
+            </Link>
             {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
             <span className={styles.facts}>
                 <span>{placeLabel(result.city, result.countries)}</span>
-                <span className={highlightDeadline ? styles.deadlineHighlight : undefined}>
-                    {deadlineLabel(result.deadline)}
-                </span>
+                <span className={result.deadline ? styles.highlight : undefined}>{deadlineLabel(result.deadline)}</span>
+                {result.funding && <span className={styles.highlight}>{result.funding}</span>}
             </span>
-            <span className={styles.bottom}>
-                <span className={styles.verdict}>
+            <div className={styles.bottom}>
+                <div className={styles.verdict}>
                     <VerdictBadge status={result.status} />
-                    <span className={styles.reason}>{result.reason}</span>
-                </span>
-            </span>
-        </Link>
+                    <ClampedText className={styles.reason}>{result.reason}</ClampedText>
+                </div>
+            </div>
+        </div>
     </li>
 );
 

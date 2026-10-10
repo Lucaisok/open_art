@@ -18,6 +18,7 @@ from api import db, discover, knowledge_base
 from api.main import app
 from src.eligibility.engine import Item, Verdict
 from src.eligibility.profile import ArtistProfile
+from src.models.processed_opportunity import FundingComponent
 from tests.conftest import PASSWORD
 from tests.test_api_documents import ILKA, TOMAS, KeywordEmbedder, upload, user_id
 from tests.test_matcher import matcher, opp
@@ -124,6 +125,25 @@ def test_pages_follow_the_same_ranking(artist):
     assert first["total"] == second["total"] == 3
     assert ids(search(artist, mode="all", offset=3)) == []
     assert artist.post("/api/discover/search", json={"limit": 0}).status_code == 422
+
+
+def test_cards_show_only_a_clear_significant_amount():
+    def call(*components):
+        return opp("x", funding_components=[FundingComponent(**c) for c in components])
+    grant = {"category": "Grant/Stipend", "currency": "EUR"}
+    assert discover.headline_funding(call({**grant, "amount_min": 18000, "amount_max": 18000,
+                                           "period": "one-time"})) == "EUR 18,000"
+    assert discover.headline_funding(call({**grant, "amount_min": 1300, "amount_max": 1300,
+                                           "period": "per month"})) == "EUR 1,300 per month"
+    assert discover.headline_funding(call({**grant, "amount_min": 1000, "amount_max": 40000})) is None   # a range
+    assert discover.headline_funding(call({**grant, "amount_min": 300, "amount_max": 300})) is None      # too small
+    assert discover.headline_funding(call({**grant, "amount_min": 85, "amount_max": 85,
+                                           "period": "per day"})) is None
+    assert discover.headline_funding(call({**grant, "amount_min": 8_940_000, "amount_max": 8_940_000})) is None
+    assert discover.headline_funding(call({**grant, "amount_min": 5000, "amount_max": 5000},
+                                          {**grant, "amount_min": 2500, "amount_max": 2500})) is None  # tiers
+    assert discover.headline_funding(call({"category": "Travel Support", "currency": "NOK",
+                                           "amount_min": 35000, "amount_max": 35000})) is None
 
 
 def test_matched_without_documents_orders_by_deadline(artist):

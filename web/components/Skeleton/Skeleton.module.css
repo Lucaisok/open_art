@@ -1,0 +1,68 @@
+/* Loading placeholders (the pages' loading.tsx): grey shapes where the content will be, with a
+   light band sweeping across them, all in step (the band is fixed to the screen, not to each shape) */
+.bone {
+  display: block;
+  max-width: 100%;   /* a fixed width never pushes a narrow screen wider */
+  flex-shrink: 0;
+  border-radius: 10px;
+  background-color: var(--color-grey-200);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--color-grey-100) 45%,
+    var(--color-white) 50%,
+    var(--color-grey-100) 55%,
+    transparent 70%
+  );
+  background-size: 200vw 100%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  animation: sweep 1.4s ease-in-out infinite;
+}
+
+/* a skeleton card: the real cards' ink border, empty inside but for a few bones */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border: 3px solid var(--color-grey-300);
+  border-radius: 18px;
+  background-color: var(--color-white);
+}
+
+.spacer {
+  margin-top: auto;
+}
+
+@keyframes sweep {
+  from {
+    background-position: -200vw 0;
+  }
+  to {
+    background-position: 200vw 0;
+  }
+}
+
+/* no sweeping for people who asked for less motion: a slow fade instead */
+@media (prefers-reduced-motion: reduce) {
+  .bone {
+    background-image: none;
+    animation: fade 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes fade {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

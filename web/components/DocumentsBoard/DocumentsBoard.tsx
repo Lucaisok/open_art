@@ -34,11 +34,13 @@ const SLOTS: SlotInfo[] = [
 
 type DocumentsBoardProps = {
     initialDocuments: DocumentInfo[];
+    onboarding: boolean;   // the profile was never saved: the footer bar leads on to the profile
 };
 
-// The Documents page body: title, the three upload cards, and the footer bar (Back, "N of 3
-// added", Skip, Continue). Each card uploads on its own; the board only counts.
-const DocumentsBoard = ({ initialDocuments }: DocumentsBoardProps) => {
+// The Documents page body: title, the three upload cards and, during the onboarding only, the
+// footer bar ("N of 3 added", Skip, Continue). Each card uploads on its own; the board only counts.
+// Outside the onboarding there is no bar: uploads save themselves and the header leads everywhere.
+const DocumentsBoard = ({ initialDocuments, onboarding }: DocumentsBoardProps) => {
     // which slots hold a document, and which are uploading: for the footer
     const [added, setAdded] = useState<Record<DocumentKind, boolean>>({
         cv: initialDocuments.some((d) => d.kind === "cv"),
@@ -87,37 +89,36 @@ const DocumentsBoard = ({ initialDocuments }: DocumentsBoardProps) => {
                 </ul>
             </main>
 
-            <footer className={styles.footer}>
-                <div className={styles.footerLeft}>
-                    <Link href="/account" className={styles.back}>
-                        ← Back
-                    </Link>
-                    <p className={styles.progress} aria-live="polite">
-                        {addedCount} of 3 added
-                    </p>
-                </div>
-                <div className={styles.footerRight}>
-                    <Link href="/profile" className={styles.skip}>
-                        Skip for now
-                    </Link>
-                    {canContinue ? (
-                        <Link href="/profile" className={styles.continue}>
-                            <span>Continue</span>
-                            <span className={styles.arrow} aria-hidden="true">
-                                →
-                            </span>
+            {onboarding && (
+                <footer className={styles.footer}>
+                    <div className={styles.footerLeft}>
+                        <p className={styles.progress} aria-live="polite">
+                            {addedCount} of 3 added
+                        </p>
+                    </div>
+                    <div className={styles.footerRight}>
+                        <Link href="/profile" className={styles.skip}>
+                            Skip for now
                         </Link>
-                    ) : (
-                        // disabled until one document is added and nothing is uploading
-                        <button type="button" className={styles.continue} disabled>
-                            <span>Continue</span>
-                            <span className={styles.arrow} aria-hidden="true">
-                                →
-                            </span>
-                        </button>
-                    )}
-                </div>
-            </footer>
+                        {canContinue ? (
+                            <Link href="/profile" className={styles.continue}>
+                                <span>Continue</span>
+                                <span className={styles.arrow} aria-hidden="true">
+                                    →
+                                </span>
+                            </Link>
+                        ) : (
+                            // disabled until one document is added and nothing is uploading
+                            <button type="button" className={styles.continue} disabled>
+                                <span>Continue</span>
+                                <span className={styles.arrow} aria-hidden="true">
+                                    →
+                                </span>
+                            </button>
+                        )}
+                    </div>
+                </footer>
+            )}
         </>
     );
 };

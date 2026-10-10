@@ -1,0 +1,33 @@
+/* Long text as a preview: the first lines (ClampedText's `lines`), then "…" */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.toggle {
+  position: relative;   /* above a card's whole-card link (ResultCard) */
+  z-index: 1;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  text-decoration-color: var(--color-lime-pressed);
+}

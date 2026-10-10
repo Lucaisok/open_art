@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CardBone } from "@/components/Skeleton/Skeleton";
 import { requestJson } from "@/lib/api";
 import {
     clearFilters,
     filterCount,
     LAST_SEARCH_KEY,
     PAGE_SIZE,
+    rememberSearch,
     SCROLL_KEY,
     startMode,
     toQueryString,
@@ -59,15 +61,26 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
         window.history.replaceState(null, "", `?${toQueryString(next)}`);
     };
 
-    // remember this search for the opportunity page's "Back to results"
+    // remember this search: for the opportunity page's "Back to results" (this tab), and in a
+    // cookie for a bare /discover (the header link, the logo, after login)
     const query = toQueryString(state);
     useEffect(() => {
+        rememberSearch(query);
         try {
             sessionStorage.setItem(LAST_SEARCH_KEY, `?${query}`);
         } catch {
             // storage blocked: "Back to results" opens a fresh Discover instead
         }
     }, [query]);
+
+    // opened as a bare /discover: write the search into the address (no reload, no redirect)
+    useEffect(() => {
+        if (window.location.search !== `?${query}`) {
+            window.history.replaceState(null, "", `?${query}`);
+        }
+        // only on arrival: later changes write the address in update()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Search whenever the request changes, after a short pause; an older answer never
     // overwrites a newer one (the old request is aborted)
@@ -223,7 +236,6 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
                 <ResultCard
                     key={result.id}
                     result={result}
-                    highlightDeadline={state.mode === "all"}
                     onOpen={rememberScroll}
                 />
             ))}
@@ -320,7 +332,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
                 {showSkeletons ? (
                     <div className={styles.grid} aria-hidden="true">
                         {[0, 1, 2].map((i) => (
-                            <div key={i} className={styles.skeleton} />
+                            <CardBone key={i} />
                         ))}
                     </div>
                 ) : shown === 0 ? (

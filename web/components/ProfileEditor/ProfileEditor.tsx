@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { requestJson } from "@/lib/api";
+import { forgetSearch } from "@/lib/discover";
+import AccountSection from "./AccountSection";
 import type { ProfileData, ProfileOptions, ProfileValues, Suggestion } from "@/lib/types";
 import { MultiChoice, SingleChoice } from "./Choices";
 import CountryChips from "./CountryChips";
@@ -24,6 +26,7 @@ type ProfileEditorProps = {
     initial: ProfileData;
     options: ProfileOptions;
     cvName: string | null;
+    email: string;        // the Account box: who is logged in
 };
 
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
@@ -80,7 +83,7 @@ const startingPoint = (initial: ProfileData) => {
 // The profile page: what the CV filled in (banner), the form (three groups), and a footer bar
 // with Save. Only Save writes anything (PUT /api/profile): the values from documents are suggestions
 // until then, and Save also marks this CV as reviewed so they aren't filled in again.
-const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
+const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) => {
     const [start] = useState(() => startingPoint(initial));
     const [values, setValues] = useState<ProfileValues>(start.values);
     const [evidence, setEvidence] = useState<EvidenceMap>(start.evidence);
@@ -92,6 +95,10 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [birthIncomplete, setBirthIncomplete] = useState(false); // some date boxes filled, not all
     const neverSaved = initial.updated_at === null && saveState.kind !== "saved";
+    // opened during the onboarding (never saved): the footer also leads back to Documents and, once
+    // saved, on to Discover. Kept for the whole visit, so the first Save shows "Continue to Discover".
+    // Afterwards the footer is only the save bar: the header leads everywhere else.
+    const onboarding = initial.updated_at === null;
 
     // unsaved: values changed, or the documents' suggestions still need the artist's Save
     const dirty = useMemo(
@@ -188,6 +195,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
         setDiffering({});
         setErrors({});
         setSaveState({ kind: "saved" });
+        forgetSearch(); // Discover starts again from the saved profile's disciplines
     };
 
     // shorthand for the props every Field and its control share
@@ -471,13 +479,17 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                         </section>
                     </form>
                 </div>
+
+                <AccountSection email={email} />
             </main>
 
             <footer className={styles.footer}>
                 <div className={styles.footerLeft}>
-                    <Link href="/documents" className={styles.back}>
-                        ← Back
-                    </Link>
+                    {onboarding && (
+                        <Link href="/documents" className={styles.back}>
+                            ← Back
+                        </Link>
+                    )}
                     <p
                         className={`${styles.saveStatus} ${saveState.kind === "error" ? styles.saveStatusError : ""}`}
                         role={saveState.kind === "error" ? "alert" : "status"}
@@ -486,7 +498,7 @@ const ProfileEditor = ({ initial, options, cvName }: ProfileEditorProps) => {
                     </p>
                 </div>
                 {/* everything saved: the onboarding is done, on to the calls */}
-                {!dirty && !neverSaved ? (
+                {onboarding && !dirty && !neverSaved ? (
                     <Link href="/discover" className={styles.saveButton}>
                         Continue to Discover →
                     </Link>
