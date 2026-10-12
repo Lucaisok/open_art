@@ -15,7 +15,7 @@ flowchart TD
 
     SRC --> CRAWL["crawler.py — Discovery\n1 LLM call: classify links + find pagination"]
     CRAWL --> DISC["data/discovered/*.jsonl\n(candidate URLs)"]
-    DISC --> EXTR["extraction.py — Extraction\n1 LLM call: extract fields + is_open_call"]
+    DISC --> EXTR["extraction.py — Extraction\npage + up to 3 linked call PDFs\n1 LLM call: extract fields + is_open_call"]
     MAN --> MANUAL["manual_entry.py"]
 
     EXTR -- rejected --> REJ["data/rejected/*.jsonl\n(cached, never re-billed)"]
@@ -41,7 +41,7 @@ is the one file this project actually ships.
 | Stage | Script | Reads | Writes | LLM call? |
 |---|---|---|---|---|
 | Discovery | `src/collectors/crawler.py` | `sources.yaml` listing page | `data/discovered/` | Yes — classify harvested links as real opportunities vs. noise |
-| Extraction | `src/collectors/extraction.py` | each discovered URL (HTML/PDF) | `data/raw/**` or `data/rejected/` | Yes — extract fields + accept/reject, `temperature=0` |
+| Extraction | `src/collectors/extraction.py` | each discovered URL (HTML/PDF) + its linked call PDFs | `data/raw/**` or `data/rejected/` | Yes — extract fields + accept/reject, `temperature=0` |
 | Manual entry | `src/collectors/manual_entry.py` | `data/manual/intake.csv` | `data/raw/**` | No |
 | Normalization | `src/processing/normalize.py` | `data/raw/**` | `data/processed/opportunities.jsonl` | Yes, only if source language ≠ English (translation) |
 | Export | `scripts/export_dataset.py` | `data/processed/opportunities.jsonl` | `dataset/opportunities.csv` | No |
@@ -59,6 +59,44 @@ Extraction is where that ambiguity actually gets resolved — it reads the
 whole fetched page, so it can tell a genuinely closed or non-eligibility
 page apart from a real open call. Splitting the two steps keeps each
 LLM call scoped to what it can actually see.
+
+### Linked PDFs: reading the call's own documents (2026-10-12)
+
+Many calls put the real eligibility rules in a PDF linked from the page
+(call text, guidelines, *bando*, *Ausschreibung*, *Søkerveileder*), not on
+the page itself. Extraction now reads those too:
+
+```mermaid
+flowchart LR
+    PAGE["opportunity page (HTML)"] --> FIND["find_pdf_links()\nevery .pdf link on the page"]
+    FIND --> SKIP{"privacy · annual report ·\nresults of past rounds\n(minutes, winners)?"}
+    SKIP -- yes --> DROP["ignored"]
+    SKIP -- no --> RANK["rank: call word +3 ·\nin main content +2 · same site +1\nkeep score ≥ 2, top 3"]
+    RANK --> READ["download (≤ 10 MB) · first 20 pages ·\n≤ 6,000 chars each"]
+    READ --> LLM["appended to the page text under\n'--- Attached document: … ---'\n→ the one extraction call"]
+    LLM --> REC["RawOpportunity.document_urls\n= the PDFs actually read"]
+```
+
+- **Results PDFs are skipped on purpose**: commission minutes or a
+  winners list from last year's round could make the model judge a live
+  call as already decided.
+- **Scanned PDFs** (no text layer) are skipped and logged — no OCR. A
+  broken attachment never loses the page.
+- **`document_urls`** is carried from raw to processed to the published
+  CSV, so every requirement can be traced to the document it came from.
+- **Older records** were extracted before this and are cached as seen,
+  so a normal run never revisits them. `scripts/refresh_pdf_extraction.py`
+  redoes only the pages that link a call PDF, as a dry run first:
+
+```
+scan     fetch every accepted/rejected page, find call PDFs    free
+extract  re-run extraction on those pages only                 1 mini call each
+report   old vs. new outcome per page → data/refresh/pdf_report.md
+```
+
+  Applying the results to `data/raw`/`data/rejected` is a separate,
+  reviewed step. The hand-annotated RQ1 dataset stays frozen: refreshed
+  records feed the app's corpus only.
 
 ### Cost guards (why re-running is cheap)
 
@@ -93,6 +131,7 @@ rewrites `requirements_text`/`title`, it only adds alongside them:
 | `title`, `requirements_text`, `description` | `*_en` — machine-translated only if the source's declared language isn't English |
 | `discipline`, `opportunity_type`, `career_stage`, `country` | `*_en` translation **and** `*_canonical` — mapped onto a fixed controlled vocabulary (list-valued; a source value can name several categories at once) |
 | `city` | `city_en` only — no fixed vocabulary for an open field |
+| `document_urls` | copied as is — the linked PDFs the extraction read |
 | `funding`, `application_fee` | structured extraction: `funding_components` (list of `{category, amount_min, amount_max, currency, period, note}`) and `application_fee_has_fee`/`_amount_min`/`_amount_max`/`_currency` |
 
 Language is tagged **per source**, by hand, in `sources.yaml` — not

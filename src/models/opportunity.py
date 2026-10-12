@@ -10,6 +10,9 @@ class RawOpportunity(BaseModel):
     source: str
     source_url: str
     application_url: str | None = None
+    # linked PDFs (call text, guidelines) whose text the extraction read alongside the page,
+    # so every requirement can be traced back to its document; [] = page text only
+    document_urls: list[str] = []
 
     title: str
     organisation: str | None = None

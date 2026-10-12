@@ -19,7 +19,7 @@ PUBLISHED_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
 
 # columns holding a list (of strings, or of funding dicts), written as Python literals
 LIST_COLUMNS = {"discipline_canonical", "opportunity_type_canonical", "career_stage_canonical",
-                "country_canonical", "funding_components"}
+                "country_canonical", "funding_components", "document_urls"}
 
 
 def _parse_row(row: dict[str, str]) -> ProcessedOpportunity:

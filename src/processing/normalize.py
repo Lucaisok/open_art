@@ -141,6 +141,7 @@ def normalize_record(client: OpenAI, raw: RawOpportunity, language: str) -> Proc
         source=raw.source,
         source_url=raw.source_url,
         application_url=raw.application_url,
+        document_urls=raw.document_urls,
         organisation=raw.organisation,
         description=raw.description,
         discipline=raw.discipline,

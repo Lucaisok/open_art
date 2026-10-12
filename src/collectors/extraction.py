@@ -18,10 +18,13 @@ Usage: uv run python -m src.collectors.extraction
 """
 
 import io
+import logging
 import os
 import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
+from urllib.parse import unquote, urlsplit
 
 import requests
 import yaml
@@ -34,8 +37,9 @@ from pypdf import PdfReader
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(REPO_ROOT)
 load_dotenv(os.path.join(REPO_ROOT, ".env"))
+logging.getLogger("pypdf").setLevel(logging.ERROR)   # silence warnings about malformed but readable PDFs
 
-from src.collectors.crawler import HEADERS, gather_candidate_links  # noqa: E402
+from src.collectors.crawler import HEADERS, gather_candidate_links, normalize_link  # noqa: E402
 from src.collectors.ids import make_id  # noqa: E402
 from src.collectors.jsonl import load_jsonl, load_seen_ids, write_jsonl  # noqa: E402
 from src.models.discovered_url import DiscoveredUrl  # noqa: E402
@@ -49,6 +53,38 @@ REJECTED_DIR = os.path.join(REPO_ROOT, "data", "rejected")
 
 MODEL = "gpt-5.4-mini"  # same cost/tier reasoning as the crawler's classify_links
 MAX_PAGE_CHARS = 8000  # ~2000 tokens - generous for one opportunity page, bounded for cost
+
+# PDFs linked from an opportunity page (call text, guidelines, regulations): often the only
+# place the eligibility rules are written down. Each one gets its own text budget, so the
+# page text can't push them out of the prompt (see workflow.MD, "Linked PDFs").
+MAX_LINKED_PDFS = 3
+MAX_PDF_CHARS = 6000          # per PDF: 3 x 6000 + the 8000-char page = ~26k chars, ~6.5k tokens
+MAX_PDF_BYTES = 10_000_000    # skip anything bigger - a call document is far smaller
+MAX_PDF_PAGES = 20            # the rules are near the start; don't parse 200-page annual reports
+
+# Word starts (matched at the start of a word, accents removed - see _pdf_words) that mark a PDF
+# as the call's own document, in the corpus' languages (EN, IT, DE, FR, ES, NL, NO/DA/SV).
+# A match ranks the PDF first.
+PDF_CALL_WORDS = (
+    "call", "guideline", "regulation", "rules", "terms", "condition", "eligib", "application",
+    "apply", "brief", "criteria", "prospectus", "charter",
+    "bando", "regolamento", "avviso", "candidatur",
+    "ausschreibung", "richtlinie", "bewerbung", "merkblatt", "teilnahmebedingung", "foerderricht",
+    "reglement", "appel", "charte",
+    "convocatoria", "bases",
+    "oproep", "voorwaarden", "regeling",
+    "veileder", "soekerveileder", "sokerveileder", "retningslinje", "regelverk", "vilkar",
+    "utlysning", "forskrift", "vejledning",
+)
+# PDFs that are never the call itself: site-wide legal/reporting documents, and the results of
+# past rounds (commission minutes, winners lists) - those could make the model judge a live
+# call as already decided.
+PDF_SKIP_WORDS = (
+    "privacy", "datenschutz", "impressum", "imprint", "cookie", "annual report", "jahresbericht",
+    "rapporto annuale", "press", "presse", "menu", "statut", "satzung", "code of conduct",
+    "pv", "proces verbal", "verbale", "protokoll", "minutes", "bilan", "result", "risultat",
+    "ergebnis", "winner", "laureat", "selected", "selection", "vincitor", "preistrager",
+)
 
 # The model is told to use null when a field isn't stated (see
 # build_extraction_system_prompt), but at least once it wrote out its own
@@ -123,6 +159,10 @@ def build_extraction_system_prompt(today: str) -> str:
     return (
         f"Today's date is {today}. You are extracting structured data from "
         "an arts/culture open-call page. "
+        "The page text may end with the text of PDF documents linked from the "
+        "page, each under an '--- Attached document: ... ---' heading: treat "
+        "them as part of the same call (they often hold the full eligibility "
+        "rules) and extract from them too. "
         "First decide: is this page CURRENTLY SOLICITING NEW APPLICATIONS from "
         "artists - a specific open call whose eligibility/requirements "
         "information is actually present in the page text given to you, with a "
@@ -187,17 +227,95 @@ def build_extraction_system_prompt(today: str) -> str:
     )
 
 
-def extract_pdf_text(content: bytes) -> str:
+def extract_pdf_text(content: bytes, max_pages: int | None = None) -> str:
     try:
         reader = PdfReader(io.BytesIO(content))
-        return " ".join((page.extract_text() or "") for page in reader.pages)
+        pages = reader.pages if max_pages is None else reader.pages[:max_pages]
+        return " ".join((page.extract_text() or "") for page in pages)
     except Exception:
         return ""  # malformed/scanned/image-only PDF - let the empty text fall through
         # to the model's normal "not readable" rejection path rather than crashing
 
 
-def fetch_page(url: str) -> tuple[str, list[tuple[str, str]]]:
-    """Fetch a page, returning (visible_text, candidate_links).
+def _pdf_words(text: str) -> str:
+    """Lower-case words, accents and punctuation removed, each preceded by a space.
+
+    "PV_Commission_MIRA.pdf" -> " pv commission mira pdf", "Søkerveileder" -> " sokerveileder",
+    so `f" {word}" in ...` matches a word start: "pv" matches the token pv, never "pvc" mid-word.
+    """
+    text = unicodedata.normalize("NFKD", text.lower().replace("ø", "o").replace("æ", "ae"))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return " " + " ".join(re.findall(r"[a-z0-9]+", text))
+
+
+def find_pdf_links(soup: BeautifulSoup, scope, page_url: str) -> list[tuple[str, str]]:
+    """The page's most likely call documents: up to MAX_LINKED_PDFS (url, label) pairs, best first.
+
+    Searches the whole document, not just <article>/<main>: call PDFs often sit in a sidebar
+    "Downloads" box. Unlike gather_candidate_links(), a link with no anchor text is kept (PDFs
+    are often linked by an icon); its file name stands in as the label.
+
+    Ranking: +3 if the label or file name has a call word (bando, Ausschreibung, guidelines...),
+    +2 if the link is inside the page's main content, +1 if it's on the same site. A PDF with
+    neither of the first two (score <= 1) is a site-wide document and is dropped.
+    """
+    in_scope = {id(a) for a in scope.find_all("a", href=True)} if scope is not soup else None
+    page_host = urlsplit(page_url).netloc
+
+    scored: dict[str, tuple[int, str]] = {}   # url -> (score, label), first occurrence wins
+    for a in soup.find_all("a", href=True):
+        url = normalize_link(a["href"], page_url)
+        if url is None or url in scored or not urlsplit(url).path.lower().endswith(".pdf"):
+            continue
+        file_name = unquote(urlsplit(url).path.rsplit("/", 1)[-1])
+        label = a.get_text(" ", strip=True) or file_name
+        words = _pdf_words(f"{label} {file_name}")
+        if any(f" {w}" in words for w in PDF_SKIP_WORDS):
+            continue
+
+        score = 0
+        if any(f" {w}" in words for w in PDF_CALL_WORDS):
+            score += 3
+        if in_scope is None or id(a) in in_scope:
+            score += 2
+        if urlsplit(url).netloc == page_host:
+            score += 1
+        if score > 1:
+            scored[url] = (score, label)
+
+    ranked = sorted(scored.items(), key=lambda item: -item[1][0])   # stable: page order on ties
+    return [(url, label) for url, (_, label) in ranked[:MAX_LINKED_PDFS]]
+
+
+def fetch_pdf_text(url: str) -> str:
+    """Download one linked PDF and return its text ("" if too big, not a PDF, or unreadable).
+
+    Streamed, so a huge file is abandoned after MAX_PDF_BYTES instead of downloaded whole.
+    Never raises: a broken attachment must not lose the page it's attached to.
+    """
+    try:
+        with requests.get(url, headers=HEADERS, timeout=20, stream=True) as resp:
+            resp.raise_for_status()
+            content = b""
+            for chunk in resp.iter_content(chunk_size=64_000):
+                content += chunk
+                if len(content) > MAX_PDF_BYTES:
+                    print(f"  linked PDF skipped (over {MAX_PDF_BYTES // 1_000_000} MB): {url}")
+                    return ""
+    except requests.RequestException as e:
+        print(f"  linked PDF skipped ({e.__class__.__name__}): {url}")
+        return ""
+
+    if not content.startswith(b"%PDF"):
+        return ""   # a ".pdf" link that served an HTML error/login page
+    text = extract_pdf_text(content, max_pages=MAX_PDF_PAGES).strip()
+    if not text:
+        print(f"  linked PDF has no text layer (scanned?): {url}")
+    return text
+
+
+def fetch_page(url: str) -> tuple[str, list[tuple[str, str]], list[str]]:
+    """Fetch a page, returning (visible_text, candidate_links, pdf_urls).
 
     get_text() strips every href along with the rest of the markup, so
     without candidate_links the model is asked for an application_url
@@ -206,26 +324,37 @@ def fetch_page(url: str) -> tuple[str, list[tuple[str, str]]]:
     button labels instead of URLs. Link harvesting reuses the crawler's
     gather_candidate_links() so both stages filter mailto/social/etc.
     the same way.
+
+    The text of the page's linked call PDFs (find_pdf_links) is appended,
+    each under an "Attached document:" heading, and their URLs returned as
+    pdf_urls - only those that actually yielded text.
     """
     resp = requests.get(url, headers=HEADERS, timeout=20)
     resp.raise_for_status()
 
     content_type = resp.headers.get("Content-Type", "")
     if "application/pdf" in content_type or url.lower().endswith(".pdf"):
-        return extract_pdf_text(resp.content)[:MAX_PAGE_CHARS], []
+        return extract_pdf_text(resp.content)[:MAX_PAGE_CHARS], [], []
 
     soup = BeautifulSoup(resp.text, "html.parser")
     scope = soup.find("article") or soup.find("main") or soup
     text = scope.get_text(" ", strip=True)[:MAX_PAGE_CHARS]
     links = gather_candidate_links(str(scope), url)
-    return text, links
+
+    pdf_urls = []
+    for pdf_url, label in find_pdf_links(soup, scope, url):
+        pdf_text = fetch_pdf_text(pdf_url)
+        if pdf_text:
+            text += f"\n\n--- Attached document: {label} ({pdf_url}) ---\n{pdf_text[:MAX_PDF_CHARS]}"
+            pdf_urls.append(pdf_url)
+    return text, links, pdf_urls
 
 
 def extract_opportunity(
     client: OpenAI, url: str, source_name: str
 ) -> tuple[RawOpportunity | None, str | None]:
     """Returns (record, rejection_reason) - record is None iff rejected."""
-    text, links = fetch_page(url)
+    text, links, pdf_urls = fetch_page(url)
     links_block = "\n".join(f"- [{text_}]({link_url})" for link_url, text_ in links) or "(none found)"
     today = datetime.now(timezone.utc).date().isoformat()
 
@@ -262,6 +391,7 @@ def extract_opportunity(
         source=source_name,
         source_url=url,
         application_url=application_url,
+        document_urls=pdf_urls,
         title=extracted.title,
         organisation=extracted.organisation,
         description=extracted.description,

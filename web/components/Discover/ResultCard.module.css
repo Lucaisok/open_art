@@ -15,16 +15,36 @@
   border-radius: 18px;
   background-color: var(--color-white);
   color: var(--color-ink);
+  box-shadow: 4px 4px 0 var(--color-ink);
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
+/* hover lifts the card towards the pointer, pressing pushes it into its shadow */
 .card:hover {
-  background-color: var(--color-grey-100);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--color-ink);
+}
+
+.card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--color-ink);
 }
 
 /* the focus ring goes around the whole card, not just the title */
 .card:has(.title:focus-visible) {
   outline: 3px solid var(--color-ink);
-  outline-offset: 3px;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:active {
+    transform: none;
+  }
 }
 
 .types {

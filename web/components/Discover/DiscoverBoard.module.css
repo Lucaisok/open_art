@@ -219,7 +219,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: 16px;
+  gap: 22px 20px;   /* room for the cards' offset shadow */
   margin-top: 20px;
   list-style: none;
 }

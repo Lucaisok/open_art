@@ -37,6 +37,7 @@ class ProcessedOpportunity(BaseModel):
     source: str
     source_url: str
     application_url: str | None = None
+    document_urls: list[str] = []  # linked PDFs read at extraction, copied from RawOpportunity
 
     organisation: str | None = None
 
