@@ -1,0 +1,15 @@
+chunk_text,label,scope,applies_to,decision,polarity,value,reason
+The ISGIES scheme does not cover individual artists working with printed matter.,APPLICANT_TYPE,APPLICANT,,fix,EXCLUDES,"{""types"": [""individual""]}",scheme for galleries/spaces; individual artists not covered
+You must be 18 years or older to speak at this event.,AGE,APPLICANT,,fix,REQUIRES,"{""min_age"": 18}",speakers must be 18 or older
+"Target group Artists, arts and culture organizations, NGOs, and others engaged in cultural activities for children and youth in accordance with official cultural policies.",APPLICANT_TYPE,APPLICANT,,drop,,,"target group names artists, organisations and 'others'; no type restriction, only a children's-culture focus"
+"Book publishers, i.e. an individual, group or legal person financially responsible for the publication of a book, registered as a party subject to value added tax pursuant to Article 5 of the Value Added Tax Act, No 50/1988, under code 58.11.0 Book publishing according to the classification of economic activities published by Statistics Iceland.",APPLICANT_TYPE,APPLICANT,,fix,REQUIRES,"{""types"": [""individual"", ""group"", ""organisation""], ""also_requires"": ""registered as VAT-liable book publisher (ISAT 58.11.0) or equivalent registration abroad""}","book publishers of any form, VAT registration unverifiable"
+"Auditions are open to young artists and apprentice artists aged 14 to 21: dancers, actors, musicians, circus performers, singers.",AGE,APPLICANT,,fix,REQUIRES,"{""min_age"": 14, ""max_age"": 21}",aged 14 to 21 inclusive
+for Villa Arson alumni.,STUDENT_STATUS,APPLICANT,,fix,REQUIRES,"{""any_of"": [{""label"": ""EDUCATION"", ""institutions"": [""Villa Arson""]}]}",alumni of Villa Arson (as round 6)
+"Profile: experience with young audiences, interest in biodiversity and transmission issues",AGE,APPLICANT,,drop,,,not an age condition; profile of experience/interests can't be checked
+"it seems preferable to reside in Nice, Menton or nearby in order to apply",RESIDENCE,PREFERENCE,,scope,,,"residing near Nice/Menton is 'preferable', not required"
+The State Culture Capital Foundation (VKKF) grants funding to a legal entity or natural person…,APPLICANT_TYPE,APPLICANT,,fix,REQUIRES,"{""types"": [""individual"", ""organisation""]}",legal entity or natural person
+The VKKF grants funding to a legal entity or natural person…,APPLICANT_TYPE,APPLICANT,,fix,REQUIRES,"{""types"": [""individual"", ""organisation""]}",legal entity or natural person
+VKKF provides funding to a legal entity or natural person…,APPLICANT_TYPE,APPLICANT,,fix,REQUIRES,"{""types"": [""individual"", ""organisation""]}",legal entity or natural person
+For Ukrainian citizens,NATIONALITY,APPLICANT,,fix,REQUIRES,"{""countries"": [""UA""]}",Ukrainian citizens
+VKKF grants funding to a legal entity or natural person…,APPLICANT_TYPE,APPLICANT,,fix,REQUIRES,"{""types"": [""individual"", ""organisation""]}",legal entity or natural person
+Citizens of Ukraine,NATIONALITY,APPLICANT,,fix,REQUIRES,"{""countries"": [""UA""]}",citizens of Ukraine

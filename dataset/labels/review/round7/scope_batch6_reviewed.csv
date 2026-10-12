@@ -1,0 +1,26 @@
+chunk_text,label,scope,decision,reason
+This project is aimed at artists interested in working on a monumental scale.,CAREER_STAGE,APPLICANT,,Defines who the call is aimed at (monumental-scale practice); in doubt keep as check
+You may apply with completed monumental works or pieces that can be scaled up through volume or size.,DISCIPLINE,PROJECT,scope,"About the works submitted, not the applicant"
+Applicants must present at least one Norwegian or Norway-based contemporary artist at one of the international art fairs included in the list of eligible art fairs.,OTHER_ELIGIBILITY,PROJECT,scope,Condition on the funded fair presentation content
+"This event is for anyone interested in or already involved in creating, holding, exploring, and taking care of archives, especially those not working in more traditional institutions or archives.",DISCIPLINE,PREFERENCE,scope,"Open to anyone interested; 'especially' is soft wording, no exclusion"
+This call for contributors is open to all* especially those with experience of working with archives and the stories within them.,DISCIPLINE,WIDENING,scope,Open to all; 'especially' adds only a preference
+Children's culture pertains to projects in the field of art and culture that are prepared for children and/or with the active participation of children.,DISCIPLINE,NOT_A_CONDITION,scope,Definition of children's culture
+The published book must be in Icelandic.,DISCIPLINE,PROJECT,scope,Condition on the book's language
+Foreign applicants must provide evidence of similar registration of their activities in another country.,OTHER_ELIGIBILITY,APPLICANT,,Foreign applicants must prove registration
+Eligible expenses incurred in the publication of the book and for which the applicant requests support must amount to at least ISK 1 million.,DISCIPLINE,PROJECT,scope,Minimum budget of eligible expenses
+Lower thresholds for books published on digital media and for certain classes of books may be laid down in a Regulation.,DISCIPLINE,NOT_A_CONDITION,scope,Note that lower thresholds may be set by regulation
+The applicant must not be in arrears to any public entity.,OTHER_ELIGIBILITY,APPLICANT,,Applicant must not be in arrears
+The applicant’s debt position toward public entities must be documented.,OTHER_ELIGIBILITY,APPLICANT,,Applicant must document debt position; keep as check
+"Target group Designers, Visual artists, Authors, Performers, Musicians, Composers and Film Authors.",DISCIPLINE,APPLICANT,,Target group list of disciplines
+"Anyone writing in English, from the UK and around the world, can send us a play.",DISCIPLINE,APPLICANT,,Must write in English
+"We do not accept screenplays, novels, poetry or radio plays.",DISCIPLINE,PROJECT,scope,Excluded forms of submitted work
+"We only read original, full-length plays (we suggest this would be from around 50 pages or 25-30 pages for a monologue).",DISCIPLINE,PROJECT,scope,Submitted play must be original and full-length
+"We are unable to accept more than one submission from a writer at a time, nor consider unsolicited resubmissions or new drafts of plays we have previously read.",PRIOR_FUNDING,APPLICANT,,Limits writers with a pending or previously read submission; in doubt keep
+We do accept scripts for original musicals but cannot accept scores or soundtracks as part of first submission.,DISCIPLINE,PROJECT,scope,Accepted content of the submission
+"We very rarely programme adaptations and therefore do not accept adaptations of novels, films or pre-existing narrative works through our open submissions – we are looking for original plays.",DISCIPLINE,PROJECT,scope,Adaptations not accepted as submitted work
+"Similarly, we are unlikely to programme plays based on histories or biographies, unless handled in a compellingly contemporary way.",DISCIPLINE,PREFERENCE,scope,"'Unlikely to programme' is soft, no exclusion"
+"professional artists, designers, crafts people and art restorers can work in large formats, which their own studios or equipment cannot facilitate.",DISCIPLINE,APPLICANT,,Discipline list of who can use the residency
+"The only requirement is, that you have been granted with a residency at the SVFK previously.",PRIOR_FUNDING,APPLICANT,,Must have had a previous SVFK residency
+The State Culture Capital Foundation of Latvia (VKKF) provides funding to a legal entity or natural person…,DISCIPLINE,WIDENING,scope,Both legal entities and natural persons can be funded
+The State Culture Capital Foundation of Latvia (VKKF) grants funding to a legal entity or a natural person…,DISCIPLINE,WIDENING,scope,Both legal entities and natural persons can be funded
+The State Culture Capital Foundation (VKKF) grants funding to a legal or natural person…,DISCIPLINE,WIDENING,scope,Both legal and natural persons can be funded

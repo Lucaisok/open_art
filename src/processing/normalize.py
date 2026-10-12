@@ -128,6 +128,14 @@ def translate(
     return response.choices[0].message.parsed
 
 
+# RawOpportunity fields the processed record carries over unchanged
+COPIED_AS_IS = (
+    "open_to", "project_requirements", "how_to_apply", "application_questions", "required_materials",
+    "selection_criteria", "application_language", "submission_method", "program_dates",
+    "rolling_deadline", "rules_in_external_document", "verbatim_flags",
+)
+
+
 def normalize_record(client: OpenAI, raw: RawOpportunity, language: str) -> ProcessedOpportunity:
     if language == "en":
         title_en, requirements_text_en, description_en = raw.title, raw.requirements_text, raw.description
@@ -159,6 +167,8 @@ def normalize_record(client: OpenAI, raw: RawOpportunity, language: str) -> Proc
         requirements_text_en=requirements_text_en,
         deadline_raw=raw.deadline,
         deadline_date=parse_deadline(raw.deadline, language, raw.source),
+        # fields from the combined re-extraction, copied untranslated (workflow.MD, "Step 3")
+        **{field: getattr(raw, field) for field in COPIED_AS_IS},
         processed_at=datetime.now(timezone.utc),
     )
 

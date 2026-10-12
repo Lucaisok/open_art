@@ -216,6 +216,17 @@ def test_funding_label_puts_support_first():
     assert discover.funding_label(call) == "Grant/stipend + mentorship/training"
 
 
+def test_funding_label_never_adds_up_alternatives():
+    # same amount twice (a stipend at home or abroad) -> once; different amounts -> up to the highest
+    monthly = {"category": "Grant/Stipend", "amount_min": 2500, "amount_max": 2500, "currency": "EUR",
+               "period": "per month"}
+    call = opp("x", funding_components=[monthly, monthly, {"category": "Travel Support"}])
+    assert discover.funding_label(call) == "EUR 2,500 per month + travel support"
+    prizes = [{"category": "Grant/Stipend", "amount_min": a, "amount_max": a, "currency": "EUR", "period": "one-time"}
+              for a in (10000, 1500, 500)]
+    assert discover.funding_label(opp("y", funding_components=prizes)) == "Up to EUR 10,000"
+
+
 def test_unknown_opportunity_is_404(artist):
     assert artist.get("/api/opportunities/nope").status_code == 404
 
@@ -233,3 +244,8 @@ def test_the_ranking_query_is_built_once_per_document(artist, monkeypatch):
     upload(artist, "statement", f"{TOMAS}/statement.md", name="new-statement.md")   # a new upload, a new id
     assert search(artist, mode="matched")["ranked_by"] == ["new-statement.md"]
     assert calls == [["statement.md"], ["new-statement.md"]]
+
+
+def test_disciplines_shown_leave_out_other_non_arts():
+    call = opp("x", discipline_canonical=["Visual Arts", "Other/Non-Arts", "Digital/New Media Arts"])
+    assert discover.disciplines_shown(call) == ["Visual Arts", "Digital/New Media Arts"]

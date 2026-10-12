@@ -85,17 +85,20 @@ flowchart LR
 - **`document_urls`** is carried from raw to processed to the published
   CSV, so every requirement can be traced to the document it came from.
 - **Older records** were extracted before this and are cached as seen,
-  so a normal run never revisits them. `scripts/refresh_pdf_extraction.py`
-  redoes only the pages that link a call PDF, as a dry run first:
+  so a normal run never revisits them. `scripts/reextract_corpus.py`
+  re-runs the current extraction on every page that still loads
+  (workflow.MD, "Step 3 — combined re-extraction"):
 
 ```
-scan     fetch every accepted/rejected page, find call PDFs    free
-extract  re-run extraction on those pages only                 1 mini call each
-report   old vs. new outcome per page → data/refresh/pdf_report.md
+scan     fetch every accepted/rejected page, find call PDFs,     free
+         write data/site_wide_pdfs.txt
+extract  re-run extraction on every page that still loads        1 mini call each, 6 in parallel
+report   old vs. new per page → data/refresh/report.md
+apply    write the results into data/raw + data/rejected, drop changed ids from data/processed
 ```
 
-  Applying the results to `data/raw`/`data/rejected` is a separate,
-  reviewed step. The hand-annotated RQ1 dataset stays frozen: refreshed
+  `apply` is the only stage that writes `data/`, and runs after the
+  report has been read. The hand-annotated RQ1 dataset stays frozen: refreshed
   records feed the app's corpus only.
 
 ### Cost guards (why re-running is cheap)

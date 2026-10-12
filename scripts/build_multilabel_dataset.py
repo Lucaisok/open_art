@@ -45,7 +45,7 @@ LABELS_DIR = os.path.join(REPO_ROOT, "dataset", "labels")
 SINGLE_PATH = os.path.join(LABELS_DIR, "eligibility_annotations.csv")
 RELABEL_PATH = os.path.join(LABELS_DIR, "review", "round4_multilabel.csv")
 COMPOUND_PATH = os.path.join(LABELS_DIR, "review", "round4_compound_batch.csv")
-CORPUS_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
+CORPUS_PATH = os.path.join(REPO_ROOT, "dataset", "rq1_corpus.csv")  # frozen RQ1 corpus (workflow.MD, "Step 3"): the live opportunities.csv changes with re-extraction
 OUT_PATH = os.path.join(LABELS_DIR, "eligibility_annotations_multilabel.csv")
 
 LABELS = ["RESIDENCE", "NATIONALITY", "AGE", "DISCIPLINE", "CAREER_STAGE", "EDUCATION",

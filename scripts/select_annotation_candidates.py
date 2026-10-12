@@ -30,7 +30,7 @@ sys.path.append(REPO_ROOT)
 # the splitter lives in src/ so the product and the training data share it
 from src.eligibility.chunking import split_into_chunks  # noqa: E402
 
-DATASET_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
+DATASET_PATH = os.path.join(REPO_ROOT, "dataset", "rq1_corpus.csv")  # frozen RQ1 corpus (workflow.MD, "Step 3"): the live opportunities.csv changes with re-extraction
 # dataset/ (not data/) is deliberate: this is derived from already-published
 # requirements_text_en, not raw scraped content, so it's meant to be published
 # alongside opportunities.csv for RQ1 reproducibility. See workflow.MD.

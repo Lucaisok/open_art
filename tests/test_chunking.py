@@ -32,7 +32,7 @@ def test_labeled_chunk_ids_still_point_at_their_sentence():
     550 labeled chunks matched exactly when the splitter moved to src/
     (2026-10-01); the rest were hand-split ("_3a") or edited during
     annotation, so they can't be checked this way."""
-    corpus = pd.read_csv(os.path.join(REPO_ROOT, "dataset", "opportunities.csv")).set_index("id")
+    corpus = pd.read_csv(os.path.join(REPO_ROOT, "dataset", "rq1_corpus.csv")).set_index("id")  # frozen RQ1 corpus (workflow.MD, "Step 3"): the live opportunities.csv changes with re-extraction
     labels = pd.read_csv(os.path.join(LABELS_DIR, "eligibility_annotations.csv"))
 
     matches = 0

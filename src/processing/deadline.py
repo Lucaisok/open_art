@@ -202,6 +202,10 @@ def parse_deadline(deadline_raw: str | None, language: str, source: str | None =
 def is_closed(deadline_date: date | None, as_of: date | None = None) -> bool:
     """True iff deadline_date is a real, parsed date that has already passed.
 
+    Since the combined re-extraction (workflow.MD, "Step 3", 2026-10-12) a call whose deadline has
+    already passed is rejected at extraction (extraction.deadline_has_passed). The note below is
+    about records already stored: they can expire later and stay in the data.
+
     Deliberately not wired into normalize.py or export_dataset.py: a
     call's eligibility requirements don't stop being valid RQ1 training
     signal just because its deadline passed, so the data pipeline keeps

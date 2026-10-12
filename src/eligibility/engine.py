@@ -425,7 +425,9 @@ def _reviewed_scope(reviews: dict[tuple[str, str], Review], text: str) -> str | 
     """The scope a reviewer gave this sentence under any of its labels, or None if it has no review.
     A non-APPLICANT scope under one label wins over APPLICANT under another: the reviewer who read the
     sentence for its scope decided it isn't about the applicant."""
-    scopes = {review.scope for label in REJECT_CLASSES if (review := reviews.get((text, label))) is not None}
+    # any label: since round 7 a scope may be reviewed under a check-only label or a safety-net
+    # sentence's suspected label too (workflow.MD, "Step 3", re-review)
+    scopes = {review.scope for label in TOPIC if (review := reviews.get((text, label))) is not None}
     if not scopes:
         return None
     others = sorted(scopes - {APPLICANT})
@@ -517,7 +519,8 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[t
             return None
         # the cue that raised the flag (chunk.safety_net_reason) stays in the data for audits, not in the text
         label = chunk.suspected_label
-        return (_scope_item(chunk, label, sentence_scope(chunk.text, chunk.heading))
+        reviewed_scope = _reviewed_scope(reviews, chunk.text)
+        return (_scope_item(chunk, label, reviewed_scope or sentence_scope(chunk.text, chunk.heading))
                 or (label == "OTHER_ELIGIBILITY" and _language_item(chunk, profile))
                 or _met_in_favour(chunk, label, profile, deadline, today)
                 or _item(chunk, label, "CHECK", "this may be a condition on who can apply; read it",
@@ -709,6 +712,15 @@ class EligibilityEngine:
     def evaluate(self, profile: ArtistProfile, opportunity: ProcessedOpportunity,
                  today: date | None = None) -> Verdict:
         common = dict(opportunity_id=opportunity.id, title=opportunity.title_en, source_url=opportunity.source_url)
+        if not opportunity.requirements_text.strip():
+            # the page states no condition on who can apply (accepted since the combined
+            # re-extraction, workflow.MD "Step 3"). Read on the pilot, such pages hold no rules
+            # rather than "open to everyone" (the rules sit on another page, or menus filled the
+            # text budget), so this is a CHECK, never a guessed ELIGIBLE
+            summary = ("This call says its eligibility rules are in a separate document; read it to check who can apply."
+                       if opportunity.rules_in_external_document else
+                       "This call's page doesn't say who can apply; read the call to check.")
+            return Verdict(**common, status="CHECK", items=[], summary=summary)
         if opportunity.id not in self.chunks_by_opportunity:
             # never classified (ingested after the last extract_constraints run): say so, don't guess
             return Verdict(**common, status="CHECK", items=[],

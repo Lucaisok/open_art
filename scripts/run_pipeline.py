@@ -35,8 +35,10 @@ from scripts.extract_constraints import extract_constraints, print_report  # noq
 from src.collectors.crawler import crawl_all  # noqa: E402
 from src.collectors.extraction import extract_all  # noqa: E402
 from src.processing.canonicalize import canonicalize_all  # noqa: E402
+from src.processing.disciplines_from_text import read_all as disciplines_from_text_all  # noqa: E402
 from src.processing.extract_funding import extract_all as extract_funding_all  # noqa: E402
 from src.processing.normalize import normalize_all  # noqa: E402
+from src.processing.translate_details import translate_all as translate_details_all  # noqa: E402
 
 SOURCES_YAML = os.path.join(REPO_ROOT, "data", "sources.yaml")
 RAW_DIR = os.path.join(REPO_ROOT, "data", "raw")
@@ -84,8 +86,14 @@ def main() -> None:
     print("\n=== Canonicalizing discipline/opportunity_type/career_stage/country/city ===")
     canonicalize_all()
 
+    print("\n=== Reading disciplines from the whole call text ===")
+    disciplines_from_text_all()   # after canonicalize, which rewrites discipline_canonical
+
     print("\n=== Extracting structured funding/application_fee ===")
     extract_funding_all()
+
+    print("\n=== Translating the call details for the page ===")
+    translate_details_all()
 
     print("\n=== Exporting CSVs ===")
     export_dataset()

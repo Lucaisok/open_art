@@ -14,16 +14,31 @@ type ResultCardProps = {
 // prototype's button: it navigates, so it can also be opened in a new tab) stretched over the card,
 // so the reason's "Show more" can sit above it without opening the call. A stated deadline and,
 // when it is one clear, significant sum (api/discover.py headline_funding), the money stand out in lime.
+// a call open to many disciplines lists them all on its page; the card shows the first few
+const MAX_DISCIPLINES = 3;
+
 const ResultCard = ({ result, onOpen }: ResultCardProps) => (
     <li className={styles.item}>
         <div className={styles.card}>
-            {result.types.length > 0 && (
+            {(result.types.length > 0 || result.disciplines.length > 0) && (
                 <span className={styles.types}>
                     {result.types.map((type) => (
                         <span key={type} className={styles.type}>
                             {type}
                         </span>
                     ))}
+                    {/* who the call is for, in a quieter chip than the type; at most MAX_DISCIPLINES */}
+                    {result.disciplines.slice(0, MAX_DISCIPLINES).map((discipline) => (
+                        <span key={discipline} className={styles.discipline}>
+                            {discipline}
+                        </span>
+                    ))}
+                    {result.disciplines.length > MAX_DISCIPLINES && (
+                        <span className={styles.discipline}>
+                            +{result.disciplines.length - MAX_DISCIPLINES}
+                            <span className={styles.visuallyHidden}> more disciplines</span>
+                        </span>
+                    )}
                 </span>
             )}
             <Link

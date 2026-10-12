@@ -19,7 +19,14 @@ PUBLISHED_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
 
 # columns holding a list (of strings, or of funding dicts), written as Python literals
 LIST_COLUMNS = {"discipline_canonical", "opportunity_type_canonical", "career_stage_canonical",
-                "country_canonical", "funding_components", "document_urls"}
+                "country_canonical", "funding_components", "document_urls",
+                # from the combined re-extraction (workflow.MD, "Step 3")
+                "open_to", "application_questions", "required_materials", "verbatim_flags",
+                "application_questions_en", "required_materials_en", "discipline_from_text"}
+
+
+# required text columns that may legitimately be empty
+TEXT_COLUMNS = {"requirements_text", "requirements_text_en"}
 
 
 def _parse_row(row: dict[str, str]) -> ProcessedOpportunity:
@@ -28,6 +35,8 @@ def _parse_row(row: dict[str, str]) -> ProcessedOpportunity:
         if column in LIST_COLUMNS:
             # literal_eval only reads Python literals (lists, dicts, strings, numbers), it never runs code
             values[column] = ast.literal_eval(cell) if cell else []
+        elif column in TEXT_COLUMNS:
+            values[column] = cell  # "" = the call states no condition on who can apply
         else:
             values[column] = cell if cell != "" else None  # empty cell = not stated
     return ProcessedOpportunity.model_validate(values)

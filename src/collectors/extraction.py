@@ -23,7 +23,7 @@ import os
 import re
 import sys
 import unicodedata
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from urllib.parse import unquote, urlsplit
 
 import requests
@@ -31,6 +31,8 @@ import yaml
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from openai import OpenAI
+from typing import Literal
+
 from pydantic import BaseModel
 from pypdf import PdfReader
 
@@ -43,8 +45,9 @@ from src.collectors.crawler import HEADERS, gather_candidate_links, normalize_li
 from src.collectors.ids import make_id  # noqa: E402
 from src.collectors.jsonl import load_jsonl, load_seen_ids, write_jsonl  # noqa: E402
 from src.models.discovered_url import DiscoveredUrl  # noqa: E402
-from src.models.opportunity import RawOpportunity  # noqa: E402
+from src.models.opportunity import ApplicationQuestion, RawOpportunity, RequiredMaterial  # noqa: E402
 from src.models.rejected_url import RejectedUrl  # noqa: E402
+from src.processing.deadline import parse_deadline  # noqa: E402
 
 SOURCES_YAML = os.path.join(REPO_ROOT, "data", "sources.yaml")
 DISCOVERED_DIR = os.path.join(REPO_ROOT, "data", "discovered")
@@ -86,6 +89,24 @@ PDF_SKIP_WORDS = (
     "ergebnis", "winner", "laureat", "selected", "selection", "vincitor", "preistrager",
 )
 
+# Site-wide PDFs: a document linked from many pages of the corpus is the organisation's general
+# rules (e.g. fpu.sk's "principles and priorities", linked from 68 calls), not one call's own text;
+# fed to the model it would copy the same general rules into every call's requirements. The list
+# is written by scripts/refresh_pdf_extraction.py scan (PDFs linked from >= SITE_WIDE_MIN_PAGES
+# pages) and read once here, so normal pipeline runs skip them too.
+SITE_WIDE_PDFS_PATH = os.path.join(REPO_ROOT, "data", "site_wide_pdfs.txt")
+SITE_WIDE_MIN_PAGES = 10
+
+
+def load_site_wide_pdfs(path: str = SITE_WIDE_PDFS_PATH) -> set[str]:
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        return {line.strip() for line in f if line.strip() and not line.startswith("#")}
+
+
+SITE_WIDE_PDFS = load_site_wide_pdfs()
+
 # The model is told to use null when a field isn't stated (see
 # build_extraction_system_prompt), but at least once it wrote out its own
 # reasoning for the absence instead - "[not present in provided text]"
@@ -120,7 +141,24 @@ _NULLABLE_FIELDS = (
     "career_stage",
     "deadline",
     "application_url",
+    "project_requirements",
+    "how_to_apply",
+    "selection_criteria",
+    "application_language",
+    "submission_method",
+    "program_dates",
 )
+
+
+class ExtractedQuestion(BaseModel):
+    question: str
+    limit: str | None
+
+
+class ExtractedMaterial(BaseModel):
+    item: str
+    details: str | None
+    quote: str
 
 
 class ExtractedOpportunity(BaseModel):
@@ -136,8 +174,19 @@ class ExtractedOpportunity(BaseModel):
     funding: str | None
     application_fee: str | None
     career_stage: str | None
-    requirements_text: str | None
+    open_to: list[Literal["individuals", "groups", "organisations"]]  # who may apply; checked in code
+    applicant_requirements: str | None   # stored as RawOpportunity.requirements_text
+    project_requirements: str | None
+    how_to_apply: str | None
+    application_questions: list[ExtractedQuestion]
+    required_materials: list[ExtractedMaterial]
+    selection_criteria: str | None
+    application_language: str | None
+    submission_method: str | None
+    program_dates: str | None
     deadline: str | None
+    rolling_deadline: bool
+    rules_in_external_document: bool
     application_url: str | None
 
 
@@ -148,82 +197,124 @@ def _drop_placeholder_leaks(extracted: ExtractedOpportunity) -> None:
             setattr(extracted, field, None)
 
 
-def build_extraction_system_prompt(today: str) -> str:
-    """today (ISO date) lets the model reject calls whose stated deadline
+def build_extraction_system_prompt() -> str:
+    """The extraction instructions (workflow.MD, "Step 3 — combined re-extraction").
 
-    has already passed even when the page never says "closed" - a static
-    prompt has no notion of "now" and can only catch explicit closure
-    wording, which missed pages that just show a quietly-past date (see
-    workflow.MD for the audit that found this).
+    No date is given any more: the model misjudged past/future deadlines in both directions
+    (it rejected a 12 November 2026 call as past on 2026-10-12, and accepted past ones), so
+    closed-by-date is decided in code after extraction (see deadline_has_passed()). The model
+    still rejects a page that explicitly says the call is closed.
+
+    Requirements are split in three so that only conditions on the artist reach the eligibility
+    classifier: project rules, duties and procedure used to land in one block and show up as
+    false checks (about a fifth of all open points, measured 2026-10-12).
     """
     return (
-        f"Today's date is {today}. You are extracting structured data from "
-        "an arts/culture open-call page. "
+        "You are extracting structured data from an arts/culture open-call page. "
         "The page text may end with the text of PDF documents linked from the "
         "page, each under an '--- Attached document: ... ---' heading: treat "
         "them as part of the same call (they often hold the full eligibility "
-        "rules) and extract from them too. "
-        "First decide: is this page CURRENTLY SOLICITING NEW APPLICATIONS from "
-        "artists - a specific open call whose eligibility/requirements "
-        "information is actually present in the page text given to you, with a "
-        "way to apply? Or is it NOT one - e.g. it describes an artist or work "
-        "already selected/completed, it's a navigational or procedural page, the "
-        "call is closed/expired - either explicitly stated as such, or because "
-        "its stated deadline falls on or before today's date given above, even "
-        "if the page never says so explicitly and otherwise reads like a normal, "
-        "live opportunity page - the given "
-        "page text does not itself contain identifiable eligibility/restriction "
-        "information - e.g. only a heading like 'Who can apply?' with no answer "
-        "beneath it, or only deadline/procedural text and no actual "
-        "restrictions - even though the page is otherwise clearly a real call, "
-        "or it's some other non-opportunity content? Set is_open_call "
-        "accordingly, and if false, give a short rejection_reason (for the "
-        "missing-eligibility-content case, say so explicitly rather than citing "
-        "a closed call or navigation page, so it's clear the page just wasn't "
-        "readable this way rather than genuinely not being a live call).\n\n"
+        "rules) and extract from them too.\n\n"
+
+        "First decide is_open_call. It is true if the page is a specific open "
+        "call currently soliciting new applications (residency, grant, "
+        "commission, prize, fellowship, exhibition call...), with a way to apply.\n"
+        "A call that states no conditions on who can apply is still an open "
+        "call: accept it and leave applicant_requirements null.\n"
+        "It is false for: an artist or work already selected, a navigational "
+        "or procedural page, a call the page explicitly says is closed, or any "
+        "other non-opportunity content. Do NOT judge whether the deadline has "
+        "passed: report the deadline as written, dates are checked later. If "
+        "false, give a short rejection_reason.\n\n"
+
+        "VERBATIM means: copy the page's own sentences, in the page's "
+        "language, without paraphrasing, summarizing, translating or "
+        "reordering words. You may leave sentences out and join the kept ones "
+        "with line breaks.\n\n"
+
         "If is_open_call is true, extract:\n"
         "- title: the specific opportunity's title\n"
         "- organisation: the organisation/institution running it\n"
-        # TODO before the next collection run (workflow.MD "Known open items"): one excerpt
-        # makes "About this call" a sentence or two; ask for the full descriptive text
-        "- description: a verbatim excerpt describing what the opportunity "
-        "actually is or offers (theme, format, activity) - copy the wording, "
-        "do not paraphrase or summarize; null if the page gives no descriptive "
-        "text beyond the title\n"
+        "- description: a short summary in ENGLISH, 2 to 4 sentences, of what "
+        "the opportunity is and offers (theme, format, activity). This is the "
+        "ONLY field you write in your own words. Do not repeat eligibility "
+        "rules or the deadline here.\n"
         "- discipline: the artistic discipline(s) the opportunity is for (e.g. "
-        "visual arts, dance, literature, music, film), exactly as stated on "
-        "the page, or null if not stated\n"
+        "visual arts, dance, literature, music, film), exactly as stated, or "
+        "null if not stated\n"
         "- opportunity_type: what kind of opportunity this is (e.g. residency, "
         "grant, commission, competition, prize, fellowship, exhibition), "
-        "exactly as stated or clearly implied by the page, or null if unclear\n"
+        "exactly as stated or clearly implied, or null if unclear\n"
         "- country: the country where the opportunity takes place (for a "
-        "grant, the funder's country), exactly as stated, or null if not "
-        "stated - not the country applicants must come from or live in, "
-        "which belongs to requirements_text\n"
-        "- city: the city the opportunity is based in, exactly as stated, or "
-        "null if not stated\n"
-        "- funding: the funding/support offered (amount, stipend, grant size, "
-        "residency support, etc.) copied verbatim, or null if not stated\n"
-        "- application_fee: any fee to apply, copied verbatim (including an "
-        "explicit 'no fee' statement if the page says so), or null if not "
-        "mentioned\n"
+        "grant, the funder's country), exactly as stated, or null - not the "
+        "country applicants must come from or live in, which belongs to "
+        "applicant_requirements\n"
+        "- city: the city the opportunity is based in, exactly as stated, or null\n"
+        "- funding: the support offered (amount, stipend, grant size, "
+        "accommodation, travel...) VERBATIM, or null\n"
+        "- application_fee: any fee to apply, VERBATIM (including an explicit "
+        "'no fee' statement), or null if not mentioned\n"
         "- career_stage: the career stage the opportunity targets (e.g. "
-        "emerging, early-career, student, established), exactly as stated, "
-        "or null if not stated\n"
-        "- requirements_text: the eligibility/requirements text copied VERBATIM "
-        "from the page - who can apply and any restrictions (nationality, "
-        "residence, age, discipline, career stage, education, student status, "
-        "etc.). Copy the actual wording; do not paraphrase or summarize. Never "
-        "substitute deadline/procedural text for this field.\n"
-        "- deadline: the application deadline exactly as stated on the page "
-        "(literal text, do not compute or convert it), or null if not stated\n"
+        "emerging, early-career, student, established), exactly as stated, or null\n"
+        "- open_to: who is allowed to be the applicant, any of 'individuals' "
+        "(a single person: artist, curator, writer, researcher...), 'groups' "
+        "(collectives, duos, ensembles of persons) and 'organisations' "
+        "(institutions, museums, companies, venues, festivals, associations). "
+        "Judge by who the applicant is, not by who fills in the form: a call "
+        "for museums is ['organisations'] even though a person submits it\n"
+        "- applicant_requirements: VERBATIM, ONLY the conditions a PERSON must "
+        "meet to be ALLOWED TO APPLY: residence, nationality, age, discipline "
+        "or practice, career stage or years of practice, education, student "
+        "status, applicant type (individual, collective, organisation), prior "
+        "funding or past participation, language skills, and exclusions "
+        "('X cannot apply'). Include sentences that widen eligibility ('open "
+        "to all nationalities'). Leave OUT: what the project or work must be, "
+        "duties if selected, documents to send, how selection works, "
+        "deadlines, the different routes or steps to apply ('There are two ways "
+        "to apply'), and list headers with nothing after them ('The residency "
+        "is open to:' - copy it together with the items that follow it).\n"
+        "- project_requirements: VERBATIM, conditions the PROJECT or WORK must "
+        "meet to be eligible (theme, format, site, duration, budget rules) "
+        "and duties if selected (be present, deliver a work, report), or null. "
+        "Not what the call offers (studio, stipend, support): that is funding "
+        "or description\n"
+        "- how_to_apply: VERBATIM, the application procedure: steps, documents "
+        "to send, how and where to submit, or null\n"
+        "- application_questions: every question or prompt the application "
+        "asks the applicant to answer in writing (e.g. 'Describe your "
+        "project', 'Why this residency?'), each with question VERBATIM and "
+        "limit VERBATIM ('max 300 words') or null. [] if none are stated\n"
+        "- required_materials: every item the applicant must submit (CV, "
+        "portfolio, project description, budget, letters, video link, ID...): "
+        "item = a short name in English, details = the stated limits (pages, "
+        "size, format) VERBATIM or null, quote = the page sentence asking for "
+        "it VERBATIM. [] if none are stated\n"
+        "- selection_criteria: VERBATIM, the criteria the jury or committee "
+        "judges applications on, or null. Not who sits on the jury\n"
+        "- application_language: the language(s) applications must be written "
+        "in, only if the page says so explicitly, or null. Do not infer it from "
+        "the language of the page or the form\n"
+        "- submission_method: one of 'online form', 'email', 'portal', "
+        "'post', 'other', or null if not stated\n"
+        "- program_dates: VERBATIM, when the residency/project/programme itself "
+        "takes place, or null. Not the selection timeline (jury meeting, "
+        "results)\n"
+        "- deadline: the application deadline VERBATIM, including the time and "
+        "time zone if stated, and every round if there are several; do not "
+        "compute or convert it; null if not stated\n"
+        "- rolling_deadline: true if applications are accepted continuously "
+        "with no closing date\n"
+        "- rules_in_external_document: true if the page says the eligibility "
+        "rules are in a document whose text you were NOT given (e.g. 'see the "
+        "regulations'); false if that document is attached above or no such "
+        "reference is made\n"
         "- application_url: if the page has a distinct application/submission "
         "link, copy its exact URL from the 'Links found on this page' list "
         "below - never the anchor text - or null if the page itself is the "
         "application page or no such link is given\n\n"
-        "If is_open_call is false, leave title/organisation/description/"
-        "discipline/opportunity_type/country/city/funding/application_fee/"
-        "career_stage/requirements_text/deadline/application_url as null."
+
+        "If is_open_call is false, leave every other field null, the lists "
+        "empty and the booleans false."
     )
 
 
@@ -267,6 +358,8 @@ def find_pdf_links(soup: BeautifulSoup, scope, page_url: str) -> list[tuple[str,
         url = normalize_link(a["href"], page_url)
         if url is None or url in scored or not urlsplit(url).path.lower().endswith(".pdf"):
             continue
+        if url in SITE_WIDE_PDFS:
+            continue   # the organisation's general document, not this call's
         file_name = unquote(urlsplit(url).path.rsplit("/", 1)[-1])
         label = a.get_text(" ", strip=True) or file_name
         words = _pdf_words(f"{label} {file_name}")
@@ -350,20 +443,110 @@ def fetch_page(url: str) -> tuple[str, list[tuple[str, str]], list[str]]:
     return text, links, pdf_urls
 
 
+# -- checks done in code after the model answers ---------------------------------------------------
+
+# Fields the prompt asks to copy VERBATIM. Each is checked against the text the model read.
+VERBATIM_FIELDS = ("requirements_text", "project_requirements", "how_to_apply", "selection_criteria",
+                   "program_dates", "funding", "application_fee", "deadline")
+_QUOTE_CHARS = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+                              "\u2013": "-", "\u2014": "-", "\u00a0": " ", "\u00ad": ""})
+# a field is split into pieces at line breaks and sentence ends: the model may leave sentences out
+# and join the kept ones, so only each piece has to appear in the text, not the whole field
+_PIECE_SPLIT = re.compile(r"\n+|(?<=[.!?;])\s+")
+MIN_PIECE_WORDS = 3  # shorter pieces ("Yes.", "1)") are too generic to tell anything
+
+
+def _flatten(text: str) -> str:
+    """Lower case, typographic quotes/dashes made plain, every whitespace run one space."""
+    return " ".join(text.translate(_QUOTE_CHARS).lower().split())
+
+
+def _is_verbatim(value: str, flat_source: str) -> bool:
+    """True if every piece of value (of MIN_PIECE_WORDS words or more) appears in the source."""
+    pieces = [_flatten(p).strip(" -*\u2022") for p in _PIECE_SPLIT.split(value)]
+    return all(p in flat_source for p in pieces if len(p.split()) >= MIN_PIECE_WORDS)
+
+
+def verbatim_misses(record: RawOpportunity, source_text: str) -> list[str]:
+    """Names of the verbatim fields whose text isn't in the page text: probably paraphrased.
+
+    Questions and materials are checked one by one ("application_questions[2]"). Flagged, not
+    removed: the report shows them, so a human decides whether the paraphrase matters.
+    """
+    flat_source = _flatten(source_text)
+    misses = [f for f in VERBATIM_FIELDS if getattr(record, f) and not _is_verbatim(getattr(record, f), flat_source)]
+    misses += [f"application_questions[{i}]" for i, q in enumerate(record.application_questions)
+               if not _is_verbatim(q.question, flat_source)]
+    misses += [f"required_materials[{i}]" for i, m in enumerate(record.required_materials)
+               if not _is_verbatim(m.quote, flat_source)]
+    return misses
+
+
+_ANY_YEAR = re.compile(r"(?<!\d)20\d{2}(?!\d)")
+# numeric day.month.year ("19.1.2026", "04.11. 2025"): read directly, because search_dates() misreads
+# runs of them ("19.1.2026 16.2.2026 7.5.2026" came out as 16 October 2026 in the full run)
+_NUMERIC_DATE = re.compile(r"(?<!\d)(\d{1,2})\.\s?(\d{1,2})\.\s?(20\d{2})(?!\d)")
+
+
+def _numeric_dates(text: str) -> list[date]:
+    found = []
+    for day, month, year in _NUMERIC_DATE.findall(text):
+        try:
+            found.append(date(int(year), int(month), int(day)))
+        except ValueError:
+            pass   # not a real date (e.g. a version number): ignore it
+    return found
+
+
+def deadline_has_passed(record: RawOpportunity, language: str, today=None) -> bool:
+    """True if the call's deadline is on or before today (author's rule, 2026-10-12).
+
+    Decided here, not by the model (see build_extraction_system_prompt). Always the LATEST date in
+    the text, so a call with several rounds is closed only after its last round. In order:
+    - never closed: a rolling call, no deadline, or a deadline that names no year ("15.01. /
+      15.05. / 15.09." are rounds that recur every year; the parser turns them into today);
+    - closed if every year written is before this one ("1 February 2015": parse_deadline() drops
+      dates more than 10 years away, so it would otherwise read as no date at all);
+    - numeric D.M.YYYY dates are read by a plain regex;
+    - otherwise parse_deadline(); a deadline it can't parse is never closed.
+    """
+    today = today or date.today()
+    if record.rolling_deadline or not record.deadline:
+        return False
+    years = [int(y) for y in _ANY_YEAR.findall(record.deadline)]
+    if not years:
+        return False
+    if max(years) < today.year:
+        return True
+    numeric = _numeric_dates(record.deadline)
+    deadline_date = max(numeric) if numeric else parse_deadline(record.deadline, language, record.source)
+    return deadline_date is not None and deadline_date <= today
+
+
+_SOURCE_LANGUAGES: dict[str, str] = {}
+
+
+def source_language(source_name: str) -> str:
+    """The source's page language from sources.yaml (read once), for deadline parsing."""
+    if not _SOURCE_LANGUAGES:
+        with open(SOURCES_YAML, encoding="utf-8") as f:
+            _SOURCE_LANGUAGES.update({s["name"]: s.get("language", "en") for s in (yaml.safe_load(f) or [])})
+    return _SOURCE_LANGUAGES.get(source_name, "en")
+
+
 def extract_opportunity(
     client: OpenAI, url: str, source_name: str
 ) -> tuple[RawOpportunity | None, str | None]:
-    """Returns (record, rejection_reason) - record is None iff rejected."""
+    """Returns (record, rejection_reason) - record is None iff rejected. Writes no file."""
     text, links, pdf_urls = fetch_page(url)
     links_block = "\n".join(f"- [{text_}]({link_url})" for link_url, text_ in links) or "(none found)"
-    today = datetime.now(timezone.utc).date().isoformat()
 
     response = client.chat.completions.parse(
         model=MODEL,
         temperature=0,  # accept/reject and field extraction should be repeatable for the
         # same page, not vary run to run - see workflow.MD for the audit that found this
         messages=[
-            {"role": "system", "content": build_extraction_system_prompt(today)},
+            {"role": "system", "content": build_extraction_system_prompt()},
             {
                 "role": "user",
                 "content": (
@@ -379,8 +562,8 @@ def extract_opportunity(
 
     if not extracted.is_open_call:
         return None, extracted.rejection_reason or "not an open call"
-    if not extracted.title or not extracted.requirements_text:
-        return None, "is_open_call=True but title/requirements_text missing"
+    if not extracted.title:
+        return None, "is_open_call=True but title missing"
 
     application_url = extracted.application_url
     if application_url and not application_url.startswith(("http://", "https://")):
@@ -402,10 +585,32 @@ def extract_opportunity(
         funding=extracted.funding,
         application_fee=extracted.application_fee,
         career_stage=extracted.career_stage,
-        requirements_text=extracted.requirements_text,
+        # "" = the page states no condition on who can apply (accepted since 2026-10-12; the
+        # engine shows a CHECK: usually the rules are on another page, not absent)
+        requirements_text=extracted.applicant_requirements or "",
+        open_to=list(extracted.open_to),
         deadline=extracted.deadline,
+        project_requirements=extracted.project_requirements,
+        how_to_apply=extracted.how_to_apply,
+        application_questions=[ApplicationQuestion(**q.model_dump()) for q in extracted.application_questions],
+        required_materials=[RequiredMaterial(**m.model_dump()) for m in extracted.required_materials],
+        selection_criteria=extracted.selection_criteria,
+        application_language=extracted.application_language,
+        submission_method=extracted.submission_method,
+        program_dates=extracted.program_dates,
+        rolling_deadline=extracted.rolling_deadline,
+        rules_in_external_document=extracted.rules_in_external_document,
+        source_text=text,
         collected_at=datetime.now(timezone.utc),
     )
+
+    # individuals only (author, 2026-10-12): decided here from a fact the model reports, because
+    # an accept/reject instruction in the prompt was not followed (a museums-only grant passed it)
+    if extracted.open_to and "individuals" not in extracted.open_to:
+        return None, f"not open to individuals (open to: {', '.join(extracted.open_to)})"
+    if deadline_has_passed(record, source_language(source_name)):
+        return None, f"deadline passed ({record.deadline})"
+    record.verbatim_flags = verbatim_misses(record, text)
     return record, None
 
 

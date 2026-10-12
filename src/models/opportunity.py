@@ -4,6 +4,19 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ApplicationQuestion(BaseModel):
+    """One question or prompt the application form asks, copied verbatim (for the application agent)."""
+    question: str
+    limit: str | None = None  # stated length limit, verbatim ("max 300 words"); None if none stated
+
+
+class RequiredMaterial(BaseModel):
+    """One thing the applicant must submit (CV, portfolio, budget, letters...)."""
+    item: str                 # short name, may be paraphrased ("Portfolio")
+    details: str | None = None  # stated limits: pages, size, format
+    quote: str                # the call's own sentence asking for it, verbatim - checked in code
+
+
 class RawOpportunity(BaseModel):
     id: str
 
@@ -26,8 +39,30 @@ class RawOpportunity(BaseModel):
     application_fee: str | None = None
     career_stage: str | None = None
 
+    # Since the combined re-extraction (workflow.MD, "Step 3"): ONLY the conditions the artist must
+    # meet to be allowed to apply - the classifier and eligibility engine read this field alone.
+    # Records extracted before that hold the older, broader block (project rules, procedure too).
     requirements_text: str
 
-    deadline: str | None = None
+    deadline: str | None = None  # verbatim, with time/timezone and every round when stated
+
+    # -- added by the combined re-extraction; defaults keep older records loading unchanged --
+    open_to: list[str] = []                   # who may apply: "individuals" / "groups" / "organisations"
+    project_requirements: str | None = None   # what the project must meet (verbatim); shown, never checked
+    how_to_apply: str | None = None           # procedure, materials, how to submit (verbatim)
+    application_questions: list[ApplicationQuestion] = []
+    required_materials: list[RequiredMaterial] = []
+    selection_criteria: str | None = None     # what the jury judges on (verbatim)
+    application_language: str | None = None   # language(s) applications must be written in
+    submission_method: str | None = None      # "online form" | "email" | "portal" | "post" | "other"
+    program_dates: str | None = None          # residency period / project timeline (verbatim)
+    rolling_deadline: bool = False            # applications accepted continuously, no closing date
+    rules_in_external_document: bool = False  # the call says its rules are in a document we didn't read
+    # verbatim fields whose text was not found in the page text (see extraction.verbatim_misses):
+    # a paraphrase to check, not to trust
+    verbatim_flags: list[str] = []
+    # the page text (+ linked PDF text) the model read, so a later prompt change can re-run
+    # without re-crawling pages that may have closed meanwhile
+    source_text: str | None = None
 
     collected_at: datetime

@@ -339,6 +339,13 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** MaterialOut */
+        MaterialOut: {
+            /** Item */
+            item: string;
+            /** Details */
+            details: string | null;
+        };
         /** OpportunityOut */
         OpportunityOut: {
             /** Id */
@@ -349,6 +356,8 @@ export interface components {
             organisation: string | null;
             /** Types */
             types: string[];
+            /** Disciplines */
+            disciplines: string[];
             /** City */
             city: string | null;
             /** Countries */
@@ -365,6 +374,22 @@ export interface components {
             description: string | null;
             /** Source Url */
             source_url: string;
+            /** Project Requirements */
+            project_requirements: string | null;
+            /** How To Apply */
+            how_to_apply: string | null;
+            /** Application Questions */
+            application_questions: components["schemas"]["QuestionOut"][];
+            /** Required Materials */
+            required_materials: components["schemas"]["MaterialOut"][];
+            /** Selection Criteria */
+            selection_criteria: string | null;
+            /** Application Language */
+            application_language: string | null;
+            /** Submission Method */
+            submission_method: string | null;
+            /** Program Dates */
+            program_dates: string | null;
             verdict: components["schemas"]["VerdictOut"];
             /** Profile Filled */
             profile_filled: boolean;
@@ -469,6 +494,13 @@ export interface components {
              */
             education: components["schemas"]["EducationEntry"][];
         };
+        /** QuestionOut */
+        QuestionOut: {
+            /** Question */
+            question: string;
+            /** Limit */
+            limit: string | null;
+        };
         /** RequirementOut */
         RequirementOut: {
             /**
@@ -491,6 +523,8 @@ export interface components {
             organisation: string | null;
             /** Types */
             types: string[];
+            /** Disciplines */
+            disciplines: string[];
             /** City */
             city: string | null;
             /** Countries */
@@ -660,12 +694,6 @@ export interface components {
             passes: number;
             /** Sentences */
             sentences: components["schemas"]["SentenceOut"][];
-            /** Commitments */
-            commitments: string[];
-            /** About Project */
-            about_project: string[];
-            /** Good To Know */
-            good_to_know: string[];
         };
     };
     responses: never;

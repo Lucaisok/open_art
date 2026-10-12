@@ -32,7 +32,7 @@ from src.eligibility.chunking import chunk_requirements  # noqa: E402
 from src.eligibility.polarity import EXCLUDES, REQUIRES, UNCLEAR, WAIVES, polarity  # noqa: E402
 
 LABELS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_annotations.csv")
-CORPUS_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
+CORPUS_PATH = os.path.join(REPO_ROOT, "dataset", "rq1_corpus.csv")  # frozen RQ1 corpus (workflow.MD, "Step 3"): the live opportunities.csv changes with re-extraction
 
 # the classes the engine may reject on (workflow.MD, "Per-class rules"): here a
 # polarity error turns straight into a wrong verdict

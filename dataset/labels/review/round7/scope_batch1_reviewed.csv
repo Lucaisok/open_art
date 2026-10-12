@@ -1,0 +1,61 @@
+chunk_text,label,scope,decision,reason
+artists of all nationalities and disciplines,DISCIPLINE,WIDENING,scope,opens the call to all nationalities and disciplines
+The International Studio Program is looking for compelling project proposals from visual artists from around the world that address these questions.,DISCIPLINE,APPLICANT,,limits to visual artists
+"The fellowship is aimed at artists, scholars, and cultural practitioners from around the world who have already developed an independent professional practice but are currently in an active phase of further growth – that is, they are no longer at the very beginning of their careers, but not yet firmly established.",CAREER_STAGE,APPLICANT,,mid-career practitioners only
+"While the program primarily addresses practitioners with up to ten years of experience, applications from those with longer professional careers will also be considered if they clearly demonstrate the specific relevance of the fellowship to their current development.",CAREER_STAGE,WIDENING,scope,"also considers longer careers, lifts the ten-year limit"
+"In the spheres of practice Visual, Aural & Physical, Textual, Spatial , and Digital , the term »education« includes all forms of artistic qualification – such as studies at art academies or universities, vocational training, mentoring, master classes, or self-taught education.",EDUCATION,NOT_A_CONDITION,scope,definition of what counts as education
+"In the sphere of practice Scientific , a master’s degree or higher is required.",EDUCATION,APPLICANT,,master's degree required in the Scientific sphere
+You must have demonstratable experience as an artist or creative professional.,CAREER_STAGE,APPLICANT,,demonstrable professional experience required
+We may decide to fund you based on your artistic potential.,DISCIPLINE,WIDENING,scope,waives the experience requirement (funding on potential)
+"We are looking for journalists, writers, photographers, illustrators, artists and academics to untangle the crises affecting Europe today, and reflect on the choices we need to make moving forward.",DISCIPLINE,APPLICANT,,lists the disciplines that may apply
+"Therefore, artists will receive a basic support but are expected to have a minimum knowledge of available machine use.",DISCIPLINE,APPLICANT,,applicants expected to have basic machine knowledge
+The international residency program invites writers and contemporary artists from around the world to take part in short- and medium-term residencies.,DISCIPLINE,APPLICANT,,open to writers and contemporary artists
+Eligible artists are those who can prove a minimum of five years of professional activity.,CAREER_STAGE,APPLICANT,,minimum five years of professional activity
+"Be an artist working in one of the following fields: visual arts, digital arts, film, the performing arts (music, performance, playwriting, directing, dance and choreography), or writing;",DISCIPLINE,APPLICANT,,discipline list of who may apply
+Be able to take time off from any professional activity for the entire duration of the residency;,OTHER_ELIGIBILITY,APPLICANT,,"availability for the whole residency, listed as a criterion to apply"
+Have a basic knowledge of French and/or a sufficient command of English to facilitate integration into life at the Cité internationale des arts and exchanges with other residents.,OTHER_ELIGIBILITY,APPLICANT,,language requirement
+It is aimed at artists:,CAREER_STAGE,NOT_A_CONDITION,scope,list lead-in; the conditions are the following items
+"In the performing arts (playwriting, directing, choreography, musical composition, circus, performance art, etc.)",DISCIPLINE,APPLICANT,,performing arts discipline item
+"Who have completed at least one residency at the Cité internationale des arts, or are currently undertaking a residency there.",OTHER_ELIGIBILITY,APPLICANT,,prior residency at the Cite required
+Artists must:,OTHER_ELIGIBILITY,NOT_A_CONDITION,scope,list lead-in; the conditions are the following items
+Be professionally active and have been practising their art for at least five years;,CAREER_STAGE,APPLICANT,,five years of professional practice
+Be able to express themselves and write in French;,OTHER_ELIGIBILITY,APPLICANT,,French language requirement
+"Be available for the entire duration of the residency, without interruption, from March 3 to May 28, 2027;",OTHER_ELIGIBILITY,APPLICANT,,"availability for the residency dates, listed under 'Artists must'"
+Writer-director,DISCIPLINE,APPLICANT,,fragment that names who may apply
+"Applications are not accepted from persons who … have been awarded a Hessische Kulturstiftung travel or residency grant in the past (does not apply to State of Hesse work, project, or gap grants) are still in the process of pursuing a degree vocational training programme at the time of the application are related to one of the jury members, are employed by the Hessische Kulturstiftung, or are related to a Hessische Kulturstiftung employee.",OTHER_ELIGIBILITY,APPLICANT,,exclusions of applicants
+Required skills: the consultation is open to any candidate or multidisciplinary team possessing the Artist Author skill.,CAREER_STAGE,APPLICANT,,Artist Author skill required
+"Please note that entities subject to EU restrictive measures under Article 29 of the Treaty on the European Union (TEU) and Article 215 of the Treaty on the Functioning of the EU (TFEU) and entities covered by Commission Guidelines No 2013/C 205/052 are NOT eligible to participate in any capacity (including as beneficiaries, affiliated entities, associated partners, third parties giving in-kind contributions, subcontractors or recipients of financial support to third parties, if any).",OTHER_ELIGIBILITY,APPLICANT,,excludes sanctioned entities
+experienced dancers and circus artists with a strong physical presence and technical ability.,CAREER_STAGE,APPLICANT,,experienced dancers and circus artists
+"Performers who are versatile, comfortable with working in both acrobatic and dance-based contexts, and who can engage with abstract concepts while bringing their own individuality and creativity to the process.",DISCIPLINE,APPLICANT,,performer profile sought at audition
+"Marta & Kim are searching for a total of 2 additional performers, who meet the following conditions:",DISCIPLINE,NOT_A_CONDITION,scope,list lead-in; the conditions are the following items
+HBO level circus or dance trained,EDUCATION,APPLICANT,,HBO-level training required
+"Relevant stage experience is highly valued •.Experience and talent for partnering, but also able to execute solo material",CAREER_STAGE,APPLICANT,,partnering and solo ability; only part is soft
+with German source language,DISCIPLINE,APPLICANT,,fragment that may limit translators to German source language
+No information,DISCIPLINE,NOT_A_CONDITION,scope,application form field option
+Ms.,DISCIPLINE,NOT_A_CONDITION,scope,application form field option
+Hamburg,DISCIPLINE,NOT_A_CONDITION,scope,application form dropdown (federal state)
+Mecklenburg-Western Pomerania,DISCIPLINE,NOT_A_CONDITION,scope,application form dropdown (federal state)
+Thuringia,DISCIPLINE,NOT_A_CONDITION,scope,application form dropdown (federal state)
+Phone,DISCIPLINE,NOT_A_CONDITION,scope,application form field
+Co-translator: optional information,DISCIPLINE,NOT_A_CONDITION,scope,application form field
+Original language German,DISCIPLINE,APPLICANT,,fragment that may limit translators to German originals
+literary translators,DISCIPLINE,APPLICANT,,open to literary translators
+experienced colleagues,CAREER_STAGE,APPLICANT,,experienced translators
+"It is aimed at translators, theatre practitioners and those interested in cultural policy from NRW who would like to deal with the special challenges of translating African and Afro-diasporic drama.",DISCIPLINE,APPLICANT,,translators and theatre practitioners from NRW
+"Excellence fellowships secure the work of translators with difficult, particularly demanding literary translation projects into German over a longer period",DISCIPLINE,APPLICANT,,aimed at translators of demanding works into German
+"For acceptance of their registration request, the interested party must have professional experience or specialized knowledge in the areas of visual arts, performing arts, street arts or disciplinary cross-over.",CAREER_STAGE,APPLICANT,,professional experience in the arts required
+"Applications from specialists in areas resulting from the crossing of the arts with other sectors of activity or social dimensions, such as the environment, gender equality, citizenship, accessibility or interculturality, will also be considered.",DISCIPLINE,WIDENING,scope,specialists from crossover areas will also be considered
+Applicant: producer,DISCIPLINE,APPLICANT,,applicant must be a producer
+"A project that has been submitted, or supported, or rejected twice (i.e. definitively) by another funding programme of EKKOMED is not accepted.",PRIOR_FUNDING,PROJECT,scope,condition on the project's funding history
+"A project that was rejected during its evaluation in this specific programme may, after being improved, be submitted again for evaluation in the programme, with a new application and for one (1) more time only.",PRIOR_FUNDING,PROJECT,scope,resubmission rule for a rejected project
+"This action supports the production of cultural products that fall within the definitions and conditions of paragraphs 1(a), 1(c) and 2 of Article 2 ""Definitions"" of Law 3905/2010 ""Support and development of the art of cinema and other provisions"" (Government Gazette 219/A/23.12.2010), as amended and in force.",DISCIPLINE,PROJECT,scope,defines the eligible cultural products
+"Within the framework of this action, eligible are projects for the production of short films: fiction, documentary, animation, with a duration of at least 3 minutes, which concern production and for which no work has commenced before the submission of a proposal/application for support under this Call.",DISCIPLINE,PROJECT,scope,eligible film types and duration
+Each project must be feasible and deliverable within eight (8) months from the signing of the relevant contract.,OTHER_ELIGIBILITY,PROJECT,scope,project delivery timeline
+This call refers to productions planned to be implemented from the first half of 2024 to the second half of 2025.,DISCIPLINE,PROJECT,scope,production period of the project
+Eligible for evaluation are Greek production films that have not yet been screened or were screened for the 1st time (in a cinema venue and/or online) in the last 12 months (1/7 – 30/6) before the deadline for submission.,CAREER_STAGE,PROJECT,scope,condition on the film's screening history
+"In this programme, short fiction films, documentaries or animation films can be selected honorarily for support, which participate in an official programme of a festival belonging to CATEGORY A, and have been produced without EKK funding.",DISCIPLINE,PROJECT,scope,condition on the films selected
+The submitted projects must be of foreign initiative with minority participation of a Greek co-producer.,OTHER_ELIGIBILITY,PROJECT,scope,structure of the co-production project
+"Before the submission of the project, at least 50% of the total budget of the film must have been secured and must be proven by the corresponding certificates/agreements.",OTHER_ELIGIBILITY,PROJECT,scope,project budget must be 50% secured
+Projects that have started filming before the submission of the proposal are not eligible.,PRIOR_FUNDING,PROJECT,scope,project must not have started filming
+"In bilateral co-productions the participation percentage of the Greek co-producer must be at least 20% and in multilateral co-productions at least 10%, provided that at least one of the co-production countries has not ratified the revised European Convention.",OTHER_ELIGIBILITY,PROJECT,scope,co-producer participation percentages
+Category B,DISCIPLINE,NOT_A_CONDITION,scope,category heading

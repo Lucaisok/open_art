@@ -56,10 +56,8 @@ def test_a_project_sentence_is_listed_apart_and_never_a_check():
                            chunk(2, "Open to visual artists.", "DISCIPLINE")])
     assert [i.outcome for i in verdict.items] == ["INFO", "INFO", "PASS"]
     assert verdict.status == "ELIGIBLE"
-    out = verdict_out(verdict)
-    assert out.about_project == ["Projects must take place in Belgium."]
-    assert out.commitments == ["The selected artist will present their work at the end of the residency."]
-    assert [s.quote for s in out.sentences] == ["Open to visual artists."]
+    # not about who can apply: left out of the page's checks (the call details show the project)
+    assert [s.quote for s in verdict_out(verdict).sentences] == ["Open to visual artists."]
 
 
 def test_a_call_with_only_project_notes_still_says_no_requirements_found():
@@ -162,7 +160,7 @@ def test_a_reviewers_scope_covers_every_label_of_the_sentence():
     reviews = {(text, "RESIDENCE"): review("RESIDENCE", None, polarity="", decision="scope", scope="PROJECT")}
     verdict = run(BERLIN, [chunk(0, text, "RESIDENCE"), chunk(0, text, "OTHER_ELIGIBILITY")], reviews)
     assert [i.outcome for i in verdict.items] == ["INFO", "INFO"]
-    assert verdict_out(verdict).about_project == [text]
+    assert verdict_out(verdict).sentences == []
 
 
 def test_encouraging_every_career_stage_is_a_widening_not_a_preference():
@@ -171,12 +169,11 @@ def test_encouraging_every_career_stage_is_a_widening_not_a_preference():
     assert verdict.items[0].reason == "open to artists at any stage of their career"
 
 
-def test_preferences_and_definitions_go_to_good_to_know():
+def test_preferences_and_definitions_are_not_checks():
     verdict = run(BERLIN, [chunk(0, "Students with a minority background are encouraged to apply.", "STUDENT_STATUS"),
                            chunk(1, "In this context, Norway and Sweden are considered as Nordic countries.",
                                  "RESIDENCE")])
-    out = verdict_out(verdict)
-    assert out.about_project == [] and len(out.good_to_know) == 2
+    assert verdict_out(verdict).sentences == []
 
 
 def test_all_disciplines_except_one():

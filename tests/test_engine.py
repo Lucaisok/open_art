@@ -447,3 +447,38 @@ def test_a_discipline_that_does_not_match_says_what_is_asked():
     assert item.reason.startswith('asks for Music ("musicians"), Dance ("dancers"); your disciplines: Visual Arts')
     [item] = run(painter, [chunk(0, "Applicants must work in the field of social innovation.", "DISCIPLINE")]).items
     assert "can't match to a discipline" in item.reason
+
+
+def test_a_call_whose_page_states_no_conditions_is_a_check_never_eligible(tmp_path):
+    # combined re-extraction (workflow.MD "Step 3"): requirements_text "" = no condition stated
+    constraints, reviewed = tmp_path / "c.jsonl", tmp_path / "r.csv"
+    constraints.write_text("")
+    reviewed.write_text("chunk_text,label,decision,polarity,value,reason\n")
+    engine = EligibilityEngine(str(constraints), str(reviewed))
+
+    def opportunity(**extra):
+        return ProcessedOpportunity(id="opp", source="test", source_url="https://example.org", language="en",
+                                    title="t", requirements_text="", title_en="t", requirements_text_en="",
+                                    processed_at="2026-10-01T00:00:00", **extra)
+
+    assert engine.evaluate(ArtistProfile(), opportunity()).status == "CHECK"
+    external = engine.evaluate(ArtistProfile(), opportunity(rules_in_external_document=True))
+    assert external.status == "CHECK" and "separate document" in external.summary
+
+
+def test_a_scope_reviewed_under_a_check_only_label_hides_the_sentence():
+    # round 7 (workflow.MD "Step 3"): scope reviews on check-only and safety-net sentences
+    text = "Be fully available for the entire duration of the residency."
+    scope_review = ((text, "CAREER_STAGE"), Review(label="CAREER_STAGE", decision="scope", polarity=None,
+                                                  value=None, reason=None, scope="OBLIGATION"))
+    verdict = run(ArtistProfile(), [chunk(0, text, "CAREER_STAGE")], [scope_review])
+    assert [item.outcome for item in verdict.items] == ["INFO"]
+
+
+def test_a_reviewed_scope_reaches_a_safety_net_sentence():
+    text = "Applications will be pre-selected to verify the eligibility of candidates."
+    scope_review = ((text, "OTHER_ELIGIBILITY"), Review(label="OTHER_ELIGIBILITY", decision="scope", polarity=None,
+                                                       value=None, reason=None, scope="NOT_A_CONDITION"))
+    flagged = chunk(0, text, "NONE", polarity=None, suspected_label="OTHER_ELIGIBILITY")
+    assert [item.outcome for item in run(ArtistProfile(), [flagged]).items] == ["CHECK"]
+    assert [item.outcome for item in run(ArtistProfile(), [flagged], [scope_review]).items] == ["INFO"]

@@ -14,6 +14,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
+from src.models.opportunity import ApplicationQuestion, RequiredMaterial
+
 
 class FundingComponent(BaseModel):
     """One distinct piece of support named in a `funding` value - many
@@ -60,6 +62,10 @@ class ProcessedOpportunity(BaseModel):
     opportunity_type_canonical: list[str] = []  # mapped onto CANONICAL_OPPORTUNITY_TYPES
     career_stage_canonical: list[str] = []  # mapped onto CANONICAL_CAREER_STAGES
     country_canonical: list[str] = []  # mapped onto CANONICAL_COUNTRIES; a list - some values name several
+    # disciplines read from the call's whole text (src/processing/disciplines_from_text.py), merged into
+    # discipline_canonical on every run of that stage; disciplines_read_at = already read
+    discipline_from_text: list[str] = []
+    disciplines_read_at: datetime | None = None
 
     funding_components: list[FundingComponent] = []  # [] if funding is None OR nothing extractable was stated
     funding_extracted_at: datetime | None = None  # set whenever extraction runs, even if it found nothing -
@@ -80,5 +86,30 @@ class ProcessedOpportunity(BaseModel):
 
     deadline_raw: str | None = None  # verbatim from RawOpportunity.deadline
     deadline_date: date | None = None  # parsed; None if absent or unparseable
+
+    # copied as-is from RawOpportunity (original language, not translated): see opportunity.py
+    open_to: list[str] = []
+    project_requirements: str | None = None
+    how_to_apply: str | None = None
+    application_questions: list[ApplicationQuestion] = []
+    required_materials: list[RequiredMaterial] = []
+    selection_criteria: str | None = None
+    application_language: str | None = None
+    submission_method: str | None = None
+    program_dates: str | None = None
+    rolling_deadline: bool = False
+    rules_in_external_document: bool = False
+    verbatim_flags: list[str] = []
+
+    # the details above in English, list items one per line (src/processing/translate_details.py);
+    # shown on the page instead of the originals. None / [] = not translated yet
+    project_requirements_en: str | None = None
+    how_to_apply_en: str | None = None
+    selection_criteria_en: str | None = None
+    application_language_en: str | None = None
+    program_dates_en: str | None = None
+    application_questions_en: list[ApplicationQuestion] = []
+    required_materials_en: list[RequiredMaterial] = []
+    details_translated_at: datetime | None = None
 
     processed_at: datetime

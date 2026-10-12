@@ -63,6 +63,25 @@
   letter-spacing: 0.06em;
 }
 
+/* who the call is for: the same pill, quieter than the type (grey border, no capitals) */
+.discipline {
+  padding: 4px 10px;
+  border: 2px solid var(--color-grey-200);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-grey-600);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .title {
   margin-top: 16px;
   color: inherit;

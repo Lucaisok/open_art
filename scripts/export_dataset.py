@@ -58,7 +58,8 @@ def export_dataset(raw_dir: str = RAW_DIR, out_path: str = RAW_OUT_PATH) -> int:
     for path in sorted(glob.glob(os.path.join(raw_dir, "*", "opportunities.jsonl"))):
         records.extend(load_jsonl(path, RawOpportunity))
 
-    df = pd.DataFrame([r.model_dump() for r in records])
+    # source_text (the whole page the model read) stays in the JSONL only: too big for a CSV
+    df = pd.DataFrame([r.model_dump(exclude={"source_text"}) for r in records])
     df.to_csv(out_path, index=False)
     print(f"Wrote {len(df)} opportunities to {out_path}")
     return len(df)

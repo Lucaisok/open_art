@@ -120,6 +120,7 @@ class ResultOut(BaseModel):
     title: str
     organisation: str | None
     types: list[str]
+    disciplines: list[str]      # canonical, the filter's names; "Other/Non-Arts" left out (disciplines_shown)
     city: str | None
     countries: list[str]
     deadline: date | None
@@ -140,6 +141,7 @@ class SearchOut(BaseModel):
 def _result(match: Match, o: ProcessedOpportunity) -> ResultOut:
     city, countries = _place(o)
     return ResultOut(id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
+                     disciplines=disciplines_shown(o),
                      city=city, countries=countries, deadline=o.deadline_date, status=match.verdict.status,
                      reason=match.verdict.summary, score=match.score, funding=headline_funding(o))
 
@@ -212,10 +214,19 @@ class VerdictOut(BaseModel):
     checks: int
     passes: int
     sentences: list[SentenceOut]  # failing sentences first (if any), then passing, then to check
-    # sentences that aren't about who can apply (scope, src/eligibility/scope.py): never a check
-    commitments: list[str]      # "What you'd commit to": what a selected artist has to do
-    about_project: list[str]    # "About the project": conditions on the project, its partners, events
-    good_to_know: list[str]     # "Good to know": preferences ("women are encouraged") and definitions
+    # sentences that aren't about who can apply (scope, src/eligibility/scope.py) are left out: the
+    # call's own project requirements, procedure etc. are shown from the extraction instead
+    # (OpportunityOut, "Step 3 — combined re-extraction" in workflow.MD)
+
+
+class QuestionOut(BaseModel):
+    question: str               # verbatim, the call's language
+    limit: str | None           # "max 300 words"
+
+
+class MaterialOut(BaseModel):
+    item: str                   # short English name: "CV", "Portfolio"
+    details: str | None         # stated limits, verbatim: "max 10 pages, PDF"
 
 
 class OpportunityOut(BaseModel):
@@ -223,6 +234,7 @@ class OpportunityOut(BaseModel):
     title: str
     organisation: str | None
     types: list[str]
+    disciplines: list[str]      # as on ResultOut
     city: str | None
     countries: list[str]
     deadline: date | None
@@ -231,6 +243,16 @@ class OpportunityOut(BaseModel):
     fee: str                    # "None", "EUR 25", "Yes, amount not stated" or "Not stated"
     description: str | None     # English
     source_url: str             # always linked: the artist reads the call itself before applying
+    # from the combined re-extraction, in English (translate_details.py; the original if not
+    # translated yet); empty when the call doesn't say, or for a record not re-extracted yet
+    project_requirements: str | None
+    how_to_apply: str | None
+    application_questions: list[QuestionOut]
+    required_materials: list[MaterialOut]
+    selection_criteria: str | None
+    application_language: str | None
+    submission_method: str | None   # "online form" / "email" / "portal" / "post" / "other"
+    program_dates: str | None
     verdict: VerdictOut
     profile_filled: bool
 
@@ -245,11 +267,39 @@ def _amount(c: FundingComponent) -> str:
     return amount
 
 
+def _amounts(components: list[FundingComponent]) -> list[str]:
+    """One amount per currency and period. Several amounts in a call are often alternatives or parts
+    of a total ("EUR 2,500 per month at home, or EUR 2,500 per month abroad"; "prizes total EUR
+    10,000: winner EUR 1,500, ..."), so adding them up with "+" misleads: the same amount twice ->
+    shown once, different amounts -> "up to" the highest."""
+    groups: dict[tuple, list[FundingComponent]] = {}
+    for c in components:
+        if c.amount_min is not None:
+            groups.setdefault((c.currency, c.period), []).append(c)
+    labels = []
+    for group in groups.values():
+        if len({_amount(c) for c in group}) == 1:
+            labels.append(_amount(group[0]))
+        else:
+            top = max(group, key=lambda c: c.amount_max if c.amount_max is not None else c.amount_min)
+            highest = top.amount_max if top.amount_max is not None else top.amount_min
+            labels.append(_amount(top.model_copy(update={"amount_min": highest, "amount_max": None}))
+                          .replace(top.currency or "", f"up to {top.currency}", 1))
+    return labels
+
+
+def disciplines_shown(o: ProcessedOpportunity) -> list[str]:
+    """The call's disciplines for the artist to see: the canonical names (the same as the filter and
+    the profile), without "Other/Non-Arts", which says nothing about the arts."""
+    return [d for d in o.discipline_canonical if d != "Other/Non-Arts"]
+
+
 def funding_label(o: ProcessedOpportunity) -> str:
     """The funding in English, from the extracted components (the raw text is often in another
-    language). Amounts first, then support without a figure. Falls back to the raw text."""
+    language). Amounts first (one per currency and period, see _amounts), then support without a
+    figure. Falls back to the raw text."""
     if o.funding_components:
-        with_amount = [_amount(c) for c in o.funding_components if c.amount_min is not None]
+        with_amount = _amounts(o.funding_components)
         # support without a figure: money or support in kind before mentoring and fee waivers
         without = sorted({c.category for c in o.funding_components if c.amount_min is None},
                          key=lambda category: (category in NOT_FUNDING, category))
@@ -333,21 +383,15 @@ def verdict_out(verdict: Verdict) -> VerdictOut:
     means for the artist. A sentence can state several (multi-label: "over 18 ... and reside in
     Senegal"), so the page shows the sentence once with a row per requirement, instead of repeating it."""
     by_sentence: dict[str, list[Item]] = {}
-    # dicts as ordered sets: a sentence with two labels is listed once
-    boxes: dict[str, dict[str, None]] = {"OBLIGATION": {}, "PROJECT": {}, "PREFERENCE": {}, "NOT_A_CONDITION": {}}
     for item in verdict.items:  # in call order
-        if item.outcome == "INFO":
-            boxes[item.scope][item.text] = None
-        else:
+        if item.outcome != "INFO":  # not about who can apply: not shown here
             by_sentence.setdefault(item.chunk_id, []).append(item)
 
     sentences = [SentenceOut(quote=items[0].text, requirements=_rows(items)) for items in by_sentence.values()]
     sentences.sort(key=lambda sentence: RANK[sentence.requirements[0].outcome])  # stable: call order kept
     outcomes = [row.outcome for sentence in sentences for row in sentence.requirements]
     return VerdictOut(status=verdict.status, summary=verdict.summary, fails=outcomes.count("FAIL"),
-                      checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences,
-                      commitments=list(boxes["OBLIGATION"]), about_project=list(boxes["PROJECT"]),
-                      good_to_know=list({**boxes["PREFERENCE"], **boxes["NOT_A_CONDITION"]}))
+                      checks=outcomes.count("CHECK"), passes=outcomes.count("PASS"), sentences=sentences)
 
 
 @router.get("/api/opportunities/{opportunity_id}")
@@ -360,6 +404,16 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
     city, countries = _place(o)
     return OpportunityOut(
         id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
-        city=city, countries=countries, deadline=o.deadline_date, funding=funding_label(o), funded=is_funded(o),
+        disciplines=disciplines_shown(o), city=city, countries=countries, deadline=o.deadline_date, funding=funding_label(o), funded=is_funded(o),
         fee=fee_label(o), description=o.description_en, source_url=o.source_url,
+        # the English copy (translate_details.py) when there is one, else the original
+        project_requirements=o.project_requirements_en or o.project_requirements,
+        how_to_apply=o.how_to_apply_en or o.how_to_apply,
+        application_questions=[QuestionOut(question=q.question, limit=q.limit)
+                               for q in (o.application_questions_en or o.application_questions)],
+        required_materials=[MaterialOut(item=m.item, details=m.details)
+                            for m in (o.required_materials_en or o.required_materials)],
+        selection_criteria=o.selection_criteria_en or o.selection_criteria,
+        application_language=o.application_language_en or o.application_language,
+        submission_method=o.submission_method, program_dates=o.program_dates_en or o.program_dates,
         verdict=verdict_out(matcher.engine.evaluate(profile, o)), profile_filled=filled)

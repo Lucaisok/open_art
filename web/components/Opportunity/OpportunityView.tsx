@@ -19,6 +19,30 @@ const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "pa
     CHECK: { count: "checks", title: "To check", icon: "○", look: styles.iconCheck },
 };
 
+// The call's details as extracted from its page, in display order. Texts are verbatim, in the
+// call's own language (not translated); a list shows one row per question or document.
+type CallDetail = { title: string; text?: string; items?: string[] };
+
+const callDetails = (call: Opportunity): CallDetail[] => {
+    const details: CallDetail[] = [
+        { title: "Project requirements", text: call.project_requirements ?? undefined },
+        {
+            title: "Application questions",
+            items: call.application_questions.map((q) => (q.limit ? `${q.question} (${q.limit})` : q.question)),
+        },
+        { title: "How to apply", text: call.how_to_apply ?? undefined },
+        {
+            title: "What to send",
+            items: call.required_materials.map((m) => (m.details ? `${m.item}: ${m.details}` : m.item)),
+        },
+        { title: "Selection criteria", text: call.selection_criteria ?? undefined },
+        { title: "Application language", text: call.application_language ?? undefined },
+        { title: "How to submit", text: call.submission_method ?? undefined },
+        { title: "Programme dates", text: call.program_dates ?? undefined },
+    ];
+    return details.filter((detail) => (detail.items ? detail.items.length > 0 : Boolean(detail.text)));
+};
+
 // One call (design: DISCOVER.md → Opportunity): facts and description on the left, "Can you
 // apply?" on the right, every eligibility sentence quoted verbatim once, with each requirement it
 // states and what that means for the artist (a sentence can state several: "over 18 ... and reside
@@ -31,6 +55,7 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
         { label: "Funding", value: call.funding },
         { label: "Application fee", value: call.fee },
         { label: "Type", value: call.types.join(", ") || "Not stated" },
+        { label: "Discipline", value: call.disciplines.join(", ") || "Not stated" },
         { label: "Place", value: place },
     ];
 
@@ -131,44 +156,25 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         ))}
                     </ul>
 
-                    {/* sentences that aren't about who can apply: listed apart, never a check (scope) */}
-                    {call.verdict.commitments.length > 0 && (
-                        <details className={styles.extra}>
+                    {/* the call's own details (combined re-extraction), collapsed so they don't compete
+                        with the checks; only the ones the call states */}
+                    {callDetails(call).map((detail) => (
+                        <details key={detail.title} className={styles.extra}>
                             <summary className={styles.extraSummary}>
-                                What you&apos;d commit to · {call.verdict.commitments.length}
+                                {detail.title}
+                                {detail.items && ` · ${detail.items.length}`}
                             </summary>
-                            <ul className={styles.extraList}>
-                                {call.verdict.commitments.map((text: string, i: number) => (
-                                    <li key={i}>“{text}”</li>
-                                ))}
-                            </ul>
+                            {detail.items ? (
+                                <ul className={styles.extraList}>
+                                    {detail.items.map((text, i) => (
+                                        <li key={i}>{text}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className={styles.extraText}>{detail.text}</p>
+                            )}
                         </details>
-                    )}
-                    {call.verdict.about_project.length > 0 && (
-                        <details className={styles.extra}>
-                            <summary className={styles.extraSummary}>
-                                About the project · {call.verdict.about_project.length}
-                            </summary>
-                            <ul className={styles.extraList}>
-                                {call.verdict.about_project.map((text: string, i: number) => (
-                                    <li key={i}>“{text}”</li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
-
-                    {call.verdict.good_to_know.length > 0 && (
-                        <details className={styles.extra}>
-                            <summary className={styles.extraSummary}>
-                                Good to know · {call.verdict.good_to_know.length}
-                            </summary>
-                            <ul className={styles.extraList}>
-                                {call.verdict.good_to_know.map((text: string, i: number) => (
-                                    <li key={i}>“{text}”</li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
+                    ))}
 
                     <p className={styles.note}>
                         These checks use your saved profile and the call&apos;s own words. Always read the original

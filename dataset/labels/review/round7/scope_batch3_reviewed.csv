@@ -1,0 +1,61 @@
+chunk_text,label,scope,decision,reason
+Applicants who receive fixed annual state grants are normally not awarded grants from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+Applicants who receive regular annual state funding are normally not granted support from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with regular state funding are excluded
+The drama must be in a language for which the state has responsibility under the Language Act.,DISCIPLINE,PROJECT,scope,"Language condition on the drama, not the applicant"
+"If you receive a grant for manuscript development, you may later apply for production support to publish the book.",DISCIPLINE,NOT_A_CONDITION,scope,Procedural note on later applying for production support
+Applicants who receive fixed annual state grants normally do not receive support from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+The application must be justified.,OTHER_ELIGIBILITY,NOT_A_CONDITION,scope,Procedural note on application content
+Equivalent competence means published scholarly work that in scope corresponds to the requirements for a doctorate.,EDUCATION,NOT_A_CONDITION,scope,Definition of equivalent competence
+The doctorate must be approved before any grant can be paid out.,CAREER_STAGE,OBLIGATION,scope,"Doctorate approval needed before payout, after selection"
+The scheme is aimed at applicants who represent the Romani people/Tatere or have broad roots in the ethnic group.,OTHER_ELIGIBILITY,APPLICANT,,Restricts applicants to Romani/Tater affiliation
+Applicants who receive a fixed annual state grant are normally not granted support from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+Applicants who receive regular annual government grants normally do not receive support from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with regular government grants are excluded
+Businesses that receive a fixed annual government subsidy usually do not receive support from this scheme.,PRIOR_FUNDING,APPLICANT,,Businesses with fixed annual subsidy are excluded
+Applicants who receive fixed annual state grants normally do not receive grants from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+"You may apply if you are actors within visual art, music, performing arts, literature, journals and criticism, cultural heritage, or if you are interdisciplinary actors.",DISCIPLINE,APPLICANT,,Discipline list of who may apply
+"You can apply for this scheme if you are a professional performing artist, producer, part of a production environment, or another entity within the performing arts field.",CAREER_STAGE,APPLICANT,,Professional performing arts applicants
+"You may apply for this scheme if you are a professional performing artist, producer, part of a production environment, or another entity within the performing arts field.",CAREER_STAGE,APPLICANT,,Professional performing arts applicants
+"The scheme does not set any special requirements regarding who can apply, but the project you are applying for must involve professional artists and/or professional art and culture communicators.",CAREER_STAGE,PROJECT,scope,No applicant requirement; condition is on the project's participants
+Applicants who receive a fixed annual state grant are normally not awarded grants from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+"Professional musicians, artists, ensembles and bands can apply for grants for concert and touring activities within all genres.",DISCIPLINE,APPLICANT,,Professional musicians may apply
+The scheme is aimed at professional actors within all musical forms of expression and genres.,DISCIPLINE,APPLICANT,,Aimed at professional music actors
+Applicants who receive fixed annual state subsidies normally do not receive grants from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state subsidies are excluded
+"You can apply for this scheme if you are an artist, writer, or producer.",DISCIPLINE,APPLICANT,,"Applicant must be artist, writer or producer"
+Applicants who receive a fixed annual state grant normally do not receive support from this scheme.,PRIOR_FUNDING,APPLICANT,,Applicants with fixed annual state grants are excluded
+This means that the author cannot have more than one book submitted to the purchase schemes for fiction for adults in the same year.,PRIOR_FUNDING,APPLICANT,,One-book rule limits authors with another submission that year
+The application form is the main document.,DISCIPLINE,NOT_A_CONDITION,scope,Procedural note about the application form
+"For applications concerning translations, you must also enclose the original work.",DISCIPLINE,NOT_A_CONDITION,scope,Procedural note on enclosing the original work
+Are you unsure which genre the book belongs to?,DISCIPLINE,NOT_A_CONDITION,scope,Procedural question about genre choice
+"Then choose the genre you think fits best, and explain why in the application form.",DISCIPLINE,NOT_A_CONDITION,scope,Procedural guidance on genre choice
+"Creators, performing artists, and producers may apply.",DISCIPLINE,APPLICANT,,"Who may apply: creators, performers, producers"
+"In order to apply, you need a letter of recommendation from a supervisor or another academic staff member at the institute where you will write your master's thesis.",EDUCATION,APPLICANT,,Recommendation letter required in order to apply
+"Organisers of literary events, initiatives and literature presentation projects for children, young adults and adults.",DISCIPLINE,APPLICANT,,List fragment of who may apply
+"Translators and publishers may apply for mentor support for translators, and translators may apply for network support.",DISCIPLINE,APPLICANT,,Who may apply for mentor/network support
+"The authors, illustrators and translators involved must have published at least one work in Danish.",CAREER_STAGE,APPLICANT,,Publication requirement may bind applicant authors/translators
+You can apply if you plan to produce an art piece to be exhibited in Denmark or abroad,OTHER_ELIGIBILITY,APPLICANT,,You can apply if you produce an art piece for exhibition
+You can apply if you shall exhibit and/or promote the work of living visual artists in Denmark or abroad.,CAREER_STAGE,APPLICANT,,You can apply if you exhibit/promote living visual artists
+"The Committee for Craft and Design Project Funding funds artists, designers, curators, authors, promoters, museums, galleries and others with an interest in developing and promoting craft and design in Denmark and Danish craft and design abroad in the form of projects.",DISCIPLINE,APPLICANT,,List of who is funded
+The Danish Art Foundation’s committees welcome all applications that border on or go beyond traditional art forms.,DISCIPLINE,WIDENING,scope,Opens the call to non-traditional art forms
+"Smaller theatres, performing arts groups, independent performing artists and operators organising or working with performing arts activities.",DISCIPLINE,APPLICANT,,List fragment of who may apply
+The application is open for all professional artists.,CAREER_STAGE,APPLICANT,,Open to professional artists
+The Rencontres d’Arles curatorial research grant is aimed at exhibition curators wishing to carry out an original project relating to image or photography.,DISCIPLINE,APPLICANT,,Aimed at exhibition curators
+The EFFEA Fund defines emerging artists not by age but by their novelty to programmers and audiences and their potential for international breakthrough.,CAREER_STAGE,NOT_A_CONDITION,scope,Definition of emerging artist
+You can familiarize yourself with the current sanctions list on the website of the Verkhovna Rada of Ukraine at the link: https://zakon.rada.gov.ua/laws/show/n0004525-20#Text legal entities or individual enterpreneurs and / or participants of such entities or individuals who have violated the Law of Ukraine “On Ensuring the Rights and Freedoms of Citizens and the Legal Regime in the Temporarily Occupied Territory of Ukraine” dated 15.04.2014 № 1207-VII.,OTHER_ELIGIBILITY,APPLICANT,,Sanctions-related exclusion of applicants
+Open for: instrumentalists and vocalists of all nationalities NEW!,DISCIPLINE,APPLICANT,,Open to instrumentalists and vocalists
+Bands may have up to 6 performing musicians and they may include: instrumentalists and vocalists instrumentalists vocalists Individual musicians can apply for the Jam Session section.,DISCIPLINE,APPLICANT,,Band composition limits for applicants
+"The Première Early Music competition on historical instruments seeks to promote young musicians who bring their artistic, scholarly, and rhetorical approach to the fore.",CAREER_STAGE,APPLICANT,,Aimed at young musicians
+"Prior knowledge or experience with digital media isn’t necessary, but of course welcome!",DISCIPLINE,WIDENING,scope,Prior digital experience not required
+"For the ‘Dress-up’ part of our party, we welcome fashion- & costume designers to send a proposal of a selection of pieces/ costumes (from their oeuvre) to be used during the Dress-Up-Tea-Party.",DISCIPLINE,WIDENING,scope,Invites fashion and costume designers too
+Teachers from the DKO or (professional) musicians who want to apply the language of soundpainting in their own teaching or artistic practice.,DISCIPLINE,APPLICANT,,Teachers or musicians applying soundpainting
+Our aim is to support the participant to develop their artistic vision fully.,CAREER_STAGE,NOT_A_CONDITION,scope,Describes programme aim
+"You are active in the visual arts, performing arts, and/or classical music.",DISCIPLINE,APPLICANT,,Must be active in listed disciplines
+Or you did not follow the traditional path of art education as an artist.,EDUCATION,APPLICANT,,List item of who may apply
+Or you have experience in supporting or guiding artists who are at the start of their professional careers.,CAREER_STAGE,APPLICANT,,List item of who may apply
+Or you are experiencing social barriers to starting your career.,CAREER_STAGE,APPLICANT,,List item of who may apply
+We are looking for unique objects and/or editions/multiples that tell a false or distorted narrative through text or image.,DISCIPLINE,PROJECT,scope,Describes the works sought
+"Three-dimensional works and objects, as well as zines and alternative forms of publication, are eligible.",DISCIPLINE,PROJECT,scope,Eligible work types
+"We prefer objects that can be displayed on a shelf, newspaper carousel, or table.",DISCIPLINE,PREFERENCE,scope,Preference for shelf-displayable objects
+Specifics: Your work tells a (fictional) story through text and/or image.,DISCIPLINE,PROJECT,scope,Condition on the work's content
+We are looking for small works: you can hold them in one hand and they cost no more than €100 (including VAT).,DISCIPLINE,PROJECT,scope,Size and price limits on the work
+You have a degree in the arts or relevant experience in the arts sector – you share a work-in-progress or an experiment (max 15min) – your work is suitable for the location (limited technical resources) – your work-in-progress should have a performative character,EDUCATION,APPLICANT,,Degree or experience in the arts required
+Focus on performing arts,DISCIPLINE,APPLICANT,,Discipline focus: performing arts
