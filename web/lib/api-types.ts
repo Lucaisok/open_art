@@ -451,6 +451,7 @@ export interface components {
             verdict: components["schemas"]["VerdictOut"];
             /** Profile Filled */
             profile_filled: boolean;
+            why?: components["schemas"]["WhyOut"] | null;
         };
         /** Option */
         Option: {
@@ -643,6 +644,12 @@ export interface components {
             topic: string;
             /** Reason */
             reason: string;
+            /** Label */
+            label?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+            /** Found By */
+            found_by?: ("classifier" | "reviewed" | "keyword_check" | "rule") | null;
         };
         /** ResultOut */
         ResultOut: {
@@ -673,6 +680,13 @@ export interface components {
             score: number | null;
             /** Funding */
             funding: string | null;
+            /**
+             * Group
+             * @enum {string}
+             */
+            group: "fit" | "other_discipline" | "not_eligible";
+            /** Evidence */
+            evidence?: string | null;
         };
         /** SearchIn */
         SearchIn: {
@@ -710,6 +724,11 @@ export interface components {
              */
             no_fee: boolean;
             /**
+             * Eligible Only
+             * @default false
+             */
+            eligible_only: boolean;
+            /**
              * Offset
              * @default 0
              */
@@ -726,6 +745,10 @@ export interface components {
             results: components["schemas"]["ResultOut"][];
             /** Total */
             total: number;
+            /** Groups */
+            groups: {
+                [key: string]: number;
+            };
             /**
              * Order
              * @enum {string}
@@ -832,6 +855,19 @@ export interface components {
             passes: number;
             /** Sentences */
             sentences: components["schemas"]["SentenceOut"][];
+        };
+        /**
+         * WhyOut
+         * @description Why "Matched to you" suggests this call: the call's sentence closest to the artist's documents
+         *     (the same as the result card's) and the artist's own sentence closest to it.
+         */
+        WhyOut: {
+            /** Call Sentence */
+            call_sentence: string;
+            /** Your Sentence */
+            your_sentence: string | null;
+            /** Your Document */
+            your_document: string | null;
         };
     };
     responses: never;

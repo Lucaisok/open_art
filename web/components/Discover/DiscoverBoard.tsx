@@ -17,7 +17,7 @@ import {
     type DiscoverState,
     type Mode,
 } from "@/lib/discover";
-import type { DiscoverOptions, SearchResults } from "@/lib/types";
+import type { DiscoverOptions, SearchResult, SearchResults } from "@/lib/types";
 import FiltersPanel from "./FiltersPanel";
 import ResultCard from "./ResultCard";
 import styles from "./DiscoverBoard.module.css";
@@ -206,27 +206,33 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
     const clearAll = () => update(clearFilters(state));
     const clearSearchAndFilters = () => update({ ...clearFilters(state), text: "" });
 
-    const eligibleOrCheck = results.results.filter((r) => r.status !== "LIKELY_NOT_ELIGIBLE");
-    const notEligible = results.results.filter((r) => r.status === "LIKELY_NOT_ELIGIBLE");
+    // the list's three groups, in the API's order (src/matching/matcher.py): calls that fit, calls
+    // probably for other disciplines, calls the artist likely can't apply to. The headings count the
+    // whole group (results.groups), not only the calls loaded so far
+    const inGroup = (group: SearchResult["group"]) => results.results.filter((r) => r.group === group);
+    const fit = inGroup("fit");
+    const otherDiscipline = inGroup("other_discipline");
+    const notEligible = inGroup("not_eligible");
     const order = results.order === "match" ? "best match first" : "nearest deadline first";
     const shown = results.results.length;
     const countLine = searching
         ? "Searching…"
         : `${results.total} ${results.total === 1 ? "call" : "calls"} · ${order}`;
 
-    // how the list is ordered, always shown under the results heading (eligible calls come first in
-    // every mode, src/matching/matcher.py); without documents it also says how to get a ranking
+    // how the list is ordered, always shown under the results heading; without documents it also
+    // says how to get a ranking. In every mode, the two lower groups come last (src/matching/matcher.py)
     const note =
         state.mode === "all" ? (
-            "Every call in OpenArt: eligible calls first, then nearest deadline. Filters still apply."
+            "Every call in OpenArt, nearest deadline first. Filters still apply."
         ) : results.ranked_by.length > 0 ? (
-            "Eligible calls first, then ranked by how well each fits your profile. Filters start from your profile too."
+            `Ranked by how close each call is to your ${results.ranked_by.join(", ")}. ` +
+            "Each card quotes the sentence of the call that is closest. Filters start from your profile."
         ) : (
             <>
                 <Link href="/documents" className={styles.noteLink}>
                     Upload your statement, CV or portfolio
                 </Link>{" "}
-                to rank calls by your practice. Until then: eligible calls first, then nearest deadline.
+                to rank calls by your practice. Until then: nearest deadline first.
             </>
         );
 
@@ -344,10 +350,27 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
                     </div>
                 ) : (
                     <>
-                        {cards(eligibleOrCheck)}
+                        {cards(fit)}
+                        {otherDiscipline.length > 0 && (
+                            <>
+                                <h3 className={styles.subheading}>
+                                    Probably for other disciplines · {results.groups.other_discipline}
+                                </h3>
+                                <p className={styles.subnote}>
+                                    Their disciplines, or their own rules, don&apos;t name yours. Lower in the
+                                    list, never hidden: your practice may still fit.
+                                </p>
+                                {cards(otherDiscipline)}
+                            </>
+                        )}
                         {notEligible.length > 0 && (
                             <>
-                                <h3 className={styles.subheading}>Likely not eligible · {notEligible.length}</h3>
+                                <h3 className={styles.subheading}>
+                                    Likely not eligible · {results.groups.not_eligible}
+                                </h3>
+                                <p className={styles.subnote}>
+                                    A rule of the call likely rules you out: each card says which.
+                                </p>
                                 {cards(notEligible)}
                             </>
                         )}

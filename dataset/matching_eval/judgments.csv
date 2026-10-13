@@ -1,0 +1,421 @@
+persona_id,opportunity_id,grade,judge,note
+p01_sound_water,bears_in_the_park_e6ed15fc968d,2,claude,residency specifically for sound artists
+p01_sound_water,cite_internationale_des_arts_0435714dd727,1,claude,art-science environment residency; generic
+p01_sound_water,european_commission_f7a3135ed0fb,1,claude,generic artist mobility grant
+p01_sound_water,european_music_collective_9776e404b5b7,0,claude,ensemble composition call; notated works
+p01_sound_water,frame_finland_4badde1dedcc,1,claude,generic creator residency incl music
+p01_sound_water,gjon_mili_ivaf_dde727dafb5e,0,claude,video and film residency
+p01_sound_water,konstepidemin_74501beabeca,1,claude,generic artist guest studios
+p01_sound_water,kulturdirektoratet_norway_0829c1124ca4,0,claude,touring sustainability program for music/performing orgs
+p01_sound_water,kulturdirektoratet_norway_7e3a53a40e56,0,claude,building infrastructure funding
+p01_sound_water,kulturdirektoratet_norway_90b336625576,1,claude,music recording grant; loosely applicable
+p01_sound_water,kunsten_be_flanders_7b3d4f68b4d8,0,claude,audition for classical vocal performers
+p01_sound_water,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency incl music; site-specific
+p01_sound_water,landis_gyr_stiftung_143698b89c4d,1,claude,generic residencies incl music
+p01_sound_water,lendhauer_97cd95ca1123,2,claude,public space harbour urban ecologies
+p01_sound_water,matadero_madrid_25c8a4ecf086,1,claude,art-science-tech research residency; open to media art
+p01_sound_water,matadero_madrid_e37e06007d22,1,claude,electronic music EP residency; not field recording focus
+p01_sound_water,plas_bodfa_1e959ec58e0a,2,claude,rivers and freshwater ecology commission; sound welcome
+p01_sound_water,plas_bodfa_23b075fb372d,1,claude,archaeology commission; sound welcome but theme off
+p01_sound_water,plas_bodfa_2e1484a7910b,1,claude,geology commission; sound possible; waterways site
+p01_sound_water,sound_and_music_8e6674d8a948,2,claude,sound with installation and technology
+p01_sound_water,sound_and_music_a3ba0b2e99d4,0,claude,orchestral composer-conductor workshop
+p01_sound_water,sound_and_music_d9a719300a30,0,claude,choral/brass score call for composers
+p01_sound_water,sound_art_lab_224a2db1d6f1,2,claude,sound art residency with equipment
+p01_sound_water,stadt_salzburg_4a214ab37f5c,1,claude,residencies for media artists
+p02_printmaker,acc_galerie_weimar_0f141ef27564,1,claude,thematic studio program On Absence
+p02_printmaker,acc_galerie_weimar_1c586a1763b4,2,claude,visual artist studio program on memory
+p02_printmaker,bba_prizes_cdc4b4399e6a,1,claude,generic all-media art prize
+p02_printmaker,buat_c7a8067a35cd,1,claude,generic artist award with solo show
+p02_printmaker,cite_internationale_des_arts_0435714dd727,1,claude,art-science residency; generic
+p02_printmaker,cite_internationale_des_arts_faaa6d16811c,1,claude,travel and residency grants for visual artists
+p02_printmaker,european_commission_f7a3135ed0fb,1,claude,generic artist mobility grant
+p02_printmaker,focuna_luxembourg_6ef1e1e83400,1,claude,carte blanche visual art grant
+p02_printmaker,fondation_francois_schneider_1c73efed7f64,1,claude,water-themed visual art competition
+p02_printmaker,fotofestiwal_acee70bdbbf2,0,claude,photography festival
+p02_printmaker,konstepidemin_74501beabeca,2,claude,guest studio with graphics workshop
+p02_printmaker,konstepidemin_df24847c1417,1,claude,studio space at art centre
+p02_printmaker,kulturdirektoratet_norway_243ed398f83b,0,claude,art publications and manuscripts
+p02_printmaker,kulturdirektoratet_norway_90a7593f042e,0,claude,funding for exhibition venues
+p02_printmaker,kunst_dk_denmark_6dba7d4003de,0,claude,cross-art-form funding guidance
+p02_printmaker,kunsten_be_flanders_0c520b567ceb,0,claude,curatorial research fellowship
+p02_printmaker,kunsten_be_flanders_77d04e963291,1,claude,editions and multiples group show
+p02_printmaker,kunsten_be_flanders_f82e09282035,1,claude,virtual exhibition; abstraction theme
+p02_printmaker,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency
+p02_printmaker,kunstlerhaus_bethanien_47bd8d99d9f0,1,claude,generic visual art studio programme
+p02_printmaker,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,visual art residency in Berlin
+p02_printmaker,kunstpunt_groningen_2118ebb6ed29,0,claude,performance MA degree
+p02_printmaker,kunststiftung_nrw_ea16b408c349,1,claude,visual art work and research grant
+p02_printmaker,mall_galleries_316fbb153889,0,claude,watercolour painting exhibition
+p02_printmaker,mondriaan_fund_2f611a04d139,0,claude,art writing and podcasts
+p02_printmaker,mondriaan_fund_927ae2095ba6,1,claude,visual artist work grant
+p02_printmaker,sound_and_music_a3ba0b2e99d4,0,claude,orchestral composer workshop
+p02_printmaker,stadt_salzburg_4a214ab37f5c,1,claude,residencies for visual artists
+p02_printmaker,statens_vaerksteder_for_kunst_a543d1a88fd3,2,claude,large-format workshop residency incl print
+p03_choreographer,acc_galerie_weimar_0f141ef27564,1,claude,multidisciplinary thematic studio program
+p03_choreographer,ada_studio_0dce32f01876,2,claude,contemporary dance research residency
+p03_choreographer,arts_council_wales_32942d1388ee,1,claude,generic R&D arts grant
+p03_choreographer,arts_council_wales_ed6fc62d20dc,1,claude,career development grant incl dance
+p03_choreographer,cite_internationale_des_arts_0435714dd727,1,claude,art-science residency; generic
+p03_choreographer,danceua_1bf3427d3229,2,claude,dance residency with studio
+p03_choreographer,danceua_e1da74f0889c,2,claude,dance residency with studio
+p03_choreographer,dansateliers_rotterdam_33931cad7e6f,1,claude,dancer audition; not own work
+p03_choreographer,dgartes_portugal_2e8ab0b42587,1,claude,general arts funding portal
+p03_choreographer,drac_centre_val_de_loire_e6e9650c49b1,1,claude,participatory art in health settings
+p03_choreographer,effea_02ae4fa4c2d2,1,claude,festival residency for emerging artists
+p03_choreographer,frame_finland_4badde1dedcc,1,claude,generic creator residency
+p03_choreographer,konstepidemin_74501beabeca,0,claude,visual art guest studios
+p03_choreographer,konstepidemin_df24847c1417,1,claude,art centre studio incl stage section
+p03_choreographer,kulturdirektoratet_norway_9dd695593dd2,2,claude,choreography development grant
+p03_choreographer,kulturdirektoratet_norway_b612a31f3a67,2,claude,dance production grant
+p03_choreographer,kulturdirektoratet_norway_e1fd7e9e35ce,0,claude,field competence development and publications
+p03_choreographer,kunst_dk_denmark_823c0bbbc582,1,claude,performing arts touring and international
+p03_choreographer,kunsten_be_flanders_4128c16d51fa,1,claude,exhibition open to performance
+p03_choreographer,kunsten_be_flanders_dbee5b009884,2,claude,inclusive choreographic lab
+p03_choreographer,kunsten_be_flanders_fcf58267129d,1,claude,digital dramaturgy support for artists
+p03_choreographer,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency
+p03_choreographer,kunstlerhaus_bethanien_47bd8d99d9f0,0,claude,visual art studio programme
+p03_choreographer,kunstpunt_groningen_2118ebb6ed29,1,claude,MA degree in performance; education
+p03_choreographer,landis_gyr_stiftung_143698b89c4d,1,claude,residencies incl dance
+p03_choreographer,matadero_madrid_eef852af4ca0,1,claude,prototyping lab open to performing arts
+p03_choreographer,sound_and_music_a3ba0b2e99d4,0,claude,orchestral composer workshop
+p03_choreographer,tanztendenz_1e8cc341875b,2,claude,rehearsal space for choreographers
+p04_documentary,art_film_vienna_386e28e6f1bb,1,claude,experimental moving image festival
+p04_documentary,arts_council_wales_32942d1388ee,1,claude,generic R&D arts grant
+p04_documentary,arts_council_wales_ed6fc62d20dc,1,claude,career development grant
+p04_documentary,bmwkms_austria_393dc7aeec66,0,claude,film preservation and curatorship
+p04_documentary,bozar_brussels_9914fd94cb78,2,claude,documentary film residency
+p04_documentary,cite_internationale_des_arts_0435714dd727,1,claude,art-science residency; generic
+p04_documentary,cite_internationale_des_arts_f26918d6e623,2,claude,feature film writing residency
+p04_documentary,cphdox_a52f6fed5773,2,claude,documentary festival forum and roughcut
+p04_documentary,ekkomed_greece_aa50bf51cf02,1,claude,completed feature support for producers
+p04_documentary,ekkomed_greece_d75f5106b4d6,2,claude,documentary co-production funding
+p04_documentary,ekkomed_greece_f91f8eaaa917,1,claude,short doc production fund
+p04_documentary,ekkomed_greece_fa19d266fc87,2,claude,feature documentary writing fund
+p04_documentary,emaf_33029fa306ba,1,claude,experimental film festival
+p04_documentary,filmfest_dresden_643782df2ea5,1,claude,short film festival submission
+p04_documentary,gjon_mili_ivaf_dde727dafb5e,2,claude,documentary and moving image residency
+p04_documentary,gjon_mili_ivaf_fc8f291e6949,1,claude,landscape residency; moving image
+p04_documentary,institut_francais_programs_7a219e87a754,1,claude,residency network incl film
+p04_documentary,kunst_dk_denmark_6dba7d4003de,0,claude,cross-art-form funding guidance
+p04_documentary,kunsten_be_flanders_17c494c11db3,1,claude,festival residency for emerging artists
+p04_documentary,kunsten_be_flanders_5de8a9a589b6,2,claude,film project development program
+p04_documentary,lux_moving_image_aa0a92230cf6,0,claude,curatorial mentorship
+p04_documentary,matadero_madrid_1085cd3b8fd6,0,claude,collaborators for design prototyping lab
+p04_documentary,milan_machinima_festival_e754c0c0c0e7,0,claude,machinima game-based works
+p04_documentary,stadt_salzburg_4a214ab37f5c,1,claude,residencies incl filmmakers
+p04_documentary,velferden_5187bf75bdb8,1,claude,self-directed generic residency
+p04_documentary,visions_du_reel_4dd017370d4d,2,claude,documentary festival and industry
+p04_documentary,vkkf_konkursu_grafiks_0da15a4f6612,0,claude,fiction film production only
+p04_documentary,vkkf_konkursu_grafiks_3fd42e9c3496,0,claude,fiction film production only
+p04_documentary,vkkf_konkursu_grafiks_6a7b335807ec,1,claude,film creative travel grant
+p04_documentary,vkkf_konkursu_grafiks_8e9fd4da793c,1,claude,film creative travel grant
+p04_documentary,vkkf_konkursu_grafiks_b4c10a0315a1,0,claude,school cultural content
+p05_poet,can_serrat_7af35b9c036f,2,claude,residency for writers
+p05_poet,cyprus_funding_programmes_culture_b33c4458f199,0,claude,publisher consortium projects
+p05_poet,deutscher_uebersetzerfonds_03397122e60c,2,claude,translator professional development stipend
+p05_poet,deutscher_uebersetzerfonds_2990e35c8f39,2,claude,translator mentoring stipend
+p05_poet,deutscher_uebersetzerfonds_50dea6a3aa11,2,claude,literary translator work grant
+p05_poet,deutscher_uebersetzerfonds_670aff2a9f35,2,claude,translator residency fellowship
+p05_poet,deutscher_uebersetzerfonds_87539605e50f,0,claude,university teaching role
+p05_poet,deutscher_uebersetzerfonds_c207b387a453,2,claude,literary translator fellowships
+p05_poet,deutscher_uebersetzerfonds_f752834300d4,2,claude,translator travel grant
+p05_poet,kulturdirektoratet_norway_c43308778cc6,0,claude,criticism and journals
+p05_poet,kunst_dk_denmark_028cc37c2d3b,0,claude,event organisers promoting Danish literature
+p05_poet,kunst_dk_denmark_6dba7d4003de,1,claude,generic cross-disciplinary arts funding
+p05_poet,landis_gyr_stiftung_143698b89c4d,2,claude,residencies for writers and literary translators
+p05_poet,literaturhaus_bremen_7c9d8cb7c944,2,claude,literary stipend and writing residency
+p05_poet,lithuanian_culture_institute_647e4cc91693,0,claude,Lithuanian literature translation; publisher oriented
+p05_poet,lithuanian_culture_institute_af5935902636,0,claude,Lithuanian literature translation; publisher oriented
+p05_poet,lithuanian_culture_institute_f9d92b46fc55,0,claude,Lithuanian literature translation; publisher oriented
+p05_poet,min_kulture_croatia_03f95761dc0d,0,claude,public needs call mainly for organisations
+p05_poet,min_kulture_croatia_5da9446c017e,0,claude,public needs call mainly for organisations
+p05_poet,min_kulture_croatia_638345cf7201,0,claude,Croatian works translation; publisher oriented
+p05_poet,rannis_iceland_8c97d0bb99e2,0,claude,publication aid for publishers
+p05_poet,rannis_iceland_af8426814170,1,claude,generic artist salary fund incl writers
+p05_poet,vkkf_konkursu_grafiks_56e2d65a8d2b,1,claude,generic lifetime stipend for cultural workers
+p05_poet,vkkf_konkursu_grafiks_6ea6d1e85304,1,claude,multidisciplinary creative stipend incl literature
+p05_poet,vkkf_konkursu_grafiks_6fba95b2791a,1,claude,multidisciplinary creative stipend incl literature
+p05_poet,vkkf_konkursu_grafiks_b4c10a0315a1,0,claude,educational school content programme
+p05_poet,vkkf_konkursu_grafiks_f851e4807427,0,claude,educational school content programme
+p06_composer,cite_internationale_des_arts_0435714dd727,1,claude,generic multidisciplinary residency
+p06_composer,epic_montreux_a67f17d2742a,2,claude,orchestral composition competition
+p06_composer,european_commission_f7a3135ed0fb,1,claude,generic artist mobility grant
+p06_composer,european_music_collective_9776e404b5b7,2,claude,call for composers; ensemble premiere
+p06_composer,konstepidemin_74501beabeca,1,claude,generic studio residency mainly visual
+p06_composer,kuenstlerhaus_lauenburg_ed5101d304e4,2,claude,fellowship includes composition
+p06_composer,kulturdirektoratet_norway_0829c1124ca4,0,claude,touring sustainability programme for organisations
+p06_composer,kulturdirektoratet_norway_70e4f7b40cc2,0,claude,research projects on immigrant culture
+p06_composer,kulturdirektoratet_norway_90b336625576,2,claude,funding to record new music
+p06_composer,kulturdirektoratet_norway_b56f43f62a98,0,claude,master student research stipend
+p06_composer,kulturdirektoratet_norway_d156e945d878,1,claude,general music project funding
+p06_composer,kulturdirektoratet_norway_e1b48f36972d,0,claude,touring grants for performing musicians
+p06_composer,kunst_dk_denmark_6dba7d4003de,1,claude,generic cross-disciplinary arts funding
+p06_composer,kunsten_be_flanders_6aad32a7d163,0,claude,advisory working group not artistic
+p06_composer,kunsten_be_flanders_7b3d4f68b4d8,0,claude,auditions for vocal performers
+p06_composer,nordic_culture_fund_a339ebc0734d,1,claude,generic Nordic collaboration funding
+p06_composer,sound_and_music_72da55ecf3d4,0,claude,choral singer position
+p06_composer,sound_and_music_970f866d3cf9,0,claude,freelance facilitator job
+p06_composer,sound_and_music_a3ba0b2e99d4,2,claude,orchestral composer workshop and premiere
+p06_composer,sound_and_music_d9a719300a30,2,claude,call for scores; performance and recording
+p06_composer,sound_and_music_fd730361c9a6,0,claude,conducting fellowship
+p06_composer,vkkf_konkursu_grafiks_159856d05471,0,claude,funding for NGO organisations
+p06_composer,vkkf_konkursu_grafiks_dc3fa13278fc,1,claude,music project competition; not composer specific
+p07_photographer,acc_galerie_weimar_1c586a1763b4,2,claude,residency on memory and realism; documentary fit
+p07_photographer,annecy_lac_photo_6b41500b4c0b,2,claude,photo series contest at festival
+p07_photographer,cite_internationale_des_arts_0435714dd727,1,claude,generic artist residency
+p07_photographer,cite_internationale_des_arts_faaa6d16811c,1,claude,generic visual artist travel residency
+p07_photographer,european_commission_f7a3135ed0fb,1,claude,generic artist mobility grant
+p07_photographer,fotofestiwal_acee70bdbbf2,2,claude,photo festival exhibition open call
+p07_photographer,hungry_eye_fair_b0a890c3cd70,2,claude,photography fair open call
+p07_photographer,kunsten_be_flanders_0c520b567ceb,0,claude,curatorial research grant
+p07_photographer,kunsten_be_flanders_1e4f87dbc5b9,0,claude,institutional exhibition partnerships
+p07_photographer,kunsten_be_flanders_5de8a9a589b6,0,claude,film project development
+p07_photographer,kunsten_be_flanders_f82e09282035,1,claude,generic visual art call; abstraction theme
+p07_photographer,kunststiftung_nrw_53b14ed530cc,1,claude,general visual arts project funding
+p07_photographer,kunststiftung_nrw_6cf7ab2533f9,1,claude,generic visual artist residency
+p07_photographer,kunststiftung_nrw_ea16b408c349,1,claude,generic visual art work grant
+p07_photographer,matadero_madrid_1085cd3b8fd6,0,claude,collaborator call for tech prototyping lab
+p07_photographer,matadero_madrid_25c8a4ecf086,0,claude,art science technology research residency
+p07_photographer,matadero_madrid_eef852af4ca0,0,claude,tech prototyping lab; off practice
+p07_photographer,mondriaan_fund_2f611a04d139,0,claude,art writing and podcasts
+p07_photographer,photoireland_a8d50aa6901e,2,claude,photography talent platform
+p07_photographer,rencontres_arles_c2c800a9cdc1,0,claude,curatorial research fellowship
+p07_photographer,saal_digital_766b7ec24895,2,claude,photography award
+p07_photographer,stadt_salzburg_4a214ab37f5c,1,claude,generic visual art residencies
+p08_ceramicist,acc_galerie_weimar_0f141ef27564,1,claude,generic themed studio programme
+p08_ceramicist,acc_galerie_weimar_1c586a1763b4,1,claude,generic visual art studio programme
+p08_ceramicist,arts_council_wales_ed6fc62d20dc,1,claude,generic artist career development grant
+p08_ceramicist,basque_biodesign_center_e877504efb2e,0,claude,biodesign and textile innovation
+p08_ceramicist,can_serrat_7af35b9c036f,1,claude,generic artist residency
+p08_ceramicist,cite_internationale_des_arts_0435714dd727,1,claude,generic artist residency
+p08_ceramicist,cite_internationale_des_arts_a0b1f92c1635,1,claude,generic artist residency
+p08_ceramicist,dgartes_portugal_65271b0a7854,0,claude,assessment committee experts
+p08_ceramicist,effea_02ae4fa4c2d2,0,claude,festival-led residency applications
+p08_ceramicist,essere_residency_b3a02db575c8,1,claude,generic multidisciplinary residency
+p08_ceramicist,focuna_luxembourg_757bade235de,2,claude,grant for ceramic project
+p08_ceramicist,fondation_francois_schneider_1c73efed7f64,1,claude,themed art prize incl sculpture
+p08_ceramicist,frame_finland_4badde1dedcc,1,claude,generic creator residency
+p08_ceramicist,gasworks_london_9ae290801255,1,claude,generic visual art residency
+p08_ceramicist,gasworks_london_d6efddb2674a,1,claude,generic visual art residency
+p08_ceramicist,konstepidemin_74501beabeca,1,claude,generic studio residency; no kilns
+p08_ceramicist,konstepidemin_df24847c1417,1,claude,generic studio space
+p08_ceramicist,kunst_dk_denmark_6dba7d4003de,1,claude,generic cross-disciplinary arts funding
+p08_ceramicist,kunsten_be_flanders_f82e09282035,1,claude,generic visual art call; abstraction theme
+p08_ceramicist,kunsthaus_am_wald_9996bdd83d8e,1,claude,generic multidisciplinary residency
+p08_ceramicist,kunstlerhaus_bethanien_47bd8d99d9f0,1,claude,generic studio programme
+p08_ceramicist,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,residency for visual and applied artists
+p08_ceramicist,kunstpunt_groningen_2118ebb6ed29,0,claude,performance MA degree
+p08_ceramicist,mamidakis_foundation_1b32d86b2622,0,claude,art science tech research week
+p08_ceramicist,mamidakis_foundation_d27a1b67ddde,1,claude,outdoor sculpture prize
+p08_ceramicist,matadero_madrid_25c8a4ecf086,0,claude,art science technology research residency
+p08_ceramicist,matadero_madrid_6673aa4af296,1,claude,artist-educator residency with schools
+p08_ceramicist,matadero_madrid_eef852af4ca0,0,claude,tech prototyping lab; off practice
+p08_ceramicist,mondriaan_fund_927ae2095ba6,1,claude,generic visual artist grant
+p08_ceramicist,norwegian_crafts_05470dd4cbeb,2,claude,large-scale craft residency and exhibition
+p08_ceramicist,norwegian_crafts_34054079ef3e,2,claude,craft workshops incl ceramics
+p08_ceramicist,norwegian_crafts_9363a83bff3a,1,claude,craft programme but glass
+p08_ceramicist,plas_bodfa_23b075fb372d,2,claude,archaeology commission for makers; craft fit
+p08_ceramicist,plas_bodfa_2e1484a7910b,1,claude,sculpture trail commission; geology theme
+p08_ceramicist,statens_vaerksteder_for_kunst_a543d1a88fd3,2,claude,workshop residency for craftspeople
+p09_theatre,arts_council_wales_21e3fea04b22,1,claude,generic arts project funding incl performing arts
+p09_theatre,arts_council_wales_32942d1388ee,1,claude,generic research and development arts funding
+p09_theatre,arts_council_wales_ed6fc62d20dc,1,claude,career development grant for individual artists
+p09_theatre,cite_internationale_des_arts_0435714dd727,0,claude,visual arts and research residency
+p09_theatre,dgartes_portugal_2e8ab0b42587,1,claude,generic arts funding portal
+p09_theatre,drac_centre_val_de_loire_e6e9650c49b1,1,claude,participatory arts in health settings; generic
+p09_theatre,effea_02ae4fa4c2d2,1,claude,festival residency for emerging artist; generic
+p09_theatre,focuna_luxembourg_d63b1cf9b11d,2,claude,theatrical writing and staging grant
+p09_theatre,kulturdirektoratet_norway_7e3a53a40e56,0,claude,building and infrastructure funding
+p09_theatre,kulturdirektoratet_norway_9dd695593dd2,2,claude,performing arts development grant for concepts
+p09_theatre,kulturdirektoratet_norway_b612a31f3a67,0,claude,dance productions not theatre
+p09_theatre,kulturdirektoratet_norway_c2fe46c33b4d,2,claude,theatre production and presentation grant
+p09_theatre,kulturdirektoratet_norway_e1fd7e9e35ce,0,claude,field competence development; publications and conferences
+p09_theatre,kunst_dk_denmark_6dba7d4003de,1,claude,cross-genre art project funding; generic
+p09_theatre,kunst_dk_denmark_823c0bbbc582,2,claude,performing arts touring and international activity
+p09_theatre,kunsten_be_flanders_8f8f6267956f,2,claude,theatre director co-creation workshop at festival
+p09_theatre,kunsten_be_flanders_ca6c04cf8273,2,claude,socially engaged theatre director workshop at festival
+p09_theatre,kunsten_be_flanders_fcf58267129d,1,claude,tech dramaturgy support; tangential to theatre
+p09_theatre,landis_gyr_stiftung_143698b89c4d,1,claude,multi-discipline residencies incl theatre; generic
+p09_theatre,matadero_madrid_eef852af4ca0,1,claude,experimental prototyping lab open to performing arts
+p09_theatre,nordic_culture_fund_a339ebc0734d,1,claude,multidisciplinary collaboration fund; generic
+p09_theatre,royal_court_theatre_344bc55515e5,2,claude,open play submissions for new writing theatre
+p09_theatre,vkkf_konkursu_grafiks_159856d05471,0,claude,for NGO cultural organisations
+p09_theatre,vkkf_konkursu_grafiks_7307b83bb09a,1,claude,musical theatre genre; adjacent
+p09_theatre,vkkf_konkursu_grafiks_b4c10a0315a1,1,claude,cultural content for schools; theatre possible
+p10_digital,acc_galerie_weimar_0f141ef27564,1,claude,themed multidisciplinary studio program
+p10_digital,alpaca_69c3f57186d4,1,claude,algorithmic patterns festival; mostly live coding music
+p10_digital,art_film_vienna_386e28e6f1bb,1,claude,experimental moving image festival; interactive allowed
+p10_digital,arts_council_wales_21e3fea04b22,1,claude,generic arts project funding
+p10_digital,bba_prizes_cdc4b4399e6a,1,claude,generic all-media art prize
+p10_digital,bozar_brussels_aca4ad6b2d5b,2,claude,media arts residency with fablab
+p10_digital,cite_internationale_des_arts_0435714dd727,2,claude,residency on new technologies and art-science
+p10_digital,dgartes_portugal_2e8ab0b42587,1,claude,generic arts funding portal
+p10_digital,effea_02ae4fa4c2d2,1,claude,festival residency for emerging artist; generic
+p10_digital,emaf_33029fa306ba,2,claude,media art festival with interactive installation section
+p10_digital,emap_emare_6cdc5b4c1e5a,2,claude,digital media robotic art production residency
+p10_digital,gjon_mili_ivaf_dde727dafb5e,1,claude,video art residency; adjacent moving image
+p10_digital,iuno_htw_berlin_3879acbeb84b,2,claude,AI and XR artistic fellowship
+p10_digital,kunst_dk_denmark_6dba7d4003de,1,claude,cross-genre art project funding; generic
+p10_digital,kunsten_be_flanders_2fa2a89c4a72,2,claude,performative AI summer school for artists
+p10_digital,kunsten_be_flanders_fcf58267129d,2,claude,support for artists using technology
+p10_digital,kunsthaus_am_wald_9996bdd83d8e,1,claude,generic multidisciplinary residency
+p10_digital,lux_moving_image_6f82a70c5ebe,0,claude,conference papers call
+p10_digital,mamidakis_foundation_1b32d86b2622,1,claude,interdisciplinary research residency week
+p10_digital,matadero_madrid_1085cd3b8fd6,1,claude,collaborator role on others projects
+p10_digital,matadero_madrid_25c8a4ecf086,2,claude,art-science-technology research residency at medialab
+p10_digital,matadero_madrid_3e1e38124dce,2,claude,experimental tech prototyping lab at medialab
+p10_digital,matadero_madrid_cd982f2fa6f8,2,claude,art-technology situated research residency
+p10_digital,milan_machinima_festival_e754c0c0c0e7,1,claude,machinima festival; game-based film
+p10_digital,mondriaan_fund_2f611a04d139,0,claude,grant for art writing and podcasts
+p10_digital,stadt_salzburg_4a214ab37f5c,2,claude,residencies abroad for media artists
+p10_digital,tu_dresden_schauflerlab_4e618beb0c40,2,claude,art and science residency with researchers
+p11_painter,acc_galerie_weimar_0f141ef27564,1,claude,themed multidisciplinary studio program
+p11_painter,bba_prizes_cdc4b4399e6a,1,claude,generic all-media art prize
+p11_painter,cite_internationale_des_arts_0435714dd727,1,claude,residency focused on technology and social issues
+p11_painter,john_ruskin_prize_273eb434ee2b,1,claude,2D/3D themed multidisciplinary prize
+p11_painter,konstepidemin_0e20784714d5,1,claude,studio space for range of art fields
+p11_painter,konstepidemin_74501beabeca,2,claude,guest studio residency for visual artists
+p11_painter,konstepidemin_df24847c1417,1,claude,studio space at multidisciplinary art centre
+p11_painter,kunst_dk_denmark_6dba7d4003de,0,claude,for projects combining different art forms
+p11_painter,kunsten_be_flanders_f82e09282035,1,claude,themed abstraction virtual exhibition; not figurative
+p11_painter,kunsthaus_am_wald_9996bdd83d8e,1,claude,residency mainly music and literature
+p11_painter,kunstlerhaus_bethanien_47bd8d99d9f0,2,claude,international studio programme for artists
+p11_painter,kunstlerhaus_bethanien_ad1d16a215d9,2,claude,visual artist studio residency in Berlin
+p11_painter,kunststiftung_nrw_6cf7ab2533f9,2,claude,live/work studio residency for visual artists
+p11_painter,kunststiftung_nrw_9fcfea3c0364,2,claude,visual arts residency for young artists
+p11_painter,kunststiftung_nrw_ea16b408c349,2,claude,work grants for individual visual artists
+p11_painter,mall_galleries_d7f9d1e80073,2,claude,painting exhibition with prizes
+p11_painter,matjoe_a520a2446e81,2,claude,exhibition opportunity for visual artists
+p11_painter,mondriaan_fund_927ae2095ba6,2,claude,visual artist grant for new work
+p11_painter,mondriaan_fund_a939eddff305,2,claude,visual artist project grant for new work
+p11_painter,mondriaan_fund_bccb4029c0d9,2,claude,early career visual artist grant
+p11_painter,rannis_iceland_af8426814170,1,claude,general artist salary fund
+p11_painter,rijksakademie_93a7ff63beba,2,claude,visual arts studio residency
+p11_painter,statens_vaerksteder_for_kunst_a543d1a88fd3,1,claude,large-format workshop residency; material and craft
+p12_public_art,arts_council_wales_ed6fc62d20dc,1,claude,career development grant for individual artists
+p12_public_art,bba_prizes_cdc4b4399e6a,1,claude,generic all-media art prize
+p12_public_art,bmwkms_austria_9877daa33711,0,claude,architecture project funding
+p12_public_art,cite_internationale_des_arts_faaa6d16811c,1,claude,travel and residency grants for visual artists
+p12_public_art,dgartes_portugal_2e8ab0b42587,1,claude,generic arts funding portal
+p12_public_art,european_commission_f7a3135ed0fb,1,claude,generic mobility grant for artists
+p12_public_art,frame_finland_4badde1dedcc,1,claude,generic international creator residency
+p12_public_art,konstepidemin_df24847c1417,1,claude,studio space at art centre
+p12_public_art,kulturdirektoratet_norway_7e3a53a40e56,0,claude,building and infrastructure funding
+p12_public_art,kulturdirektoratet_norway_90a7593f042e,0,claude,grant for exhibition venues
+p12_public_art,kunst_dk_denmark_6dba7d4003de,0,claude,for projects combining different art forms
+p12_public_art,kunsten_be_flanders_4128c16d51fa,1,claude,themed exhibition on circular systems
+p12_public_art,kunstpunt_groningen_329de4764bea,2,claude,site-specific public artwork commission
+p12_public_art,kunststiftung_nrw_53b14ed530cc,1,claude,general visual arts project funding
+p12_public_art,lendhauer_97cd95ca1123,2,claude,public space art project call
+p12_public_art,mamidakis_foundation_d27a1b67ddde,2,claude,permanent outdoor sculpture commission prize
+p12_public_art,matadero_madrid_eef852af4ca0,1,claude,experimental prototyping lab; tech focus
+p12_public_art,matjoe_a520a2446e81,1,claude,gallery exhibition call; not outdoor
+p12_public_art,mondriaan_fund_3afe43141b61,0,claude,grant applied for by commissioners not artists
+p12_public_art,mondriaan_fund_a939eddff305,1,claude,generic visual artist project grant
+p12_public_art,muenchen_kulturreferat_54d5c5c8cd20,2,claude,temporary public space art competition
+p12_public_art,plas_bodfa_1e959ec58e0a,2,claude,river ecology commission for sculpture trail
+p12_public_art,plas_bodfa_23b075fb372d,2,claude,archaeology landscape commission for sculpture trail
+p12_public_art,plas_bodfa_2e1484a7910b,2,claude,landscape commission for sculpture trail
+p12_public_art,plas_bodfa_86e8391308e9,2,claude,ecology commission for sculpture trail
+p12_public_art,plas_bodfa_90db5f1b238d,2,claude,outdoor sculpture trail open call
+p13_performance,acc_galerie_weimar_0f141ef27564,1,claude,themed multidisciplinary studio program
+p13_performance,cite_internationale_des_arts_0435714dd727,1,claude,contemporary issues residency; generic
+p13_performance,danceua_1bf3427d3229,1,claude,dance residency; adjacent to body-based performance
+p13_performance,danceua_e1da74f0889c,1,claude,dance residency for solo/duet work; adjacent
+p13_performance,drac_centre_val_de_loire_e6e9650c49b1,1,claude,participatory art in care settings; institution-led
+p13_performance,effea_02ae4fa4c2d2,1,claude,festival residency for emerging artists all disciplines
+p13_performance,emaf_33029fa306ba,1,claude,film/installation/expanded festival; fits video and installation
+p13_performance,essere_residency_b3a02db575c8,1,claude,multidisciplinary residency naming performance art; generic
+p13_performance,frame_finland_4badde1dedcc,1,claude,multidisciplinary creator residency
+p13_performance,institut_francais_programs_7a219e87a754,1,claude,French network residencies across disciplines; generic
+p13_performance,kulturdirektoratet_norway_b612a31f3a67,1,claude,dance production grant; adjacent
+p13_performance,kulturdirektoratet_norway_c2fe46c33b4d,1,claude,theatre production grant; adjacent
+p13_performance,kunst_dk_denmark_6dba7d4003de,2,claude,interdisciplinary project grant; fits hybrid live practice
+p13_performance,kunst_dk_denmark_823c0bbbc582,2,claude,performing arts grant incl. site-specific and residencies
+p13_performance,kunsten_be_flanders_4d016b2d08b2,2,claude,call for performances and happenings at event
+p13_performance,kunsten_be_flanders_f82e09282035,0,claude,abstract visual art virtual exhibition
+p13_performance,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency; generic
+p13_performance,kunstlerhaus_bethanien_47bd8d99d9f0,1,claude,visual arts studio residency; generic
+p13_performance,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,visual and applied arts residency; generic
+p13_performance,kunstpunt_groningen_2118ebb6ed29,1,claude,performance MA degree; fits practice but not an open call
+p13_performance,kunststiftung_nrw_6cf7ab2533f9,1,claude,visual arts residency stipend; generic
+p13_performance,landis_gyr_stiftung_143698b89c4d,1,claude,multidisciplinary residencies incl. dance and theatre
+p13_performance,matadero_madrid_25c8a4ecf086,1,claude,art-tech research residency; generic
+p13_performance,matadero_madrid_eef852af4ca0,1,claude,experimental prototyping lab; performance welcome
+p13_performance,statens_vaerksteder_for_kunst_a543d1a88fd3,0,claude,large-format material workshops; not live art
+p14_illustrator,arts_council_wales_21e3fea04b22,1,claude,arts creation and engagement grant; generic
+p14_illustrator,arts_council_wales_ed6fc62d20dc,1,claude,career development grant for individuals
+p14_illustrator,bba_prizes_cdc4b4399e6a,1,claude,open art prize all mediums
+p14_illustrator,can_serrat_7af35b9c036f,1,claude,residency for writers and artists
+p14_illustrator,cite_internationale_des_arts_0435714dd727,1,claude,contemporary issues residency; generic
+p14_illustrator,cite_internationale_des_arts_faaa6d16811c,1,claude,visual artist travel/residency grant; generic
+p14_illustrator,dgartes_portugal_2e8ab0b42587,1,claude,national arts funding portal; generic
+p14_illustrator,konstepidemin_74501beabeca,1,claude,artist guest studio with graphics workshop
+p14_illustrator,konstepidemin_df24847c1417,1,claude,artist studio at art centre; generic
+p14_illustrator,kulturdirektoratet_norway_243ed398f83b,0,claude,publications about contemporary art; criticism focus
+p14_illustrator,kulturdirektoratet_norway_7e3a53a40e56,0,claude,building and infrastructure funding
+p14_illustrator,kulturdirektoratet_norway_90a7593f042e,0,claude,grant for exhibition venues
+p14_illustrator,kunst_dk_denmark_6dba7d4003de,1,claude,cross-art-form funding; generic
+p14_illustrator,kunsten_be_flanders_77d04e963291,1,claude,visual arts group show of image/text works
+p14_illustrator,kunsten_be_flanders_f82e09282035,0,claude,abstract art virtual exhibition; not illustration
+p14_illustrator,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,visual and applied arts residency; generic
+p14_illustrator,kunststiftung_nrw_53b14ed530cc,1,claude,visual arts projects incl. publications; generic
+p14_illustrator,kunststiftung_nrw_ea16b408c349,1,claude,visual arts work grant; generic
+p14_illustrator,mondriaan_fund_2f611a04d139,0,claude,art criticism media and podcasts
+p14_illustrator,mondriaan_fund_6d9761361246,1,claude,presentation abroad grant; generic visual arts
+p14_illustrator,mondriaan_fund_927ae2095ba6,1,claude,visual artist practice grant; generic
+p14_illustrator,mondriaan_fund_a939eddff305,1,claude,visual artist project grant; generic
+p14_illustrator,mondriaan_fund_bccb4029c0d9,1,claude,early-career visual artist grant; generic
+p14_illustrator,norwegian_crafts_ec6807d7b33a,0,claude,galleries and publishers at art fairs
+p14_illustrator,rannis_iceland_8c97d0bb99e2,0,claude,subsidy for publishers; not individual artists
+p14_illustrator,rannis_iceland_af8426814170,1,claude,artist salary fund; generic
+p14_illustrator,silent_book_contest_c5a828b72619,2,claude,wordless picture book contest with publication
+p14_illustrator,statens_vaerksteder_for_kunst_a543d1a88fd3,1,claude,workshop residency for material projects; generic
+p15_architecture,ars_liturgica_17bd4df880eb,2,claude,spatial design competition for church interior
+p15_architecture,arts_council_wales_32942d1388ee,1,claude,R&D creation grant; generic
+p15_architecture,basque_biodesign_center_e877504efb2e,2,claude,biodesign material residency with local waste
+p15_architecture,bmwkms_austria_9877daa33711,2,claude,individual architecture project grant
+p15_architecture,cite_internationale_des_arts_0435714dd727,1,claude,contemporary issues residency incl. environment
+p15_architecture,european_commission_f7a3135ed0fb,1,claude,mobility grant for artists incl. architecture
+p15_architecture,frame_finland_4badde1dedcc,1,claude,creator residency incl. architecture
+p15_architecture,konstepidemin_74501beabeca,1,claude,artist guest studio; generic
+p15_architecture,kulturdirektoratet_norway_7e3a53a40e56,0,claude,building infrastructure funding for arenas
+p15_architecture,kunst_dk_denmark_64e7cbaea368,1,claude,craft and design project grant; object-design focus
+p15_architecture,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency; site-specific welcome
+p15_architecture,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,visual and applied arts residency; generic
+p15_architecture,lendhauer_97cd95ca1123,2,claude,public space urban ecology projects
+p15_architecture,matadero_madrid_1085cd3b8fd6,1,claude,collaborator call for prototyping lab
+p15_architecture,matadero_madrid_25c8a4ecf086,2,claude,art-design-society research residency
+p15_architecture,matadero_madrid_cd982f2fa6f8,2,claude,situated research projects open to design/architecture
+p15_architecture,matadero_madrid_eef852af4ca0,1,claude,experimental prototyping lab residency
+p15_architecture,riba_3f662c6064f1,2,claude,architecture exhibition open call incl. housing
+p15_architecture,swiss_embassy_denmark_cd9344857d4b,1,claude,furniture/interior design showcase; partial fit
+p15_architecture,vkkf_konkursu_grafiks_1ada5719af7f,0,claude,funding for educational institutions equipment
+p16_textile,arts_council_wales_ed6fc62d20dc,1,claude,career development grant; generic
+p16_textile,basque_biodesign_center_e877504efb2e,2,claude,textile and biofashion residency with waste materials
+p16_textile,bien_kranj_af6c9b9ff7f1,2,claude,textile art biennial open call
+p16_textile,cite_internationale_des_arts_0435714dd727,1,claude,contemporary issues residency; generic
+p16_textile,dgartes_portugal_2e8ab0b42587,1,claude,national arts funding portal; generic
+p16_textile,effea_02ae4fa4c2d2,1,claude,festival residency all disciplines; generic
+p16_textile,european_commission_f7a3135ed0fb,1,claude,mobility grant for artists; generic
+p16_textile,fondation_francois_schneider_1c73efed7f64,1,claude,water-themed art competition incl. craft
+p16_textile,konstepidemin_74501beabeca,1,claude,artist guest studio; generic
+p16_textile,kulturdirektoratet_norway_70e4f7b40cc2,0,claude,research projects on immigrant cultural history
+p16_textile,kunst_dk_denmark_64e7cbaea368,2,claude,craft and design project grant
+p16_textile,kunst_dk_denmark_6dba7d4003de,1,claude,cross-art-form funding; generic
+p16_textile,kunsten_be_flanders_f82e09282035,1,claude,abstract art virtual exhibition; generic
+p16_textile,kunsthaus_am_wald_9996bdd83d8e,1,claude,multidisciplinary residency; generic
+p16_textile,kunstlerhaus_bethanien_ad1d16a215d9,1,claude,visual and applied arts residency incl. craft
+p16_textile,kunststiftung_nrw_53b14ed530cc,1,claude,visual arts projects grant; generic
+p16_textile,kunststiftung_nrw_72dbd2a3195b,1,claude,visual artist residency fellowship; generic
+p16_textile,matadero_madrid_25c8a4ecf086,1,claude,art-tech research residency; generic
+p16_textile,matadero_madrid_eef852af4ca0,1,claude,experimental prototyping lab; generic
+p16_textile,matjoe_a520a2446e81,1,claude,exhibition open call for visual artists
+p16_textile,mondriaan_fund_927ae2095ba6,1,claude,visual artist practice grant; generic
+p16_textile,mondriaan_fund_a939eddff305,1,claude,visual artist project grant; generic
+p16_textile,mondriaan_fund_bccb4029c0d9,1,claude,early-career visual artist grant; generic
+p16_textile,norwegian_crafts_34054079ef3e,2,claude,craft workshops incl. textiles for craft artists
+p16_textile,norwegian_crafts_ec6cbcf93e7d,2,claude,international craft exhibition support for craft artists
+p16_textile,sound_and_music_7c7eeaa75306,1,claude,no-strings artist grant; generic
+p16_textile,statens_vaerksteder_for_kunst_a543d1a88fd3,2,claude,workshop residency for craftspeople and material research

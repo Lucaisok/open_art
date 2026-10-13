@@ -1,0 +1,82 @@
+[
+  {
+    "id": "p01_sound_water",
+    "statement": "I am a sound artist working with field recordings, hydrophones and multichannel installation. My recent works listen to rivers, estuaries and harbours: I record underwater soundscapes and turn them into spatial sound pieces for public space and galleries. I collaborate with ecologists and hydrologists, and my work deals with water, climate and the more-than-human.\n\nI am looking for residencies near water, commissions for public space, and grants for research-based sound projects that connect art and ecology.",
+    "profile": {"birth_date": "1988-05-02", "nationalities": ["PT"], "residence_country": "PT", "disciplines": ["Music", "Digital/New Media Arts"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p02_printmaker",
+    "statement": "My practice is printmaking: etching, aquatint and monotype, often in large formats. I work from archives, old maps and photographs of coastlines, and my series deal with memory, erosion and landscapes that are disappearing. Paper, ink and the press are at the centre of my process.\n\nI am looking for studio residencies with access to an etching press and print workshop, exhibition opportunities for works on paper, and travel grants for visual artists.",
+    "profile": {"birth_date": "1991-11-20", "nationalities": ["HU"], "residence_country": "AT", "disciplines": ["Visual Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p03_choreographer",
+    "statement": "I am a choreographer and dancer making contemporary dance pieces for stage and site-specific settings. My work explores the body in public space, touch, and collective movement, often with non-professional performers and communities. I develop pieces through long rehearsal periods and improvisation.\n\nI am looking for dance residencies with studio space, production support for new choreographic work, and festivals or programmes that present contemporary dance and performance.",
+    "profile": {"birth_date": "1993-02-14", "nationalities": ["BE"], "residence_country": "BE", "disciplines": ["Dance", "Performing Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p04_documentary",
+    "statement": "I am a documentary filmmaker. I make creative documentaries and essay films about migration, labour and borders in Europe, shot over long periods with the people they portray. I direct, shoot and edit my own films, which are shown at film festivals and in cinemas.\n\nI am looking for development and production funding for documentary film, film labs and pitching forums, and residencies for filmmakers to write and edit my next feature documentary.",
+    "profile": {"birth_date": "1985-08-30", "nationalities": ["DE"], "residence_country": "DE", "disciplines": ["Film/Video"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p05_poet",
+    "statement": "I am a poet and translator. I write poetry and short prose, and translate contemporary poetry between Latvian and English. My books deal with language, family history and the Baltic landscape. I also perform my poems at readings and literary festivals.\n\nI am looking for writing residencies, literary grants and translation grants, and opportunities to publish and present my work at literature festivals.",
+    "profile": {"birth_date": "1979-04-09", "nationalities": ["LV"], "residence_country": "LV", "disciplines": ["Literature/Writing"], "career_stage": "Established/Professional", "applicant_type": "individual"}
+  },
+  {
+    "id": "p06_composer",
+    "statement": "I am a composer of contemporary classical music. I write chamber music, works for ensemble and orchestra, and pieces for voice. My music works with microtonality and with folk material from Northern Norway. I collaborate with ensembles and performers on new commissions.\n\nI am looking for commissions for new compositions, composer residencies, workshops with ensembles and orchestras, and funding to compose and record new work.",
+    "profile": {"birth_date": "1990-12-03", "nationalities": ["NO"], "residence_country": "NO", "disciplines": ["Music"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p07_photographer",
+    "statement": "I am a photographer working in a documentary and conceptual mode. My long-term photo projects follow rural communities and post-industrial towns in Southern Europe. I work with medium-format film and also make photobooks and exhibitions.\n\nI am looking for photography prizes and awards, open calls for photo festivals and exhibitions, photobook grants, and residencies where I can develop a new photographic series.",
+    "profile": {"birth_date": "1995-06-18", "nationalities": ["IT"], "residence_country": "IT", "disciplines": ["Photography", "Visual Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p08_ceramicist",
+    "statement": "I am a ceramic artist. I make sculptural ceramics and installations in clay, porcelain and stoneware, fired in wood and gas kilns. My work is about craft knowledge, the hand and the slow time of making, and draws on traditional pottery techniques.\n\nI am looking for residencies with a ceramics studio and kilns, craft and applied arts grants, and exhibition opportunities for contemporary craft and sculpture.",
+    "profile": {"birth_date": "1987-09-25", "nationalities": ["DK"], "residence_country": "DK", "disciplines": ["Craft", "Visual Arts"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p09_theatre",
+    "statement": "I am a theatre director and playwright. I make text-based and devised theatre with an independent company, often on political and social topics such as housing and work. Our productions tour small venues and festivals.\n\nI am looking for funding for theatre productions, residencies for theatre makers to develop new plays, playwriting competitions and festivals that programme independent theatre.",
+    "profile": {"birth_date": "1983-01-11", "nationalities": ["GB"], "residence_country": "GB", "disciplines": ["Theatre", "Performing Arts"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p10_digital",
+    "statement": "I am a new media artist working with code, AI, generative systems and interactive installation. My works question surveillance, data and algorithms, and are shown at media art festivals. I build custom software and use sensors, projection and machine learning.\n\nI am looking for media art and art-and-technology residencies, labs with technical support, grants for digital art and opportunities to show interactive and digital work.",
+    "profile": {"birth_date": "1992-07-07", "nationalities": ["NL"], "residence_country": "NL", "disciplines": ["Digital/New Media Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p11_painter",
+    "statement": "I am a painter. I paint large figurative oil paintings about domestic life, intimacy and the body, and smaller works on paper. Colour and the history of painting are central to my practice, and I work slowly in the studio.\n\nI am looking for studio residencies for painters, painting prizes, exhibition opportunities in galleries and project spaces, and grants for visual artists to produce new work.",
+    "profile": {"birth_date": "1998-03-29", "nationalities": ["ES"], "residence_country": "ES", "disciplines": ["Visual Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p12_public_art",
+    "statement": "I am a sculptor making public art and site-specific installations in steel, wood and found materials. My projects are developed with local communities and deal with urban space, landscape and shared history. I have realised permanent and temporary works in parks, squares and along rivers.\n\nI am looking for public art commissions, site-specific open calls, sculpture parks and land art projects, and production grants for large-scale outdoor work.",
+    "profile": {"birth_date": "1976-10-15", "nationalities": ["AT"], "residence_country": "AT", "disciplines": ["Visual Arts"], "career_stage": "Established/Professional", "applicant_type": "individual"}
+  },
+  {
+    "id": "p13_performance",
+    "statement": "I am a performance artist. My live works use the body, endurance and ritual, and often involve the audience. I work across performance art, video and installation, and my themes are gender, queerness and care.\n\nI am looking for residencies for performance and live art, open calls for performance festivals, and grants for interdisciplinary and experimental projects.",
+    "profile": {"birth_date": "1994-12-01", "nationalities": ["HR"], "residence_country": "HR", "disciplines": ["Performing Arts", "Visual Arts"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p14_illustrator",
+    "statement": "I am an illustrator and comics artist. I make graphic novels, picture books and editorial illustration, drawing by hand and digitally. My stories are about childhood, migration and everyday life.\n\nI am looking for comics and illustration residencies, grants for graphic novels and picture books, illustration competitions, and publishing opportunities.",
+    "profile": {"birth_date": "1989-04-22", "nationalities": ["FR"], "residence_country": "FR", "disciplines": ["Visual Arts", "Literature/Writing"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p15_architecture",
+    "statement": "I am an architect and designer working at the edge of art and architecture. I make spatial installations, temporary pavilions and research on sustainable materials such as timber, earth and reuse. My projects deal with housing, ecology and the commons.\n\nI am looking for design and architecture competitions, grants for spatial and design research, and residencies for architects and designers.",
+    "profile": {"birth_date": "1990-02-02", "nationalities": ["SE"], "residence_country": "SE", "disciplines": ["Design/Architecture"], "career_stage": "Emerging/Early-Career", "applicant_type": "individual"}
+  },
+  {
+    "id": "p16_textile",
+    "statement": "I am a textile artist. I weave, knit and dye with natural pigments, and make large textile installations and wall hangings. My work connects textile craft traditions, women's labour and ecology, and I often run participatory workshops.\n\nI am looking for textile and craft residencies, grants for artists working with traditional techniques, and exhibitions of contemporary textile art.",
+    "profile": {"birth_date": "1984-08-08", "nationalities": ["GR"], "residence_country": "GR", "disciplines": ["Craft", "Visual Arts"], "career_stage": "Mid-Career", "applicant_type": "individual"}
+  }
+]

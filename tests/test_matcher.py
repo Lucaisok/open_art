@@ -7,10 +7,11 @@ from importlib.metadata import version
 import numpy as np
 import pytest
 
-from src.eligibility.engine import Verdict
+from src.eligibility.engine import Item, Verdict
+from src.eligibility.profile import ArtistProfile
 from src.matching.filters import MatchFilters
 from src.matching.index import OpportunityIndex, opportunity_text, text_hash
-from src.matching.matcher import Matcher
+from src.matching.matcher import Matcher, discipline_mismatch
 from src.models.processed_opportunity import ProcessedOpportunity
 
 TODAY = date(2026, 10, 5)
@@ -55,18 +56,68 @@ def test_most_similar_first():
     assert results[0].score == pytest.approx(1.0)
 
 
-def test_eligible_first_not_eligible_last_but_not_hidden():
+def test_eligible_is_not_ranked_first_but_not_eligible_goes_last():
     results = matcher(CALLS, VECTORS, {"close": "LIKELY_NOT_ELIGIBLE", "far": "ELIGIBLE"}).search("x", today=TODAY)
-    # three tiers: ELIGIBLE, CHECK, LIKELY_NOT_ELIGIBLE, whatever the similarity
-    assert [m.opportunity_id for m in results] == ["far", "middle", "close"]
-    assert results[-1].verdict.status == "LIKELY_NOT_ELIGIBLE"
+    # ELIGIBLE and CHECK share the "fit" group (similarity decides); not eligible last, never hidden
+    assert [m.opportunity_id for m in results] == ["middle", "far", "close"]
+    assert [m.group for m in results] == ["fit", "fit", "not_eligible"]
 
 
-def test_by_deadline_also_puts_eligible_first():
+def test_by_deadline_does_not_put_eligible_first():
     calls = [opp("soon", deadline_date=date(2026, 10, 20)), opp("later", deadline_date=date(2026, 12, 1)),
              opp("none")]
-    m = matcher(calls, [[1, 0], [1, 1], [0, 1]], {"later": "ELIGIBLE", "soon": "LIKELY_NOT_ELIGIBLE"})
-    assert [r.opportunity_id for r in m.by_deadline(today=TODAY)] == ["later", "none", "soon"]
+    m = matcher(calls, [[1, 0], [1, 1], [0, 1]], {"later": "ELIGIBLE"})
+    assert [r.opportunity_id for r in m.by_deadline(today=TODAY)] == ["soon", "later", "none"]
+
+
+def mismatch_item() -> Item:
+    return Item(chunk_id="c", chunk_index=0, text="Open to composers.", label="DISCIPLINE", confidence=0.9,
+                polarity="REQUIRES", outcome="CHECK", reason="asks for composers", check_kind="discipline_mismatch")
+
+
+class ItemsEngine(FakeEngine):
+    """FakeEngine whose verdicts also carry the given items, per call."""
+    def __init__(self, statuses, items):
+        super().__init__(statuses)
+        self.items = items
+
+    def evaluate(self, profile, opportunity, today=None):
+        verdict = super().evaluate(profile, opportunity, today)
+        return verdict.model_copy(update={"items": self.items.get(opportunity.id, [])})
+
+
+def test_calls_for_other_disciplines_go_between_fit_and_not_eligible():
+    calls = [opp("music", discipline_canonical=["Music"]), opp("rules", discipline_canonical=["Visual Arts"]),
+             opp("blocked"), opp("mine", discipline_canonical=["Visual Arts"]), opp("any", discipline_canonical=["Multidisciplinary"]),
+             opp("unknown")]
+    m = matcher(calls, [[1, 0], [1, 0.1], [1, 0.2], [0.1, 1], [0.1, 1.1], [0.1, 1.2]], {"blocked": "LIKELY_NOT_ELIGIBLE"})
+    m.engine = ItemsEngine({"blocked": "LIKELY_NOT_ELIGIBLE"}, {"rules": [mismatch_item()]})
+    painter = ArtistProfile(disciplines=["Visual Arts"])
+    results = m.search("x", profile=painter, today=TODAY)
+    # "music": no shared discipline; "rules": its own rules name another discipline. Multidisciplinary
+    # and unknown disciplines fit. Similarity orders each group
+    assert [(r.opportunity_id, r.group) for r in results] == [
+        ("mine", "fit"), ("any", "fit"), ("unknown", "fit"),
+        ("music", "other_discipline"), ("rules", "other_discipline"), ("blocked", "not_eligible")]
+    # without disciplines in the profile there is nothing to compare: every call fits
+    assert {r.group for r in m.search("x", today=TODAY)} == {"fit", "not_eligible"}
+
+
+def test_discipline_mismatch_in_an_or_group_that_passes_is_not_a_mismatch():
+    item = mismatch_item().model_copy(update={"group": 1, "group_outcome": "PASS"})
+    verdict = Verdict(opportunity_id="a", title="a", source_url="u", status="CHECK", summary="", items=[item])
+    assert not discipline_mismatch(opp("a"), verdict, ArtistProfile(disciplines=["Visual Arts"]))
+
+
+def test_evidence_is_the_description_sentence_closest_to_the_query():
+    m = matcher([opp("a"), opp("b")], [[1, 0], [0, 1]])
+    m.index.sentence_owner = np.array([0, 0, 1], dtype=np.int32)
+    m.index.sentence_texts = ["about printing", "about sound and water", "about dance"]
+    m.index.sentence_vectors = np.array([[0, 1], [1, 0], [1, 0]], dtype=np.float32)
+    m = Matcher(opportunities=m.opportunities, index=m.index, engine=m.engine, embedder=m.embedder)
+    text, vector = m.evidence("a", np.array([1.0, 0.0]))
+    assert text == "about sound and water" and list(vector) == [1, 0]
+    assert matcher([opp("c")], [[1, 0]]).evidence("c", np.array([1.0, 0.0])) is None   # no sentences
 
 
 def test_filters_run_before_ranking_and_k_limits():

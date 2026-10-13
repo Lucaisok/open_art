@@ -13,6 +13,7 @@ export type DiscoverState = {
     country: string;       // "" = any country
     fundedOnly: boolean;
     noFee: boolean;
+    eligibleOnly: boolean; // only calls whose verdict is "Eligible"
     panelOpen: boolean;    // the filters panel
 };
 
@@ -42,6 +43,7 @@ export const parseState = (params: ParamRecord): DiscoverState => ({
     country: one(params.country),
     fundedOnly: one(params.funded) === "1",
     noFee: one(params.nofee) === "1",
+    eligibleOnly: one(params.eligible) === "1",
     panelOpen: one(params.panel) === "1",
 });
 
@@ -53,6 +55,7 @@ export const toQueryString = (state: DiscoverState): string => {
     if (state.country) params.set("country", state.country);
     if (state.fundedOnly) params.set("funded", "1");
     if (state.noFee) params.set("nofee", "1");
+    if (state.eligibleOnly) params.set("eligible", "1");
     if (state.panelOpen) params.set("panel", "1");
     return params.toString();
 };
@@ -67,6 +70,7 @@ export const startMode = (mode: Mode, current: DiscoverState, profileDisciplines
     country: "",
     fundedOnly: false,
     noFee: false,
+    eligibleOnly: false,
 });
 
 export const clearFilters = (state: DiscoverState): DiscoverState => ({
@@ -76,10 +80,12 @@ export const clearFilters = (state: DiscoverState): DiscoverState => ({
     country: "",
     fundedOnly: false,
     noFee: false,
+    eligibleOnly: false,
 });
 
 export const filterCount = (state: DiscoverState): number =>
-    state.types.length + state.disciplines.length + (state.country ? 1 : 0) + (state.fundedOnly ? 1 : 0) + (state.noFee ? 1 : 0);
+    state.types.length + state.disciplines.length + (state.country ? 1 : 0) + (state.fundedOnly ? 1 : 0) + (state.noFee ? 1 : 0) +
+    (state.eligibleOnly ? 1 : 0);
 
 // Calls per page (api/discover.py PAGE_SIZE): the board loads the next page as the artist scrolls
 export const PAGE_SIZE = 30;
@@ -92,6 +98,7 @@ export const toSearchBody = (state: DiscoverState): SearchBody => ({
     country: state.country || null,
     funded_only: state.fundedOnly,
     no_fee: state.noFee,
+    eligible_only: state.eligibleOnly,
     offset: 0,
     limit: PAGE_SIZE,
 });

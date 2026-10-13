@@ -49,6 +49,14 @@ const ResultCard = ({ result, onOpen }: ResultCardProps) => (
                 {result.title}
             </Link>
             {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
+            {/* why "Matched to you" ranks it here: the call's own sentence closest to the artist's
+                documents (api/discover.py ResultOut.evidence); none when ordered by deadline */}
+            {result.evidence && (
+                <div className={styles.why}>
+                    <span className={styles.whyLabel}>Why it&apos;s here</span>
+                    <ClampedText className={styles.whyQuote}>“{result.evidence}”</ClampedText>
+                </div>
+            )}
             <span className={styles.facts}>
                 <span>{placeLabel(result.city, result.countries)}</span>
                 <span className={result.deadline ? styles.highlight : undefined}>{deadlineLabel(result.deadline)}</span>

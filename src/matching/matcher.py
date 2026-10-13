@@ -10,14 +10,20 @@ Three steps, each kept separate so each stays auditable:
 1. filters  - the artist's preferences (src/matching/filters.py), plain field checks
 2. ranking  - cosine similarity between the query and each call's embedding (src/matching/index.py)
 3. verdict  - the eligibility engine runs on every kept call. Its status is shown,
-               never changed, and orders the list in three tiers: ELIGIBLE first, then
-               CHECK, then LIKELY_NOT_ELIGIBLE (at the bottom with its reason, never
-               hidden). Inside a tier, the similarity (or deadline) order. ELIGIBLE was
-               merged with CHECK while nearly every call was CHECK; since the
-               "conclusive verdicts" work it carries information (author, 2026-10-10).
+               never changed by the ranking, and puts each call in one of three groups:
+                 fit               ELIGIBLE or CHECK: the artist can probably apply
+                 other_discipline  probably for other disciplines (discipline_mismatch)
+                 not_eligible      LIKELY_NOT_ELIGIBLE, at the bottom with its reason, never hidden
+               Inside a group, the similarity (or deadline) order.
+
+ELIGIBLE is no longer ranked above CHECK (author, 2026-10-13): with that tier first, the 10
+calls most similar to an artist were pushed off the first screen by "eligible" calls that are
+often eligible only because they state no rules (workflow.MD "Matching evaluation"). ELIGIBLE is
+now a badge and an "Eligible only" filter (api/discover.py) instead.
 """
 
 from datetime import date
+from typing import Literal
 
 import numpy as np
 from pydantic import BaseModel
@@ -25,12 +31,32 @@ from pydantic import BaseModel
 from src.eligibility.engine import EligibilityEngine, Verdict
 from src.eligibility.profile import ArtistProfile
 
-# the tier a verdict puts a call in: eligible first, not eligible last
-STATUS_ORDER = {"ELIGIBLE": 0, "CHECK": 1, "LIKELY_NOT_ELIGIBLE": 2}
 from src.matching.corpus import load_opportunities
-from src.matching.filters import MatchFilters, passes
+from src.matching.filters import ANY_DISCIPLINE, MatchFilters, passes
 from src.matching.index import OpportunityIndex, embed_query, load_embedder
 from src.models.processed_opportunity import ProcessedOpportunity
+
+# the three groups of the list, in display order (see the module docstring)
+Group = Literal["fit", "other_discipline", "not_eligible"]
+GROUP_ORDER = {"fit": 0, "other_discipline": 1, "not_eligible": 2}
+
+
+def discipline_mismatch(o: ProcessedOpportunity, verdict: Verdict, profile: ArtistProfile) -> bool:
+    """True when the call is probably for other disciplines than the artist's (profile Practice).
+    Two signs, either is enough:
+      - the call's own rules name a discipline or role the artist doesn't have: the engine's
+        DISCIPLINE item is a CHECK with check_kind "discipline_mismatch" ("open to composers")
+      - the call's disciplines (canonical) share none with the artist's, and it isn't
+        Multidisciplinary. Unknown disciplines are not a mismatch (unknown is kept, as in filters.py).
+    Never a verdict: the call stays CHECK or ELIGIBLE, it is only ranked lower (author, 2026-10-13).
+    No disciplines in the profile: nothing to compare, never a mismatch."""
+    if not profile.disciplines:
+        return False
+    for item in verdict.items:
+        if item.check_kind == "discipline_mismatch" and (item.group_outcome or item.outcome) == "CHECK":
+            return True
+    call = set(o.discipline_canonical)
+    return bool(call) and ANY_DISCIPLINE not in call and not call & set(profile.disciplines)
 
 
 class Match(BaseModel):
@@ -42,6 +68,7 @@ class Match(BaseModel):
     source_url: str             # always linked, so the artist can read the call itself
     score: float | None         # cosine similarity with the query, -1 to 1 (higher = closer); None by deadline
     verdict: Verdict
+    group: Group                # where the call is listed (fit / other_discipline / not_eligible)
 
 
 class Matcher:
@@ -59,11 +86,25 @@ class Matcher:
         self.engine = engine or EligibilityEngine()
         self.embedder = embedder or load_embedder(self.index.model)
         self._row = {opp_id: i for i, opp_id in enumerate(self.index.ids)}
+        # call row -> the rows of its evidence sentences in the index
+        self._sentence_rows: dict[int, list[int]] = {}
+        for sentence_row, owner in enumerate(self.index.sentence_owner.tolist()):
+            self._sentence_rows.setdefault(owner, []).append(sentence_row)
         self._by_id = {o.id: o for o in self.opportunities}
 
     def get(self, opportunity_id: str) -> ProcessedOpportunity | None:
         """One call by id (None if there is no such call)."""
         return self._by_id.get(opportunity_id)
+
+    def evidence(self, opportunity_id: str, query_vector: np.ndarray) -> tuple[str, np.ndarray] | None:
+        """Why a call is in the results: the sentence of its description closest to the query, and that
+        sentence's vector. None when the call has no evidence sentence (no or a very short description).
+        Explains the ranking, never changes it."""
+        rows = self._sentence_rows.get(self._row[opportunity_id], [])
+        if not rows:
+            return None
+        best = rows[int(np.argmax(self.index.sentence_vectors[rows] @ query_vector))]
+        return self.index.sentence_texts[best], self.index.sentence_vectors[best]
 
     def kept(self, filters: MatchFilters | None = None, today: date | None = None) -> list[ProcessedOpportunity]:
         """The calls the artist's filters keep, in corpus order."""
@@ -72,14 +113,14 @@ class Matcher:
         return [o for o in self.opportunities if passes(o, filters, today)]
 
     def search(self, query: str, profile: ArtistProfile | None = None, filters: MatchFilters | None = None,
-               k: int = 10, today: date | None = None) -> list[Match]:
-        """The kept calls most similar to the query first (not-eligible last)."""
+               k: int | None = 10, today: date | None = None) -> list[Match]:
+        """The kept calls most similar to the query first, in the three groups. k=None: all of them."""
         if not query or not query.strip():
             raise ValueError("query is empty: describe your practice or what you are looking for")
         return self.search_vector(embed_query(self.embedder, query), profile, filters, k, today)
 
     def search_vector(self, query_vector: np.ndarray, profile: ArtistProfile | None = None,
-                      filters: MatchFilters | None = None, k: int = 10, today: date | None = None) -> list[Match]:
+                      filters: MatchFilters | None = None, k: int | None = 10, today: date | None = None) -> list[Match]:
         """search() with the query already embedded (embed_query): the API keeps each artist's
         query vector, since embedding a whole statement is most of a search's time."""
         today = today or date.today()
@@ -91,22 +132,30 @@ class Matcher:
         scores = self.index.vectors[[self._row[o.id] for o in kept]] @ query_vector
 
         matches = [self._match(o, float(score), profile, today) for o, score in zip(kept, scores)]
-        # eligible first, not eligible last, then most similar first; ties keep corpus order (sort is stable)
-        matches.sort(key=lambda m: (STATUS_ORDER[m.verdict.status], -m.score))
+        # by group (fit, other discipline, not eligible), then most similar first; ties keep corpus order
+        matches.sort(key=lambda m: (GROUP_ORDER[m.group], -m.score))
         return matches[:k]
 
     def by_deadline(self, profile: ArtistProfile | None = None, filters: MatchFilters | None = None,
-                    k: int = 10, today: date | None = None) -> list[Match]:
-        """The kept calls in the three verdict tiers, nearest deadline first in each (no deadline stated after them).
+                    k: int | None = 10, today: date | None = None) -> list[Match]:
+        """The kept calls in the three groups, nearest deadline first in each (no deadline stated after them).
         Used when there is nothing to rank by: "All calls", or every matching term turned off."""
         today = today or date.today()
         matches = [self._match(o, None, profile, today) for o in self.kept(filters, today)]
-        matches.sort(key=lambda m: (STATUS_ORDER[m.verdict.status], m.deadline is None, m.deadline or today))
+        matches.sort(key=lambda m: (GROUP_ORDER[m.group], m.deadline is None, m.deadline or today))
         return matches[:k]
 
     def _match(self, o: ProcessedOpportunity, score: float | None, profile: ArtistProfile | None,
                today: date) -> Match:
+        profile = profile or ArtistProfile()
+        verdict = self.engine.evaluate(profile, o, today=today)
+        if verdict.status == "LIKELY_NOT_ELIGIBLE":
+            group = "not_eligible"
+        elif discipline_mismatch(o, verdict, profile):
+            group = "other_discipline"
+        else:
+            group = "fit"
         return Match(opportunity_id=o.id, title=o.title_en, organisation=o.organisation,
                      opportunity_types=o.opportunity_type_canonical, deadline=o.deadline_date,
                      source_url=o.source_url, score=None if score is None else round(score, 4),
-                     verdict=self.engine.evaluate(profile or ArtistProfile(), o, today=today))
+                     verdict=verdict, group=group)

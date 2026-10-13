@@ -104,6 +104,15 @@ const FiltersPanel = ({ state, options, onChange, onClear }: FiltersPanelProps) 
                         />
                         <span>No application fee</span>
                     </label>
+                    <label className={styles.pill}>
+                        <input
+                            type="checkbox"
+                            className={styles.pillBox}
+                            checked={state.eligibleOnly}
+                            onChange={() => onChange({ ...state, eligibleOnly: !state.eligibleOnly })}
+                        />
+                        <span>Eligible only</span>
+                    </label>
                 </div>
             </section>
         </div>

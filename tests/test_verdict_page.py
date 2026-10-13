@@ -34,6 +34,16 @@ def test_the_page_shows_the_sentence_once_with_one_row_per_requirement():
     # a failure first, then passes, then checks
     assert [(r.outcome, r.topic) for r in sentence.requirements] == [
         ("FAIL", "Residence"), ("PASS", "Age"), ("CHECK", "Language")]  # "proficient in French or English"
+    # each row says where it comes from: the reviewed classes, and the language rule (not a classifier class)
+    assert [(r.label, r.found_by) for r in sentence.requirements] == [
+        ("RESIDENCE", "reviewed"), ("AGE", "reviewed"), ("LANGUAGE", "rule")]
+
+
+def test_a_row_the_classifier_found_carries_its_confidence():
+    verdict = Verdict(opportunity_id="opp", title=None, source_url=None, status="CHECK", summary="",
+                      items=[item(0, "Open to artists under 35.", "AGE", kind="missing_profile_field")])
+    [row] = verdict_out(verdict).sentences[0].requirements
+    assert (row.label, row.confidence, row.found_by) == ("AGE", 0.9, "classifier")
 
 
 def item(index, text, label, outcome="CHECK", kind="check_only_class", reason="read it"):

@@ -19,6 +19,19 @@ const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "pa
     CHECK: { count: "checks", title: "To check", icon: "○", look: styles.iconCheck },
 };
 
+// Where a requirement row comes from (api/discover.py RequirementOut): the RQ1 eligibility classifier,
+// a person's review, or the keyword safety net. Shown small under the reason, so the model's work is
+// visible and auditable; a merged row of generic checks has no source and shows none.
+const sourceLabel = (requirement: Requirement): string | null => {
+    if (!requirement.label || !requirement.found_by) return null;
+    if (requirement.found_by === "reviewed") return "checked by hand";
+    if (requirement.found_by === "keyword_check") return "flagged by keyword check";
+    if (requirement.found_by === "rule") return "found by a rule";
+    return requirement.confidence != null
+        ? `classifier, ${Math.round(requirement.confidence * 100)}% sure`
+        : "classifier";
+};
+
 // The call's details as extracted from its page, in display order. Texts are verbatim, in the
 // call's own language (not translated); a list shows one row per question or document.
 type CallDetail = { title: string; text?: string; items?: string[] };
@@ -93,6 +106,25 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         </>
                     )}
 
+                    {/* why "Matched to you" suggests it: the call's sentence closest to the artist's
+                        documents, and the artist's own sentence closest to that one (api/discover.py why_matched).
+                        Same embeddings as the ranking, no model call; absent without documents */}
+                    {call.why && (
+                        <section aria-labelledby="why-heading" className={styles.why}>
+                            <h2 id="why-heading" className={styles.aboutHeading}>
+                                Why it&apos;s suggested to you
+                            </h2>
+                            <p className={styles.whyLabel}>The call says</p>
+                            <blockquote className={styles.whyQuote}>“{call.why.call_sentence}”</blockquote>
+                            {call.why.your_sentence && (
+                                <>
+                                    <p className={styles.whyLabel}>Closest in your {call.why.your_document}</p>
+                                    <blockquote className={styles.whyQuote}>“{call.why.your_sentence}”</blockquote>
+                                </>
+                            )}
+                        </section>
+                    )}
+
                     <a href={call.source_url} target="_blank" rel="noopener noreferrer" className={styles.original}>
                         Read the original call →<span className={styles.visuallyHidden}> (opens in a new tab)</span>
                     </a>
@@ -147,6 +179,12 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                                                         <span className={styles.visuallyHidden}>: {outcome.title}</span>
                                                     </p>
                                                     <p className={styles.reason}>{requirement.reason}</p>
+                                                    {sourceLabel(requirement) && (
+                                                        <p className={styles.source}>
+                                                            <span className={styles.label}>{requirement.label}</span>
+                                                            {sourceLabel(requirement)}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </li>
                                         );

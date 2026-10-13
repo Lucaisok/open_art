@@ -234,6 +234,14 @@
   letter-spacing: 0.06em;
 }
 
+/* one line under a group's heading: why these calls are lower in the list */
+.subnote {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
 .empty {
   display: flex;
   flex-direction: column;

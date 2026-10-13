@@ -276,6 +276,27 @@
   color: var(--color-grey-600);
 }
 
+/* where a row comes from: the RQ1 class as a small tag, then classifier / hand-checked / keyword check */
+.source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-grey-600);
+}
+
+.label {
+  padding: 1px 6px;
+  border: 1.5px solid var(--color-grey-300);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
 /* the call's details (project requirements, how to apply, ...): collapsed, so they don't compete with the checks */
 .extra {
   margin-top: 16px;
@@ -375,4 +396,28 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* why it's suggested: the call's sentence and the artist's own, side by side in the reading column */
+.why {
+  margin-top: 8px;
+}
+
+.whyLabel {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-grey-600);
+}
+
+.whyQuote {
+  margin: 4px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--color-lime);
+  font-size: 16px;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.5;
 }

@@ -11,6 +11,11 @@ open call takes ~50 ms, so verdicts are worked out on each request, not stored. 
 stored either: the page asks for the next page (offset, limit) as the artist scrolls, and the whole
 list is ranked again each time. The ranking is deterministic, so pages line up.
 
+The list comes in three groups (src/matching/matcher.py): calls that fit, calls probably for other
+disciplines, calls the artist likely can't apply to; similarity orders each group. ELIGIBLE is a badge
+and the "Eligible only" filter, not a rank (2026-10-13, workflow.MD "Matching evaluation"). Each
+ranked call says why it is there: the sentence of its description closest to the artist's documents.
+
 "Matched to you" ranks by the artist's own words: from each of their documents (statement, portfolio,
 CV), the passages about their practice and wishes (suggest_query, RAG step 4), averaged; no
 documents -> nearest deadline. Short matching terms were tried instead and ranked worse
@@ -38,8 +43,9 @@ from api.profile import ProfileValues, to_artist_profile
 from src.eligibility.engine import TOPIC, Item, Status, Verdict
 from src.eligibility.profile import ArtistProfile
 from src.matching.filters import ANY_COUNTRY, NOT_FUNDING, MatchFilters, is_funded
-from src.matching.index import EMBEDDING_MODEL, OpportunityIndex, embed_query
-from src.matching.matcher import Match, Matcher
+from src.eligibility.chunking import split_into_chunks
+from src.matching.index import EMBEDDING_MODEL, MIN_EVIDENCE_WORDS, OpportunityIndex, embed_passages, embed_query
+from src.matching.matcher import Group, Match, Matcher
 from src.models.processed_opportunity import FundingComponent, ProcessedOpportunity
 from src.processing.canonicalize import CANONICAL_DISCIPLINES, CANONICAL_OPPORTUNITY_TYPES
 from src.rag.query_suggestion import suggest_query
@@ -55,6 +61,9 @@ RANKING_KINDS = ["statement", "portfolio", "cv"]   # all of them rank "Matched t
 # upload has a new id, so a replaced document is never ranked by its old text. Kept in memory only.
 _query_vectors: dict[uuid.UUID, np.ndarray | None] = {}
 MAX_CACHED_QUERIES = 1000
+# document id -> the sentences of its ranking query and their vectors, for the call page's "why": built
+# only when a call page is opened, once per document (~1 s), kept in memory like _query_vectors
+_query_sentences: dict[uuid.UUID, tuple[list[str], np.ndarray]] = {}
 
 
 @lru_cache
@@ -111,6 +120,7 @@ class SearchIn(BaseModel):
     country: str | None = None
     funded_only: bool = False
     no_fee: bool = False
+    eligible_only: bool = False                    # only calls whose verdict is ELIGIBLE
     offset: int = Field(0, ge=0)                   # paging: skip the first `offset` calls of the ranking
     limit: int = Field(PAGE_SIZE, ge=1, le=MAX_PAGE)
 
@@ -128,22 +138,28 @@ class ResultOut(BaseModel):
     reason: str                 # the verdict's one-line summary
     score: float | None         # None when ordered by deadline
     funding: str | None         # "EUR 18,000", only when clear and significant (headline_funding)
+    group: Group                # fit / other_discipline / not_eligible: the list's three groups
+    # why it is in the results: the sentence of the call's description closest to the artist's
+    # documents (Matcher.evidence). None when ordered by deadline or the call has no such sentence
+    evidence: str | None = None
 
 
 class SearchOut(BaseModel):
     results: list[ResultOut]    # calls offset .. offset+limit of the ranking; not-eligible calls last, never hidden
     total: int                  # every call the filters keep
+    groups: dict[str, int]      # how many of them are in each group (the page's headings count them)
     order: Literal["match", "deadline"]
     ranked_by: list[str]        # the documents "Matched to you" ranks by (file names); []: none
     profile_filled: bool        # False: the page asks the artist to fill in their profile
 
 
-def _result(match: Match, o: ProcessedOpportunity) -> ResultOut:
+def _result(match: Match, o: ProcessedOpportunity, evidence: str | None) -> ResultOut:
     city, countries = _place(o)
     return ResultOut(id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
                      disciplines=disciplines_shown(o),
                      city=city, countries=countries, deadline=o.deadline_date, status=match.verdict.status,
-                     reason=match.verdict.summary, score=match.score, funding=headline_funding(o))
+                     reason=match.verdict.summary, score=match.score, funding=headline_funding(o),
+                     group=match.group, evidence=evidence)
 
 
 @router.post("/api/discover/search")
@@ -158,15 +174,22 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
     matcher = get_matcher()
     profile, filled = saved_profile(db, user.id)
     ranked_by, vector = ranking_vector(db, user.id, matcher) if body.mode == "matched" else ([], None)
-    k = body.offset + body.limit   # rank everything up to the end of this page, then keep the page
+    # the whole ranking (the engine runs on every kept call anyway), then this page of it
     if vector is not None:
-        matches, order = matcher.search_vector(vector, profile, filters, k=k), "match"
+        matches, order = matcher.search_vector(vector, profile, filters, k=None), "match"
     else:
-        matches, order = matcher.by_deadline(profile, filters, k=k), "deadline"
+        matches, order = matcher.by_deadline(profile, filters, k=None), "deadline"
+    if body.eligible_only:
+        matches = [m for m in matches if m.verdict.status == "ELIGIBLE"]
 
-    page = matches[body.offset:]
-    return SearchOut(results=[_result(m, matcher.get(m.opportunity_id)) for m in page],
-                     total=len(matcher.kept(filters)), order=order, ranked_by=ranked_by, profile_filled=filled)
+    groups = {group: sum(m.group == group for m in matches) for group in ("fit", "other_discipline", "not_eligible")}
+    page = matches[body.offset:body.offset + body.limit]
+    results = []
+    for m in page:
+        found = matcher.evidence(m.opportunity_id, vector) if vector is not None else None
+        results.append(_result(m, matcher.get(m.opportunity_id), found[0] if found else None))
+    return SearchOut(results=results, total=len(matches), groups=groups, order=order, ranked_by=ranked_by,
+                     profile_filled=filled)
 
 
 def document_vector(db, user_id: uuid.UUID, document: Document, matcher: Matcher) -> np.ndarray | None:
@@ -178,6 +201,18 @@ def document_vector(db, user_id: uuid.UUID, document: Document, matcher: Matcher
             _query_vectors.pop(next(iter(_query_vectors)))   # the oldest entry
         _query_vectors[document.id] = embed_query(matcher.embedder, query) if query else None
     return _query_vectors[document.id]
+
+
+def document_sentences(db, user_id: uuid.UUID, document: Document, matcher: Matcher) -> tuple[list[str], np.ndarray]:
+    """The sentences of one document's ranking query (the same passages document_vector embeds), and
+    their vectors. Fragments shorter than MIN_EVIDENCE_WORDS are left out. Cached by document id."""
+    if document.id not in _query_sentences:
+        query = suggest_query(PgKnowledgeBase(db, user_id), documents=[document.file_name]).query
+        sentences = [s for s in split_into_chunks(query) if len(s.split()) >= MIN_EVIDENCE_WORDS]
+        if len(_query_sentences) >= MAX_CACHED_QUERIES:
+            _query_sentences.pop(next(iter(_query_sentences)))   # the oldest entry
+        _query_sentences[document.id] = (sentences, embed_passages(matcher.embedder, sentences))
+    return _query_sentences[document.id]
 
 
 def ranking_vector(db, user_id: uuid.UUID, matcher: Matcher) -> tuple[list[str], np.ndarray | None]:
@@ -200,6 +235,14 @@ class RequirementOut(BaseModel):
     outcome: Literal["FAIL", "CHECK", "PASS"]  # "Doesn't pass" / "To check" / "Passes"
     topic: str                  # "Age", "Residence", ...
     reason: str
+    # where the row comes from, so the page can show the RQ1 classifier at work (2026-10-13).
+    # None on a merged row of generic checks (it stands for several sentences' classes)
+    label: str | None = None    # the eligibility class: "RESIDENCE", "AGE", ...
+    confidence: float | None = None   # the classifier's probability for that class
+    found_by: Literal["classifier", "reviewed", "keyword_check", "rule"] | None = None
+    # classifier: the model's class; reviewed: a person confirmed or fixed it; keyword_check: the
+    # classifier said NONE but the safety net's keywords flagged it (label = the suspected class);
+    # rule: not a classifier class, read by a rule from any sentence (LANGUAGE, src/eligibility/languages.py)
 
 
 class SentenceOut(BaseModel):
@@ -229,6 +272,14 @@ class MaterialOut(BaseModel):
     details: str | None         # stated limits, verbatim: "max 10 pages, PDF"
 
 
+class WhyOut(BaseModel):
+    """Why "Matched to you" suggests this call: the call's sentence closest to the artist's documents
+    (the same as the result card's) and the artist's own sentence closest to it."""
+    call_sentence: str
+    your_sentence: str | None   # None when the documents give no full sentence
+    your_document: str | None   # the file it comes from
+
+
 class OpportunityOut(BaseModel):
     id: str
     title: str
@@ -255,6 +306,26 @@ class OpportunityOut(BaseModel):
     program_dates: str | None
     verdict: VerdictOut
     profile_filled: bool
+    why: WhyOut | None = None   # None without documents, or when the call has no evidence sentence
+
+
+def why_matched(db, user_id: uuid.UUID, o: ProcessedOpportunity, matcher: Matcher) -> WhyOut | None:
+    """The call's sentence closest to the artist's ranking vector, and the sentence of their documents
+    closest to that one. Plain cosine similarity on the same embeddings as the ranking: no model call."""
+    _, vector = ranking_vector(db, user_id, matcher)
+    if vector is None or (found := matcher.evidence(o.id, vector)) is None:
+        return None
+    call_sentence, call_vector = found
+    best: tuple[float, str, str] | None = None   # (similarity, sentence, document)
+    for document in db.scalars(select(Document).where(Document.user_id == user_id)):
+        sentences, vectors = document_sentences(db, user_id, document, matcher)
+        if sentences:
+            scores = vectors @ call_vector
+            i = int(np.argmax(scores))
+            if best is None or scores[i] > best[0]:
+                best = (float(scores[i]), sentences[i], document.file_name)
+    return WhyOut(call_sentence=call_sentence, your_sentence=best[1] if best else None,
+                  your_document=best[2] if best else None)
 
 
 def _amount(c: FundingComponent) -> str:
@@ -363,14 +434,25 @@ GENERIC_CHECKS = {"check_only_class", "safety_net", "not_reviewed", "unreadable"
 RANK = {"FAIL": 0, "PASS": 1, "CHECK": 2}
 
 
+def _found_by(item: Item) -> Literal["classifier", "reviewed", "keyword_check", "rule"]:
+    if item.label == "LANGUAGE":
+        return "rule"
+    if item.check_kind == "safety_net":
+        return "keyword_check"
+    return "reviewed" if item.review in ("confirm", "fix") else "classifier"
+
+
+def _row(item: Item) -> RequirementOut:
+    return RequirementOut(outcome=_outcome(item), topic=TOPIC[item.label].capitalize(), reason=item.reason,
+                          label=item.label, confidence=item.confidence, found_by=_found_by(item))
+
+
 def _rows(items: list[Item]) -> list[RequirementOut]:
     """One row per requirement of a sentence, generic checks merged into one row."""
-    rows = [RequirementOut(outcome=_outcome(item), topic=TOPIC[item.label].capitalize(), reason=item.reason)
-            for item in items if not (_outcome(item) == "CHECK" and item.check_kind in GENERIC_CHECKS)]
+    rows = [_row(item) for item in items if not (_outcome(item) == "CHECK" and item.check_kind in GENERIC_CHECKS)]
     generic = [item for item in items if _outcome(item) == "CHECK" and item.check_kind in GENERIC_CHECKS]
     if len(generic) == 1:
-        rows.append(RequirementOut(outcome="CHECK", topic=TOPIC[generic[0].label].capitalize(),
-                                   reason=generic[0].reason))
+        rows.append(_row(generic[0]))
     elif generic:
         topics = list(dict.fromkeys(TOPIC[item.label] for item in generic))
         rows.append(RequirementOut(outcome="CHECK", topic=", ".join(topics).capitalize(),
@@ -416,4 +498,5 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
         selection_criteria=o.selection_criteria_en or o.selection_criteria,
         application_language=o.application_language_en or o.application_language,
         submission_method=o.submission_method, program_dates=o.program_dates_en or o.program_dates,
-        verdict=verdict_out(matcher.engine.evaluate(profile, o)), profile_filled=filled)
+        verdict=verdict_out(matcher.engine.evaluate(profile, o)), profile_filled=filled,
+        why=why_matched(db, user.id, o, matcher))
