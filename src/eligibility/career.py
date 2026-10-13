@@ -15,6 +15,9 @@ Career stage, two kinds of sentence:
 Education:
   "a degree", "a bachelor's / master's", "higher education in the arts"
           -> {"degree": True}, compared with profile.has_degree
+  "a degree from an art academy / art university", "a master's in fine arts"
+          -> {"degree": True, "art": True}: also needs the degree field or one of the schools in the
+          profile to look like art ("Kunst und Medien", "Universität der Künste"); otherwise a CHECK
 
     parse_career("Applicants must have at least three years of professional practice.") -> {"min_years": 3}
     parse_career("This call is aimed at emerging artists.") -> {"stages": ["Emerging/Early-Career"]}
@@ -96,9 +99,35 @@ def parse_career(text: str) -> dict | None:
     return None
 
 
+# the one detail the profile can check: a degree in art, or from an art school
+ART_DEGREE_RE = _re(r"\b(from|at) (a|an|the) (art|arts|fine arts?) (academy|academies|university|universities|"
+                    r"school|schools|college|colleges)(\s?/\s?(art )?(academy|university|school|college))?"
+                    r"|\b(from|at) (a|an|the) (academy|university|school|college) of (fine |visual )?arts?"
+                    r"|\bin (the field of )?(fine arts?|visual arts?|the arts|arts?)\b(?! (history|histories|management|education))")
+# a degree field or school name that is art, in the languages of the corpus. Substrings on purpose for
+# German compounds ("Medienkunst", "Kunsthochschule"); a missing word only means a CHECK, never a FAIL
+# (art history and art management are university subjects, not an art school training)
+ART_FIELD_RE = _re(r"kunst(?!geschichte|wissenschaft)|künste|kuenste|\b(arts?(?! (history|management|education))|"
+                   r"artes|arti|artistic|beaux[- ]arts|painting|sculpture|drawing|printmaking|photography|malerei|bildhauerei|grafik|graphic arts)\b")
+
+
 def parse_education(text: str) -> dict | None:
-    if DEGREE_RE.search(text) and not DEGREE_DETAIL_RE.search(text):
-        return {"degree": True}
+    if not DEGREE_RE.search(text):
+        return None
+    # take the art detail out first: if nothing else is left, the sentence is "a degree in art"
+    rest = ART_DEGREE_RE.sub(" ", text)
+    if DEGREE_DETAIL_RE.search(rest):
+        return None   # a field, level or school the profile can't check
+    return {"degree": True, "art": True} if rest != text else {"degree": True}
+
+
+def _art_background(profile: ArtistProfile) -> str | None:
+    """Where the profile shows art ("in Kunst und Medien", "at Universität der Künste"), else None."""
+    if profile.degree_field and ART_FIELD_RE.search(profile.degree_field):
+        return f"in {profile.degree_field}"
+    for entry in profile.education:
+        if ART_FIELD_RE.search(entry.institution):
+            return f"at {entry.institution}"
     return None
 
 
@@ -130,8 +159,13 @@ def career_check(value: dict | None, profile: ArtistProfile) -> tuple[bool, str]
 def education_check(value: dict | None, profile: ArtistProfile) -> tuple[bool, str]:
     if value is None:
         return False, "the app can't check this for you: read it and compare it with your studies"
+    asked = "a degree in art or from an art school" if value.get("art") else "a degree"
     if profile.has_degree is None:
-        return False, "asks for a degree; whether you have one is not in your profile"
-    if profile.has_degree:
+        return False, f"asks for {asked}; whether you have one is not in your profile"
+    if profile.has_degree is False:
+        return False, f"asks for {asked}; your profile says you have none, check whether an equivalent counts"
+    if not value.get("art"):
         return True, "asks for a degree; your profile says you have one"
-    return False, "asks for a degree; your profile says you have none, check whether an equivalent counts"
+    if art := _art_background(profile):
+        return True, f"asks for {asked}; your profile says you have one {art}"
+    return False, f"asks for {asked}; your profile says you have a degree, check whether it is in art"

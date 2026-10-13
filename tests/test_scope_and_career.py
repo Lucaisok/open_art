@@ -12,6 +12,7 @@ from src.eligibility.engine import Review, evaluate_chunks
 from src.eligibility.geo import broad_regions_named
 from src.eligibility.profile import ArtistProfile
 from src.eligibility.scope import scope
+from src.eligibility.study import EducationEntry
 from src.models.classified_chunk import ClassifiedChunk
 
 TODAY = date(2026, 10, 1)
@@ -98,9 +99,25 @@ def test_career_and_education_never_fail():
 
 def test_education():
     assert parse_education("Applicants must hold a bachelor's degree.") == {"degree": True}
-    assert parse_education("A master's degree in fine arts is required.") is None   # a field the profile can't check
+    assert parse_education("A master's degree in music is required.") is None   # a field the profile can't check
     assert parse_education("Projects proposed by the French diplomatic representations.") is None  # not "diploma"
     assert education_check({"degree": True}, BERLIN)[0] is True
+
+
+def test_art_degree():
+    art = {"degree": True, "art": True}
+    assert parse_education("A completed degree from an art academy/art university is required.") == art
+    assert parse_education("A master's degree in fine arts is required.") == art
+    assert parse_education("A degree from a recognised art school.") is None   # "recognised" can't be checked
+    # an art field or an art school in the profile passes; any other degree stays a check
+    assert education_check(art, ArtistProfile(has_degree=True, degree_field="Kunst und Medien"))[0] is True
+    school = EducationEntry(institution="Universität der Künste", city="Berlin")
+    assert education_check(art, ArtistProfile(has_degree=True, education=[school]))[0] is True
+    assert education_check(art, ArtistProfile(has_degree=True, degree_field="Kunstgeschichte"))[0] is False
+    assert education_check(art, BERLIN)[0] is False   # a degree, but no field or school given
+    verdict = run(ArtistProfile(has_degree=True, degree_field="Kunst und Medien"),
+                  [chunk(0, "A completed degree from an art academy/art university is required.", "EDUCATION")])
+    assert verdict.items[0].outcome == "PASS" and "Kunst und Medien" in verdict.items[0].reason
 
 
 # -- structured reviews ------------------------------------------------------------------------------------
