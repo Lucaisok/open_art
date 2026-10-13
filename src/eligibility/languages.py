@@ -47,6 +47,11 @@ NOT_A_SKILL_RE = re.compile(r"\b(translat\w*|written in|published in|submit\w*|a
 NOT_REQUIRED_RE = re.compile(r"\b(not (essential|required|necessary|mandatory|a requirement)|advantage|welcome\w*|"
                              r"preferr\w*|preferabl\w*|asset|a plus|desirable|appreciated|helpful|useful)\b",
                              re.IGNORECASE)
+# a skill phrase right before a language name ("level of English", "fluent in French", at most two words
+# between): asked of the applicant even when the sentence also mentions translation or submission
+# ("a medium-high level of English ... does not require consecutive translation in meetings")
+SKILL_NEXT_TO_LANGUAGE_RE = re.compile(SKILL_RE.pattern + r"\W+(?:\w+\W+){0,2}?" + LANGUAGE_RE.pattern,
+                                       re.IGNORECASE)
 ALL_RE = re.compile(r"\b(both|as well as)\b|\band\b(?!\s*/\s*or)", re.IGNORECASE)
 EITHER_RE = re.compile(r"\bor\b|/", re.IGNORECASE)
 
@@ -55,7 +60,9 @@ def parse_languages(text: str) -> dict | None:
     """{"languages": [codes], "all": True if every one is needed} for a sentence that asks the applicant
     for a language skill; None when the sentence names no language skill or the languages are about
     the work (translations, the language of submission)."""
-    if not SKILL_RE.search(text) or NOT_A_SKILL_RE.search(text) or NOT_REQUIRED_RE.search(text):
+    if not SKILL_RE.search(text) or NOT_REQUIRED_RE.search(text):
+        return None
+    if NOT_A_SKILL_RE.search(text) and not SKILL_NEXT_TO_LANGUAGE_RE.search(text):
         return None
     codes = sorted({NAME_TO_LANGUAGE[found.group(0).lower()] for found in LANGUAGE_RE.finditer(text)})
     if not codes:

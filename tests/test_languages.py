@@ -18,6 +18,12 @@ from src.rag.documents import Chunk
     ("Demonstrate a professional-level command of French and/or English", {"languages": ["en", "fr"], "all": False}),
     ("Applicants must speak both Dutch and English.", {"languages": ["en", "nl"], "all": True}),
     ("English language skills are a prerequisite.", {"languages": ["en"], "all": False}),
+    # a skill right next to the language counts even when the sentence also mentions translation
+    ("It is essential to have at least a medium-high level of English that allows for fluent communication "
+     "with other participants and does not require consecutive translation in meetings.",
+     {"languages": ["en"], "all": False}),
+    ("A good knowledge of English is essential in order to participate, and all written materials must be "
+     "translated into English.", {"languages": ["en"], "all": False}),
     # not a skill asked of the applicant
     ("Please note that all sessions will be held in English.", None),
     ("It is not essential to speak or understand Italian, but it is an advantage.", None),
