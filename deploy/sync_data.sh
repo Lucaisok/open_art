@@ -21,7 +21,7 @@ DIR="${OPEN_ART_DIR:?set OPEN_ART_DIR, the repo path on the VPS}"
 cd "$(dirname "$0")/.."
 
 echo "1/3  Checking that the constraints cover every published call..."
-python scripts/check_constraints_coverage.py
+uv run python scripts/check_constraints_coverage.py
 
 echo "2/3  Checking that the corpus files in git are committed and pushed..."
 GIT_FILES="dataset/opportunities.csv dataset/labels/eligibility_constraints_reviewed.csv artifacts/opportunity_index.npz artifacts/match_score.json"
