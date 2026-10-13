@@ -109,17 +109,6 @@ def test_discipline_mismatch_in_an_or_group_that_passes_is_not_a_mismatch():
     assert not discipline_mismatch(opp("a"), verdict, ArtistProfile(disciplines=["Visual Arts"]))
 
 
-def test_evidence_is_the_description_sentence_closest_to_the_query():
-    m = matcher([opp("a"), opp("b")], [[1, 0], [0, 1]])
-    m.index.sentence_owner = np.array([0, 0, 1], dtype=np.int32)
-    m.index.sentence_texts = ["about printing", "about sound and water", "about dance"]
-    m.index.sentence_vectors = np.array([[0, 1], [1, 0], [1, 0]], dtype=np.float32)
-    m = Matcher(opportunities=m.opportunities, index=m.index, engine=m.engine, embedder=m.embedder)
-    text, vector = m.evidence("a", np.array([1.0, 0.0]))
-    assert text == "about sound and water" and list(vector) == [1, 0]
-    assert matcher([opp("c")], [[1, 0]]).evidence("c", np.array([1.0, 0.0])) is None   # no sentences
-
-
 def test_filters_run_before_ranking_and_k_limits():
     calls = [opp("closed", deadline_date=date(2026, 1, 1)), opp("open", deadline_date=date(2026, 12, 1)),
              opp("unknown")]

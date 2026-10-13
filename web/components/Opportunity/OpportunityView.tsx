@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ClampedText from "@/components/ClampedText/ClampedText";
+import Highlighted from "@/components/Highlighted/Highlighted";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
 import { deadlineFact, placeLabel } from "@/lib/discover";
 import type { Opportunity } from "@/lib/types";
@@ -106,21 +107,47 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         </>
                     )}
 
-                    {/* why "Matched to you" suggests it: the call's sentence closest to the artist's
-                        documents, and the artist's own sentence closest to that one (api/discover.py why_matched).
-                        Same embeddings as the ranking, no model call; absent without documents */}
+                    {/* why "Matched to you" suggests it (api/discover.py why_matched): the specific words
+                        the call shares with the artist's documents, marked in the call's sentence and in
+                        the artist's own; or, when it shares none, that it is a broad match. Plain word
+                        rules (src/matching/explain.py), no model call; absent without documents */}
                     {call.why && (
                         <section aria-labelledby="why-heading" className={styles.why}>
                             <h2 id="why-heading" className={styles.aboutHeading}>
                                 Why it&apos;s suggested to you
                             </h2>
-                            <p className={styles.whyLabel}>The call says</p>
-                            <blockquote className={styles.whyQuote}>“{call.why.call_sentence}”</blockquote>
-                            {call.why.your_sentence && (
+                            {call.why.shared.length > 0 ? (
                                 <>
-                                    <p className={styles.whyLabel}>Closest in your {call.why.your_document}</p>
-                                    <blockquote className={styles.whyQuote}>“{call.why.your_sentence}”</blockquote>
+                                    <p className={styles.whyLabel}>In common with your documents</p>
+                                    <p className={styles.shared}>
+                                        {call.why.shared.map((word) => (
+                                            <span key={word} className={styles.sharedWord}>
+                                                {word.toLowerCase()}
+                                            </span>
+                                        ))}
+                                    </p>
+                                    {call.why.call_sentence && (
+                                        <>
+                                            <p className={styles.whyLabel}>The call says</p>
+                                            <blockquote className={styles.whyQuote}>
+                                                “<Highlighted text={call.why.call_sentence} words={call.why.call_highlight} />”
+                                            </blockquote>
+                                        </>
+                                    )}
+                                    {call.why.your_sentence && (
+                                        <>
+                                            <p className={styles.whyLabel}>Your {call.why.your_document} says</p>
+                                            <blockquote className={styles.whyQuote}>
+                                                “<Highlighted text={call.why.your_sentence} words={call.why.your_highlight} />”
+                                            </blockquote>
+                                        </>
+                                    )}
                                 </>
+                            ) : (
+                                <p className={styles.broad}>
+                                    A broad match: the call is close to your documents in general, but names nothing
+                                    specific from your practice. Read it to judge whether it fits.
+                                </p>
                             )}
                         </section>
                     )}

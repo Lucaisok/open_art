@@ -169,9 +169,24 @@
   color: var(--color-grey-600);
 }
 
-.whyQuote {
-  font-size: 14px;
-  font-weight: 600;
-  font-style: italic;
-  line-height: 1.45;
+.shared {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* a shared word: lime, the same mark as in the quote below */
+.sharedWord {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background-color: var(--color-lime);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* nothing specific in common: said plainly, quieter than a real reason */
+.broad {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-grey-600);
 }

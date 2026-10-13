@@ -9,6 +9,7 @@ export const FIELD_LABELS: Record<FieldName, string> = {
     birth_date: "Birth date",
     nationalities: "Nationalities",
     residence_country: "Country of residence",
+    residence_city: "City of residence",
     applicant_type: "Applying as",
     disciplines: "Disciplines",
     career_stage: "Career stage",

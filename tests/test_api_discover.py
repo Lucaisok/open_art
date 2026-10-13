@@ -15,10 +15,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from api import db, discover, knowledge_base
+from src.matching import explain
 from api.main import app
 from src.eligibility.engine import Item, Verdict
 from src.eligibility.profile import ArtistProfile
-from src.matching.matcher import Matcher
 from src.models.processed_opportunity import FundingComponent
 from tests.conftest import PASSWORD
 from tests.test_api_documents import ILKA, TOMAS, KeywordEmbedder, upload, user_id
@@ -216,35 +216,36 @@ def test_eligible_is_a_filter_not_a_rank_and_groups_are_counted(artist, small_ma
 
 
 @pytest.fixture
-def matcher_with_sentences(monkeypatch):
-    """small_matcher's calls, with evidence sentences: "near" has two, the others none."""
-    m = matcher(CALLS, VECTORS)
+def described_matcher(monkeypatch):
+    """small_matcher's calls, "near" with a description. Four calls are too few for "rare in the
+    corpus" to mean anything, so here a word is specific when it is in at most half of them."""
+    calls = [c.model_copy(update={"description_en": "A residency by the water for sound artists. "
+                                                    "Studios are open all year round."}) if c.id == "near" else c
+             for c in CALLS]
+    m = matcher(calls, VECTORS)
     m.engine = RecordingEngine()
-    m.index.sentence_owner = np.array([0, 0], dtype=np.int32)
-    m.index.sentence_texts = ["Studios are open all year round.", "A residency by the water for sound artists."]
-    m.index.sentence_vectors = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float32)
-    m = Matcher(opportunities=m.opportunities, index=m.index, engine=m.engine, embedder=m.embedder)
+    monkeypatch.setattr(explain, "SPECIFIC_MAX_SHARE", 0.5)
     monkeypatch.setattr(discover, "get_matcher", lambda: m)
-    # the artist's sentences: "water" ones point along the query (x axis), the others away from it
-    monkeypatch.setattr(discover, "embed_passages", lambda embedder, texts: np.array(
-        [[1.0, 0.0] if "water" in t else [0.0, 1.0] for t in texts], dtype=np.float32).reshape(-1, 2))
     return m
 
 
-def test_ranked_cards_quote_the_sentence_closest_to_the_documents(artist, matcher_with_sentences):
-    assert all(r["evidence"] is None for r in search(artist, mode="matched")["results"])   # by deadline: none
-    upload(artist, "statement", f"{TOMAS}/statement.md")
-    results = {r["id"]: r["evidence"] for r in search(artist, mode="matched")["results"]}
-    assert results == {"near": "A residency by the water for sound artists.", "far": None, "blocked": None}
+def test_ranked_cards_say_what_they_share_with_the_documents(artist, described_matcher):
+    assert all(r["why"] is None for r in search(artist, mode="matched")["results"])   # by deadline: nothing to explain
+    upload(artist, "statement", f"{TOMAS}/statement.md")   # sound installations from recordings of water
+    why = {r["id"]: r["why"] for r in search(artist, mode="matched")["results"]}
+    assert {"sound", "water"} <= {w.lower() for w in why["near"]["shared"]}
+    # "Print grant" shares nothing specific with a sound artist: a broad match, said as such
+    assert why["far"] == {"shared": []}
 
 
-def test_the_call_page_says_why_it_is_suggested(artist, matcher_with_sentences):
-    assert artist.get("/api/opportunities/near").json()["why"] is None   # no documents: nothing to explain
+def test_the_call_page_says_why_it_is_suggested(artist, described_matcher):
+    assert artist.get("/api/opportunities/near").json()["why"] is None   # no documents: nothing ranks it
     upload(artist, "statement", f"{TOMAS}/statement.md")
     why = artist.get("/api/opportunities/near").json()["why"]
     assert why["call_sentence"] == "A residency by the water for sound artists."
-    assert "water" in why["your_sentence"] and why["your_document"] == "statement.md"
-    assert artist.get("/api/opportunities/far").json()["why"] is None    # a call without evidence sentences
+    assert why["your_document"] == "statement.md" and "water" in why["your_highlight"]
+    assert "water" in why["your_sentence"]
+    assert artist.get("/api/opportunities/far").json()["why"]["shared"] == []
 
 
 def test_opportunity_page(artist):

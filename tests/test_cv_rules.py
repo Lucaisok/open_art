@@ -29,7 +29,7 @@ def chunks(*lines: str, section: str | None = None) -> list[Chunk]:
 def test_ilka_cv():
     found = extract("examples/artists/ilka_varga/cv.pdf")
     assert {f: s.value for f, s in found.items()} == {
-        "birth_date": "1994-03-12", "nationalities": ["HU"], "residence_country": "AT",
+        "birth_date": "1994-03-12", "nationalities": ["HU"], "residence_country": "AT", "residence_city": "Vienna",
         "disciplines": ["Visual Arts"], "active_since": 2021, "has_degree": True, "graduation_year": 2021,
         "degree_field": "Painting and Graphic Arts", "languages": ["de", "en", "hu"],
         "education": [{"institution": "Academy of Fine Arts Vienna", "city": None, "country": "AT"},
@@ -113,6 +113,19 @@ def test_a_place_alone_in_the_contact_block_is_the_residence():
     assert found["residence_country"].value == "DE" and found["residence_country"].quote == "Berlin"
     found = {s.field: s.value for s in extract_profile(chunks("Ana Silva", "Lisbon, Portugal"), "cv.pdf", TODAY)}
     assert found["residence_country"] == "PT"
+
+
+@pytest.mark.parametrize("line, country, city", [
+    ("Lives and works in Berlin", "DE", "Berlin"),
+    ("Lives and works in Leipzig, Germany", "DE", "Leipzig"),     # a city the app doesn't know, before a country
+    ("Based in Germany", "DE", None),                             # only a country
+    ("Lives and works between Berlin and Oslo", "DE", None),      # two cities: no one city
+    ("Vienna, Austria", "AT", "Vienna"),                          # a contact-block line
+])
+def test_residence_city(line, country, city):
+    found = {s.field: s.value for s in extract_profile(chunks("Ana Silva", line), "cv.pdf", TODAY)}
+    assert found["residence_country"] == country
+    assert found.get("residence_city") == city
 
 
 @pytest.mark.parametrize("line", ["German", "Berlin Biennale 2024", "Hauptstraße 5, 10115 Berlin"])

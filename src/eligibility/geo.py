@@ -194,6 +194,12 @@ SUBNATIONAL = {
     "Paris": "FR", "Vienna": "AT", "Oslo": "NO",
 }
 
+# the SUBNATIONAL names that are one city, so an artist living in another city of the same country is
+# outside it ("based in Berlin" vs "lives in Leipzig"). Regions (Bavaria, Flanders) are left out: a
+# profile holds a city, and the app can't tell which region a city is in. Brussels is left out too:
+# artists often name their commune (Ixelles, Schaerbeek) rather than "Brussels".
+SUBNATIONAL_CITIES = {"London", "Berlin", "Madrid", "Rotterdam", "Amsterdam", "Paris", "Vienna", "Oslo"}
+
 VAGUE_REGION_RE = re.compile(
     r"\b(Europe|European(?! (Union|Economic Area))|Africa|African|Asia|Asian|Caribbean(?! part of the Kingdom)"
     r"|Latin America|South America|North America|Middle East|Balkans?|Scandinavia|Sápmi"

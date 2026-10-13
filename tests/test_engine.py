@@ -88,6 +88,19 @@ def test_safety_net_sentence_resolves_only_in_the_artists_favour():
     assert run(outside, [flagged]).status == "CHECK"
 
 
+def test_unsure_discipline_flag_naming_no_discipline_is_dropped():
+    # the classifier was only unsure (runner-up rule) and the sentence names no discipline: nothing to check
+    flagged = chunk(0, "artists from around the world", "NONE", polarity=None, suspected_label="DISCIPLINE",
+                    safety_net_reason="classifier unsure: DISCIPLINE at 0.49")
+    assert run(BELGIAN, [flagged]).items == []
+
+
+def test_unsure_discipline_flag_naming_a_discipline_stays():
+    flagged = chunk(0, "for choreographers working in the city", "NONE", polarity=None,
+                    suspected_label="DISCIPLINE", safety_net_reason="classifier unsure: DISCIPLINE at 0.45")
+    assert [i.label for i in run(BELGIAN, [flagged]).items] == ["DISCIPLINE"]
+
+
 @pytest.mark.parametrize("label", ["DISCIPLINE", "CAREER_STAGE", "EDUCATION", "PRIOR_FUNDING", "OTHER_ELIGIBILITY"])
 def test_check_only_classes_never_reject(label):
     # even an exclusion with a review row can't reject: these classes are never verified automatically
@@ -282,6 +295,37 @@ NRW = {"countries": ["DE"], "also_requires": "North Rhine-Westphalia"}
 def test_also_requires(residence, polarity, expected):
     outcome, _ = one(ArtistProfile(residence_country=residence), "RESIDENCE", NRW, polarity)
     assert outcome == expected
+
+
+# a city inside the country ("based in Berlin"): the profile's city decides, for RESIDENCE only
+
+BERLIN = {"countries": ["DE"], "also_requires": "Berlin"}
+
+
+@pytest.mark.parametrize("city, value, expected, kind", [
+    ("Berlin", BERLIN, "PASS", None),
+    ("berlin-Kreuzberg", BERLIN, "PASS", None),                       # a district of the named city
+    ("Leipzig", BERLIN, "FAIL", None),                                # another city in Germany
+    (None, BERLIN, "CHECK", "missing_profile_field"),                 # no city in the profile
+    ("Munich", {"countries": ["DE"], "also_requires": "Bavaria"}, "CHECK", "narrower_set"),  # a region
+    ("Berlin", {"countries": ["DE"], "also_requires": "Berlin / for at least 2 years"}, "CHECK", "narrower_set"),
+])
+def test_residence_city(city, value, expected, kind):
+    text = "Applicants must be based in Berlin."
+    profile = ArtistProfile(residence_country="DE", residence_city=city)
+    item = run(profile, [chunk(0, text, "RESIDENCE")], [reviewed(text, "RESIDENCE", value)]).items[0]
+    assert (item.outcome, item.check_kind) == (expected, kind)
+    if city is None:
+        assert "add it to check this" in item.reason
+
+
+def test_residence_city_never_decides_outside_the_country_or_on_nationality():
+    # another country is a FAIL on the country alone, whatever the city says
+    assert one(ArtistProfile(residence_country="FR", residence_city="Berlin"), "RESIDENCE", BERLIN)[0] == "FAIL"
+    # "German citizens or residents of Berlin": the city doesn't settle the nationality alternative
+    value = BERLIN | {"nationality_or_residence": True}
+    profile = ArtistProfile(nationalities=["DE"], residence_country="DE", residence_city="Leipzig")
+    assert one(profile, "NATIONALITY", value)[0] == "CHECK"
 
 
 def test_exclusion_of_specific_organisations_does_not_reject_every_organisation():

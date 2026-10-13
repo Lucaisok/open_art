@@ -316,6 +316,15 @@ export interface components {
             /** File */
             file: string;
         };
+        /**
+         * CardWhyOut
+         * @description Why a ranked call is on the list (src/matching/explain.py). The card shows only the words: the
+         *     sentences that hold them are on the call page (WhyOut).
+         */
+        CardWhyOut: {
+            /** Shared */
+            shared: string[];
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
@@ -523,6 +532,8 @@ export interface components {
             nationalities: string[];
             /** Residence Country */
             residence_country?: string | null;
+            /** Residence City */
+            residence_city?: string | null;
             /** Applicant Type */
             applicant_type?: ("individual" | "group" | "organisation") | null;
             /**
@@ -685,8 +696,7 @@ export interface components {
              * @enum {string}
              */
             group: "fit" | "other_discipline" | "not_eligible";
-            /** Evidence */
-            evidence?: string | null;
+            why?: components["schemas"]["CardWhyOut"] | null;
         };
         /** SearchIn */
         SearchIn: {
@@ -858,14 +868,21 @@ export interface components {
         };
         /**
          * WhyOut
-         * @description Why "Matched to you" suggests this call: the call's sentence closest to the artist's documents
-         *     (the same as the result card's) and the artist's own sentence closest to it.
+         * @description Why "Matched to you" suggests this call (src/matching/explain.py): the specific words it shares
+         *     with the artist's documents, and the sentence on each side holding most of them. shared = []: a broad
+         *     match, nothing specific in common.
          */
         WhyOut: {
+            /** Shared */
+            shared: string[];
             /** Call Sentence */
-            call_sentence: string;
+            call_sentence: string | null;
+            /** Call Highlight */
+            call_highlight: string[];
             /** Your Sentence */
             your_sentence: string | null;
+            /** Your Highlight */
+            your_highlight: string[];
             /** Your Document */
             your_document: string | null;
         };

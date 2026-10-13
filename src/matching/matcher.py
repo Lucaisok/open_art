@@ -32,6 +32,7 @@ from src.eligibility.engine import EligibilityEngine, Verdict
 from src.eligibility.profile import ArtistProfile
 
 from src.matching.corpus import load_opportunities
+from src.matching.explain import Explainer
 from src.matching.filters import ANY_DISCIPLINE, MatchFilters, passes
 from src.matching.index import OpportunityIndex, embed_query, load_embedder
 from src.models.processed_opportunity import ProcessedOpportunity
@@ -86,25 +87,13 @@ class Matcher:
         self.engine = engine or EligibilityEngine()
         self.embedder = embedder or load_embedder(self.index.model)
         self._row = {opp_id: i for i, opp_id in enumerate(self.index.ids)}
-        # call row -> the rows of its evidence sentences in the index
-        self._sentence_rows: dict[int, list[int]] = {}
-        for sentence_row, owner in enumerate(self.index.sentence_owner.tolist()):
-            self._sentence_rows.setdefault(owner, []).append(sentence_row)
+        # why a call is in an artist's results: the specific words they share (src/matching/explain.py)
+        self.explainer = Explainer(self.opportunities)
         self._by_id = {o.id: o for o in self.opportunities}
 
     def get(self, opportunity_id: str) -> ProcessedOpportunity | None:
         """One call by id (None if there is no such call)."""
         return self._by_id.get(opportunity_id)
-
-    def evidence(self, opportunity_id: str, query_vector: np.ndarray) -> tuple[str, np.ndarray] | None:
-        """Why a call is in the results: the sentence of its description closest to the query, and that
-        sentence's vector. None when the call has no evidence sentence (no or a very short description).
-        Explains the ranking, never changes it."""
-        rows = self._sentence_rows.get(self._row[opportunity_id], [])
-        if not rows:
-            return None
-        best = rows[int(np.argmax(self.index.sentence_vectors[rows] @ query_vector))]
-        return self.index.sentence_texts[best], self.index.sentence_vectors[best]
 
     def kept(self, filters: MatchFilters | None = None, today: date | None = None) -> list[ProcessedOpportunity]:
         """The calls the artist's filters keep, in corpus order."""

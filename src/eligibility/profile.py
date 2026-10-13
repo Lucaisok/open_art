@@ -34,6 +34,8 @@ class ArtistProfile(BaseModel):
     birth_date: date | None = None
     nationalities: list[str] = []           # every citizenship the artist holds; [] = not given
     residence_country: str | None = None    # where the artist lives now
+    residence_city: str | None = None       # the city they live in, as they write it ("Berlin");
+                                            # lets "based in Berlin" pass instead of being a check
     applicant_type: ApplicantType | None = None  # who applies: a person, a group/collective, an organisation
     disciplines: list[str] = []             # CANONICAL_DISCIPLINES
     career_stage: str | None = None         # CANONICAL_CAREER_STAGES
@@ -74,6 +76,11 @@ class ArtistProfile(BaseModel):
     @classmethod
     def _check_residence(cls, code: str | None) -> str | None:
         return None if code is None else _country_code(code)
+
+    @field_validator("residence_city")
+    @classmethod
+    def _check_city(cls, city: str | None) -> str | None:
+        return (city or "").strip() or None
 
     @field_validator("disciplines")
     @classmethod

@@ -17,6 +17,8 @@ CV section each line sits in ("Education", "Exhibitions"). Per field:
   nationalities       country names or adjectives on a "citizenship" / "nationality" line
   residence_country   the country (or a known city) after "lives in" / "based in" / "resident in";
                       otherwise a line that is only a place in the CV's contact block ("Berlin")
+  residence_city      the city on that same line: a known city ("Berlin") or the name before
+                      ", <country>" ("Lives in Leipzig, Germany")
   applicant_type      "we are a collective" -> group, "individual artist" -> individual, ...
   disciplines         discipline words (the engine's table) in the CV's opening lines
   active_since        the earliest year of an exhibition / performance / residency / award /
@@ -41,7 +43,8 @@ from datetime import date
 from typing import Any
 
 from src.eligibility.disciplines import TERMS
-from src.eligibility.geo import COUNTRIES, COUNTRY_RE, NAME_TO_COUNTRY, SUBNATIONAL_LOOKUP, SUBNATIONAL_RE
+from src.eligibility.geo import (COUNTRIES, COUNTRY_RE, NAME_TO_COUNTRY, SUBNATIONAL_CITIES, SUBNATIONAL_LOOKUP,
+                                 SUBNATIONAL_RE)
 from src.eligibility.languages import LANGUAGE_RE, NAME_TO_LANGUAGE
 from src.rag.documents import Chunk
 
@@ -217,9 +220,27 @@ def _place_only(text: str) -> str | None:
     return countries[0] if countries else SUBNATIONAL_LOOKUP[places[0]]
 
 
-def _residence(lines: list[_Line], intro: list[_Line]) -> tuple[str, _Line] | None:
-    """The first country after a residence phrase; a known city ("Lives in Amsterdam") if no country;
-    else a line in the contact block that is only a place (CV templates put "Berlin" under the name)."""
+def _city_in(text: str) -> str | None:
+    """The city in a residence text: a known one ("Berlin", "Vienna") or the name right before
+    ", <country>" ("Leipzig, Germany"). Only what the text plainly says; None otherwise."""
+    if known := SUBNATIONAL_RE.search(text):
+        name = known.group(0).lower()
+        return next(n for n in SUBNATIONAL_CITIES if n.lower() == name) if name in CITY_NAMES else None
+    if found := CITY_BEFORE_COUNTRY.match(text.strip()):
+        if found.group(2).lower() in NAME_TO_COUNTRY and not re.search(r"\d", found.group(1)):
+            return found.group(1).strip()
+    return None
+
+
+# "Leipzig, Germany": up to three capitalised words, a comma, then the country
+CITY_BEFORE_COUNTRY = re.compile(r"([A-ZÀ-Ý][\w'\-]*(?: [A-ZÀ-Ý][\w'\-]*){0,2}),\s*([A-Za-z][\w .]+?)[\s.;)]*$")
+CITY_NAMES = {name.lower() for name in SUBNATIONAL_CITIES}
+
+
+def _residence(lines: list[_Line], intro: list[_Line]) -> tuple[str, str | None, _Line] | None:
+    """(country, city, line): the first country after a residence phrase; a known city ("Lives in
+    Amsterdam") if no country; else a line in the contact block that is only a place (CV templates put
+    "Berlin" under the name). The city is read from the same words (_city_in), None if not stated."""
     city_only = None
     for line in lines:
         match = RESIDENCE_PHRASE.search(line.text)
@@ -227,15 +248,17 @@ def _residence(lines: list[_Line], intro: list[_Line]) -> tuple[str, _Line] | No
             continue
         rest = line.text[match.end():]
         if codes := _countries_in(rest):
-            return codes[0], line
-        if city_only is None and (city := SUBNATIONAL_RE.search(rest)):
-            city_only = SUBNATIONAL_LOOKUP[city.group(0).lower()], line
+            # "between Berlin, Germany and Oslo, Norway": two countries, so no one city
+            return codes[0], (_city_in(rest) if len(codes) == 1 else None), line
+        if city_only is None and (cities := SUBNATIONAL_RE.findall(rest)):
+            # "between Berlin and Oslo": the first gives the country, but neither is the one city
+            city_only = SUBNATIONAL_LOOKUP[cities[0].lower()], (_city_in(cities[0]) if len(cities) == 1 else None), line
     if city_only:
         return city_only
     contact = intro + [line for line in lines if line.section and CONTACT_SECTION.search(line.section)]
     for line in contact:
         if code := _place_only(line.text):
-            return code, line
+            return code, _city_in(line.text), line
     return None
 
 
@@ -500,7 +523,10 @@ def extract_profile(chunks: list[Chunk], document: str, today: date | None = Non
     found_birth = _birth_date(lines, today)
     add("birth_date", (found_birth[0].isoformat(), found_birth[1]) if found_birth else None)
     add("nationalities", _nationalities(lines))
-    add("residence_country", _residence(lines, intro))
+    if residence := _residence(lines, intro):
+        country, city, line = residence
+        add("residence_country", (country, line))
+        add("residence_city", (city, line) if city else None)
     add("applicant_type", _applicant_type(intro + lines[:12]))
     add("disciplines", _disciplines(intro))
     add("active_since", _active_since(lines, intro, today),

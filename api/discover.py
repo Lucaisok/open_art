@@ -14,7 +14,8 @@ list is ranked again each time. The ranking is deterministic, so pages line up.
 The list comes in three groups (src/matching/matcher.py): calls that fit, calls probably for other
 disciplines, calls the artist likely can't apply to; similarity orders each group. ELIGIBLE is a badge
 and the "Eligible only" filter, not a rank (2026-10-13, workflow.MD "Matching evaluation"). Each
-ranked call says why it is there: the sentence of its description closest to the artist's documents.
+ranked call says why it is there: the specific words it shares with the artist's documents, or that it
+is a broad match (src/matching/explain.py).
 
 "Matched to you" ranks by the artist's own words: from each of their documents (statement, portfolio,
 CV), the passages about their practice and wishes (suggest_query, RAG step 4), averaged; no
@@ -43,8 +44,8 @@ from api.profile import ProfileValues, to_artist_profile
 from src.eligibility.engine import TOPIC, Item, Status, Verdict
 from src.eligibility.profile import ArtistProfile
 from src.matching.filters import ANY_COUNTRY, NOT_FUNDING, MatchFilters, is_funded
-from src.eligibility.chunking import split_into_chunks
-from src.matching.index import EMBEDDING_MODEL, MIN_EVIDENCE_WORDS, OpportunityIndex, embed_passages, embed_query
+from src.matching.explain import ArtistText, explain
+from src.matching.index import EMBEDDING_MODEL, OpportunityIndex, embed_query
 from src.matching.matcher import Group, Match, Matcher
 from src.models.processed_opportunity import FundingComponent, ProcessedOpportunity
 from src.processing.canonicalize import CANONICAL_DISCIPLINES, CANONICAL_OPPORTUNITY_TYPES
@@ -61,9 +62,8 @@ RANKING_KINDS = ["statement", "portfolio", "cv"]   # all of them rank "Matched t
 # upload has a new id, so a replaced document is never ranked by its old text. Kept in memory only.
 _query_vectors: dict[uuid.UUID, np.ndarray | None] = {}
 MAX_CACHED_QUERIES = 1000
-# document id -> the sentences of its ranking query and their vectors, for the call page's "why": built
-# only when a call page is opened, once per document (~1 s), kept in memory like _query_vectors
-_query_sentences: dict[uuid.UUID, tuple[list[str], np.ndarray]] = {}
+# document id -> the text of its ranking query (what _query_vectors embeds): the explanation reads it
+_query_texts: dict[uuid.UUID, str] = {}
 
 
 @lru_cache
@@ -125,6 +125,12 @@ class SearchIn(BaseModel):
     limit: int = Field(PAGE_SIZE, ge=1, le=MAX_PAGE)
 
 
+class CardWhyOut(BaseModel):
+    """Why a ranked call is on the list (src/matching/explain.py). The card shows only the words: the
+    sentences that hold them are on the call page (WhyOut)."""
+    shared: list[str]           # specific words it shares with the artist's documents; [] = a broad match
+
+
 class ResultOut(BaseModel):
     id: str
     title: str
@@ -139,9 +145,7 @@ class ResultOut(BaseModel):
     score: float | None         # None when ordered by deadline
     funding: str | None         # "EUR 18,000", only when clear and significant (headline_funding)
     group: Group                # fit / other_discipline / not_eligible: the list's three groups
-    # why it is in the results: the sentence of the call's description closest to the artist's
-    # documents (Matcher.evidence). None when ordered by deadline or the call has no such sentence
-    evidence: str | None = None
+    why: CardWhyOut | None = None   # None when ordered by deadline (nothing ranks it)
 
 
 class SearchOut(BaseModel):
@@ -153,13 +157,13 @@ class SearchOut(BaseModel):
     profile_filled: bool        # False: the page asks the artist to fill in their profile
 
 
-def _result(match: Match, o: ProcessedOpportunity, evidence: str | None) -> ResultOut:
+def _result(match: Match, o: ProcessedOpportunity, why: CardWhyOut | None) -> ResultOut:
     city, countries = _place(o)
     return ResultOut(id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
                      disciplines=disciplines_shown(o),
                      city=city, countries=countries, deadline=o.deadline_date, status=match.verdict.status,
                      reason=match.verdict.summary, score=match.score, funding=headline_funding(o),
-                     group=match.group, evidence=evidence)
+                     group=match.group, why=why)
 
 
 @router.post("/api/discover/search")
@@ -184,10 +188,14 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
 
     groups = {group: sum(m.group == group for m in matches) for group in ("fit", "other_discipline", "not_eligible")}
     page = matches[body.offset:body.offset + body.limit]
+    artist = ArtistText(ranking_documents(db, user.id, matcher)) if vector is not None else None
     results = []
     for m in page:
-        found = matcher.evidence(m.opportunity_id, vector) if vector is not None else None
-        results.append(_result(m, matcher.get(m.opportunity_id), found[0] if found else None))
+        o, why = matcher.get(m.opportunity_id), None
+        if artist is not None:
+            e = explain(matcher.explainer, artist, o)
+            why = CardWhyOut(shared=e.shared)
+        results.append(_result(m, o, why))
     return SearchOut(results=results, total=len(matches), groups=groups, order=order, ranked_by=ranked_by,
                      profile_filled=filled)
 
@@ -200,19 +208,23 @@ def document_vector(db, user_id: uuid.UUID, document: Document, matcher: Matcher
         if len(_query_vectors) >= MAX_CACHED_QUERIES:
             _query_vectors.pop(next(iter(_query_vectors)))   # the oldest entry
         _query_vectors[document.id] = embed_query(matcher.embedder, query) if query else None
+        if len(_query_texts) >= MAX_CACHED_QUERIES:
+            _query_texts.pop(next(iter(_query_texts)))
+        _query_texts[document.id] = query
     return _query_vectors[document.id]
 
 
-def document_sentences(db, user_id: uuid.UUID, document: Document, matcher: Matcher) -> tuple[list[str], np.ndarray]:
-    """The sentences of one document's ranking query (the same passages document_vector embeds), and
-    their vectors. Fragments shorter than MIN_EVIDENCE_WORDS are left out. Cached by document id."""
-    if document.id not in _query_sentences:
-        query = suggest_query(PgKnowledgeBase(db, user_id), documents=[document.file_name]).query
-        sentences = [s for s in split_into_chunks(query) if len(s.split()) >= MIN_EVIDENCE_WORDS]
-        if len(_query_sentences) >= MAX_CACHED_QUERIES:
-            _query_sentences.pop(next(iter(_query_sentences)))   # the oldest entry
-        _query_sentences[document.id] = (sentences, embed_passages(matcher.embedder, sentences))
-    return _query_sentences[document.id]
+def ranking_documents(db, user_id: uuid.UUID, matcher: Matcher) -> list[tuple[str, str]]:
+    """[(file name, ranking query text)] of the artist's documents: what the explanation reads.
+    The same texts ranking_vector embeds (built and cached by document_vector)."""
+    documents = sorted(db.scalars(select(Document).where(Document.user_id == user_id)),
+                       key=lambda d: RANKING_KINDS.index(d.kind))
+    found = []
+    for document in documents:
+        document_vector(db, user_id, document, matcher)   # builds the query text once, then cached
+        if text := _query_texts.get(document.id):
+            found.append((document.file_name, text))
+    return found
 
 
 def ranking_vector(db, user_id: uuid.UUID, matcher: Matcher) -> tuple[list[str], np.ndarray | None]:
@@ -273,11 +285,15 @@ class MaterialOut(BaseModel):
 
 
 class WhyOut(BaseModel):
-    """Why "Matched to you" suggests this call: the call's sentence closest to the artist's documents
-    (the same as the result card's) and the artist's own sentence closest to it."""
-    call_sentence: str
-    your_sentence: str | None   # None when the documents give no full sentence
-    your_document: str | None   # the file it comes from
+    """Why "Matched to you" suggests this call (src/matching/explain.py): the specific words it shares
+    with the artist's documents, and the sentence on each side holding most of them. shared = []: a broad
+    match, nothing specific in common."""
+    shared: list[str]
+    call_sentence: str | None
+    call_highlight: list[str]
+    your_sentence: str | None
+    your_highlight: list[str]
+    your_document: str | None   # the file your_sentence comes from
 
 
 class OpportunityOut(BaseModel):
@@ -306,26 +322,17 @@ class OpportunityOut(BaseModel):
     program_dates: str | None
     verdict: VerdictOut
     profile_filled: bool
-    why: WhyOut | None = None   # None without documents, or when the call has no evidence sentence
+    why: WhyOut | None = None   # None without documents (nothing ranks the call)
 
 
 def why_matched(db, user_id: uuid.UUID, o: ProcessedOpportunity, matcher: Matcher) -> WhyOut | None:
-    """The call's sentence closest to the artist's ranking vector, and the sentence of their documents
-    closest to that one. Plain cosine similarity on the same embeddings as the ranking: no model call."""
-    _, vector = ranking_vector(db, user_id, matcher)
-    if vector is None or (found := matcher.evidence(o.id, vector)) is None:
+    """What the call shares with the artist's documents; None when they have none to rank by."""
+    documents = ranking_documents(db, user_id, matcher)
+    if not documents:
         return None
-    call_sentence, call_vector = found
-    best: tuple[float, str, str] | None = None   # (similarity, sentence, document)
-    for document in db.scalars(select(Document).where(Document.user_id == user_id)):
-        sentences, vectors = document_sentences(db, user_id, document, matcher)
-        if sentences:
-            scores = vectors @ call_vector
-            i = int(np.argmax(scores))
-            if best is None or scores[i] > best[0]:
-                best = (float(scores[i]), sentences[i], document.file_name)
-    return WhyOut(call_sentence=call_sentence, your_sentence=best[1] if best else None,
-                  your_document=best[2] if best else None)
+    e = explain(matcher.explainer, ArtistText(documents), o)
+    return WhyOut(shared=e.shared, call_sentence=e.call_sentence, call_highlight=e.call_highlight,
+                  your_sentence=e.your_sentence, your_highlight=e.your_highlight, your_document=e.your_document)
 
 
 def _amount(c: FundingComponent) -> str:

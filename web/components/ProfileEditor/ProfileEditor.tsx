@@ -38,6 +38,7 @@ const HELPERS: Partial<Record<FieldName, string>> = {
     birth_date: "Many calls have age limits.",
     nationalities: "Some calls are only for citizens of certain countries. Add every citizenship you hold.",
     residence_country: "Many calls require living in a country or region.",
+    residence_city: "Some calls are for artists based in one city, like Berlin or Paris.",
     languages: "Languages you can work in at a fluent or professional level. Some calls require one.",
     disciplines: "Calls are usually for one or a few disciplines.",
     career_stage: "Your own call. Some calls are only for emerging artists, others for established ones.",
@@ -310,6 +311,20 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
                                         </option>
                                     ))}
                                 </select>
+                            </Field>
+
+                            <Field {...field("residence_city")}>
+                                <input
+                                    id="field-residence_city"
+                                    type="text"
+                                    className={styles.input}
+                                    maxLength={100}
+                                    autoComplete="address-level2"
+                                    placeholder="e.g. Berlin"
+                                    value={values.residence_city ?? ""}
+                                    onChange={(e) => set("residence_city", e.target.value || null)}
+                                    {...ariaFor("residence_city")}
+                                />
                             </Field>
 
                             <Field {...field("languages")}>

@@ -53,6 +53,7 @@ class ProfileValues(BaseModel):
     birth_date: date | None = None
     nationalities: list[str] = []
     residence_country: str | None = None
+    residence_city: str | None = None       # free text, as the artist writes it ("Berlin")
     applicant_type: ApplicantType | None = None
     disciplines: list[str] = []
     career_stage: str | None = None
@@ -126,6 +127,14 @@ class ProfileValues(BaseModel):
         value = (value or "").strip()
         if len(value) > 200:
             raise ValueError("Keep this under 200 characters.")
+        return value or None
+
+    @field_validator("residence_city")
+    @classmethod
+    def _tidy_city(cls, value: str | None) -> str | None:
+        value = (value or "").strip()
+        if len(value) > 100:
+            raise ValueError("Keep this under 100 characters.")
         return value or None
 
 

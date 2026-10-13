@@ -42,6 +42,7 @@ FULL = {
     "birth_date": "1994-03-12",
     "nationalities": ["hu", "AT", "HU"],
     "residence_country": "at",
+    "residence_city": " Vienna ",
     "applicant_type": "individual",
     "disciplines": ["Visual Arts", "Craft"],
     "career_stage": "Emerging/Early-Career",
@@ -75,7 +76,7 @@ def test_save_normalises_and_reads_back(artist):
     assert response.status_code == 200
     values = artist.get("/api/profile").json()["values"]
     assert values["nationalities"] == ["AT", "HU"]        # upper-cased, sorted, no duplicates
-    assert values["residence_country"] == "AT"
+    assert values["residence_country"] == "AT" and values["residence_city"] == "Vienna"
     assert values["degree_field"] == "Painting and Graphic Arts"
     assert values["birth_date"] == "1994-03-12" and values["active_since"] == 2021
 

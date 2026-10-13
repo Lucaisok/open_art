@@ -40,6 +40,9 @@ residence.
   STUDENT_STATUS                excluded. With "also_requires" the real set is only part of S:
                                   REQUIRES + outside S -> FAIL     inside S -> CHECK
                                   EXCLUDES + inside S  -> CHECK    outside S -> PASS
+                                RESIDENCE in a city ("based in Berlin"), inside the country:
+                                  the profile's city named -> PASS, another city -> FAIL,
+                                  no city / a region / a duration -> CHECK
 
 How sentences combine: consecutive sentences of the same class (a reject class
 or DISCIPLINE) are an OR group ("• Individuals • Organisations"), and so is a run of adjacent NATIONALITY /
@@ -57,16 +60,19 @@ residence pair, which ingestion already merges into one item (src/eligibility/re
 import csv
 import json
 import os
+import re
 from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel
 
 from src.eligibility.career import career_check, education_check, parse_career, parse_education
-from src.eligibility.disciplines import discipline_match, disciplines_named, excluded_disciplines, narrowing_word
+from src.eligibility.disciplines import (ANY_DISCIPLINE_RE, GENERIC_PRACTICE_RE, discipline_match, disciplines_named,
+                                         excluded_disciplines, narrowing_word)
 from src.eligibility.languages import languages_check, parse_languages
 from src.eligibility.study import parse_study, study_check
-from src.eligibility.geo import BROAD_REGIONS, broad_regions_named, describe_countries
+from src.eligibility.geo import (BROAD_REGIONS, SUBNATIONAL_CITIES, SUBNATIONAL_LOOKUP, broad_regions_named,
+                                  describe_countries)
 from src.eligibility.polarity import polarity as parse_polarity
 from src.eligibility.scope import APPLICANT, WIDENING, scope as sentence_scope
 from src.eligibility.values import parse_value
@@ -246,6 +252,28 @@ def _country_membership(label: str, value: dict, profile: ArtistProfile):
     if all(codes for _, codes in fields) and not value.get("broad_regions"):
         return False, detail
     return None, detail
+
+
+def _city_membership(value: dict, profile: ArtistProfile) -> tuple[bool | None, str]:
+    """The narrower part of a RESIDENCE requirement the artist's country already meets, e.g. "Berlin" in
+    "based in Berlin" (also_requires, src/eligibility/values.py). True: their city is named; False: the
+    condition is only cities and theirs is another one; None: can't tell (no city in the profile, a region
+    like Bavaria, or a condition that isn't a place, like "for at least 2 years")."""
+    parts = value["also_requires"].split(" / ")
+    places = [part for part in parts if part.lower() in SUBNATIONAL_LOOKUP]
+    if len(places) < len(parts):
+        return None, "check the rest"                 # a duration or other condition: not in the profile
+    city = profile.residence_city
+    if city is None:
+        return None, "your city is not in your profile; add it to check this"
+    detail = f"your city: {city}"
+    # a whole-word match, so "Berlin-Kreuzberg" or "Berlin, Germany" count as Berlin
+    if any(re.search(rf"\b{re.escape(place)}\b", city, re.IGNORECASE) for place in places):
+        return True, detail
+    cities = {name.lower() for name in SUBNATIONAL_CITIES}
+    if all(place.lower() in cities for place in places):
+        return False, detail
+    return None, detail + "; check whether it is in " + " / ".join(places)
 
 
 def _applicant_type_membership(value: dict, profile: ArtistProfile):
@@ -444,6 +472,16 @@ def _reviewed_scope(reviews: dict[tuple[str, str], Review], text: str) -> str | 
     return others[0] if others else APPLICANT
 
 
+def _names_no_discipline(chunk: ClassifiedChunk) -> bool:
+    """A safety-net DISCIPLINE flag with nothing to check: raised only because the classifier was unsure
+    (no keyword cue), on a sentence that names no discipline at all ("artists from around the world",
+    "Hamburg"). A discipline condition has to name one, so the flag is dropped. Keyword flags are kept."""
+    from_runner_up = (chunk.safety_net_reason or "").startswith("classifier unsure")
+    names_one = (disciplines_named(chunk.text) or ANY_DISCIPLINE_RE.search(chunk.text)
+                 or GENERIC_PRACTICE_RE.search(chunk.text))
+    return from_runner_up and not names_one
+
+
 def _met_in_favour(chunk: ClassifiedChunk, label: str, profile: ArtistProfile,
                    deadline: date | None, today: date) -> Item | None:
     """A PASS for an unreviewed sentence whose condition the profile clearly meets, else None (step 5).
@@ -529,6 +567,8 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[t
             return None
         # the cue that raised the flag (chunk.safety_net_reason) stays in the data for audits, not in the text
         label = chunk.suspected_label
+        if label == "DISCIPLINE" and _names_no_discipline(chunk):
+            return None
         reviewed_scope = _reviewed_scope(reviews, chunk.text)
         return (_scope_item(chunk, label, reviewed_scope or sentence_scope(chunk.text, chunk.heading))
                 or (label == "OTHER_ELIGIBILITY" and _language_item(chunk, profile))
@@ -593,6 +633,13 @@ def assess_chunk(chunk: ClassifiedChunk, profile: ArtistProfile, reviews: dict[t
     elif polarity == "REQUIRES":
         if not inside:
             outcome, reason = "FAIL", f"requires {described}; {detail}"
+        elif narrower and label == "RESIDENCE" and not value.get("nationality_or_residence"):
+            # "based in Berlin": the artist's country is right, their city decides (never the nationality)
+            in_city, city_detail = _city_membership(value, profile)
+            outcome = {True: "PASS", False: "FAIL", None: "CHECK"}[in_city]
+            reason = f"requires {described} and also: {narrower}; {detail}; {city_detail}"
+            if in_city is None:
+                kind = "missing_profile_field" if "not in your profile" in city_detail else "narrower_set"
         elif narrower:
             outcome, reason = "CHECK", f"requires {described} and also: {narrower}; {detail}, check the rest"
             kind = "narrower_set"

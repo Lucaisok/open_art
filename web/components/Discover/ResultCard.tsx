@@ -49,12 +49,27 @@ const ResultCard = ({ result, onOpen }: ResultCardProps) => (
                 {result.title}
             </Link>
             {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
-            {/* why "Matched to you" ranks it here: the call's own sentence closest to the artist's
-                documents (api/discover.py ResultOut.evidence); none when ordered by deadline */}
-            {result.evidence && (
+            {/* why "Matched to you" ranks it here (api/discover.py CardWhyOut): the specific words it
+                shares with the artist's documents, or, when it shares none, that it is a broad match.
+                The sentences holding the words are on the call page. None when ordered by deadline */}
+            {result.why && (
                 <div className={styles.why}>
-                    <span className={styles.whyLabel}>Why it&apos;s here</span>
-                    <ClampedText className={styles.whyQuote}>“{result.evidence}”</ClampedText>
+                    {result.why.shared.length > 0 ? (
+                        <>
+                            <span className={styles.whyLabel}>In common with your documents</span>
+                            <span className={styles.shared}>
+                                {result.why.shared.map((word) => (
+                                    <span key={word} className={styles.sharedWord}>
+                                        {word.toLowerCase()}
+                                    </span>
+                                ))}
+                            </span>
+                        </>
+                    ) : (
+                        <span className={styles.broad}>
+                            Broad match: close to your documents in general, nothing specific in common
+                        </span>
+                    )}
                 </div>
             )}
             <span className={styles.facts}>

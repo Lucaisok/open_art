@@ -63,6 +63,7 @@ Rules:
   birth_date: YYYY-MM-DD.
   nationalities: every citizenship stated, as ISO 3166-1 alpha-2 codes ("HU", "PT").
   residence_country: the country the artist lives in now, ISO 3166-1 alpha-2.
+  residence_city: the city the artist lives in now, as written ("Berlin"); null if only a country is stated.
   applicant_type: "individual", "group" or "organisation", only if a passage says how the artist works or
     applies ("works as an individual artist", "a collective of four"). A personal CV, a name or a birth date
     is not evidence. A person who also belongs to a collective is still "individual".
@@ -121,6 +122,7 @@ class LLMAnswer(BaseModel):
     birth_date: _Date | None
     nationalities: _Countries | None
     residence_country: _Country | None
+    residence_city: _Text | None
     applicant_type: _Applicant | None
     disciplines: _Disciplines | None
     active_since: _Year | None          # turned into years_active here, so the arithmetic is not the LLM's
