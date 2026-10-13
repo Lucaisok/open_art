@@ -254,6 +254,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Projects */
+        get: operations["list_projects_api_projects_get"];
+        put?: never;
+        /** Add Project */
+        post: operations["add_project_api_projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Project */
+        put: operations["edit_project_api_projects__project_id__put"];
+        post?: never;
+        /** Delete Project */
+        delete: operations["delete_project_api_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss */
+        post: operations["dismiss_api_projects_dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -276,6 +329,11 @@ export interface components {
             disciplines: string[];
             /** Countries */
             countries: string[];
+        };
+        /** DismissIn */
+        DismissIn: {
+            /** Key */
+            key: string;
         };
         /** DocumentOut */
         DocumentOut: {
@@ -494,6 +552,79 @@ export interface components {
              */
             education: components["schemas"]["EducationEntry"][];
         };
+        /** ProjectIn */
+        ProjectIn: {
+            /**
+             * Kind
+             * @default project
+             * @enum {string}
+             */
+            kind: "project" | "interest";
+            /** Title */
+            title?: string | null;
+            /** Status */
+            status?: ("past" | "current" | "planned") | null;
+            /** Years */
+            years?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Medium */
+            medium?: string | null;
+            /**
+             * Venues
+             * @default []
+             */
+            venues: string[];
+            /** Suggestion Key */
+            suggestion_key?: string | null;
+        };
+        /** ProjectOut */
+        ProjectOut: {
+            /**
+             * Kind
+             * @default project
+             * @enum {string}
+             */
+            kind: "project" | "interest";
+            /** Title */
+            title?: string | null;
+            /** Status */
+            status?: ("past" | "current" | "planned") | null;
+            /** Years */
+            years?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Medium */
+            medium?: string | null;
+            /**
+             * Venues
+             * @default []
+             */
+            venues: string[];
+            /** Suggestion Key */
+            suggestion_key?: string | null;
+            /** Id */
+            id?: string | null;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["SourceOut"][];
+            /**
+             * From Documents
+             * @default false
+             */
+            from_documents: boolean;
+        };
+        /** ProjectsOut */
+        ProjectsOut: {
+            /** Projects */
+            projects: components["schemas"]["ProjectOut"][];
+            /** Interests */
+            interests: components["schemas"]["ProjectOut"][];
+            /** Suggestions */
+            suggestions: components["schemas"]["ProjectOut"][];
+        };
         /** QuestionOut */
         QuestionOut: {
             /** Question */
@@ -633,6 +764,13 @@ export interface components {
             kind: string;
             /** File Name */
             file_name: string;
+        };
+        /** SourceOut */
+        SourceOut: {
+            /** Quote */
+            quote: string;
+            /** Citation */
+            citation: string;
         };
         /** Suggestion */
         Suggestion: {
@@ -1121,6 +1259,154 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["OpportunityOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_projects_api_projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectsOut"];
+                };
+            };
+        };
+    };
+    add_project_api_projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_project_api_projects__project_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_project_api_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_api_projects_dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

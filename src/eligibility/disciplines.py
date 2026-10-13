@@ -67,7 +67,18 @@ GENERIC_PRACTICE_RE = re.compile(r"\b(recogni[sz]ed|professional) (artistic|crea
 
 # a role or venue that narrows the discipline to something other than making the art
 NARROWING_RE = re.compile(r"\b(translat\w*|teach\w*|educat\w*|festivals?|publish\w*|producers?|venues?|"
-                          r"organi[sz]ers?|museums?|schools?|librar\w*)\b", re.IGNORECASE)
+                          r"organi[sz]ers?|museums?|schools?(?![- ]age)|librar\w*)\b", re.IGNORECASE)
+
+# a list of examples ("cultural practitioners (such as curators, producers …)") illustrates a wider group, so a
+# role word inside it doesn't narrow the sentence: cut from the cue to the closing bracket or the end of the clause
+EXAMPLES_RE = re.compile(r"\((such as|e\.g\.|for example|including)[^)]*\)"
+                         r"|\b(such as|e\.g\.|for example)\b[^.;:)]*", re.IGNORECASE)
+
+
+def _narrowing(text: str) -> re.Match | None:
+    """The first role or venue word that narrows the sentence, outside any list of examples."""
+    return NARROWING_RE.search(EXAMPLES_RE.sub(" ", text))
+
 
 _TERM_RES = {canonical: re.compile(r"\b(" + "|".join(terms) + r")\b", re.IGNORECASE)
              for canonical, terms in TERMS.items()}
@@ -94,11 +105,13 @@ def excluded_disciplines(text: str) -> set[str] | None:
 
 def discipline_match(text: str, disciplines: list[str]) -> tuple[str, str] | None:
     """(the artist's discipline that matched, the words that named it), or None."""
-    if not disciplines or NARROWING_RE.search(text):
+    if not disciplines or _narrowing(text):
         return None
     # "all disciplines" only counts if the sentence names no specific one: "all disciplines and genres of
-    # the independent performing arts" is open to performing arts only, not to everyone
-    names_specific = any(term_re.search(text) for term_re in _TERM_RES.values())
+    # the independent performing arts" is open to performing arts only, not to everyone. A field named only
+    # as an example ("in all forms of art (such as curating …)") doesn't count
+    main_text = EXAMPLES_RE.sub(" ", text)
+    names_specific = any(term_re.search(main_text) for term_re in _TERM_RES.values())
     if not names_specific and (found := ANY_DISCIPLINE_RE.search(text) or GENERIC_PRACTICE_RE.search(text)):
         return disciplines[0], found.group(0)
     for discipline in disciplines:
@@ -120,5 +133,5 @@ def disciplines_named(text: str) -> list[tuple[str, str]]:
 
 def narrowing_word(text: str) -> str | None:
     """The role or venue word that narrows the sentence ("translators", "festivals"), if any."""
-    found = NARROWING_RE.search(text)
+    found = _narrowing(text)
     return found.group(0) if found else None

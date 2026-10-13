@@ -9,7 +9,9 @@ Records are cached as seen, so a normal pipeline run never redoes them; this scr
     scan     fetch every page (no model calls): which call PDFs it links, whether it still loads.
              Also writes data/site_wide_pdfs.txt: PDFs linked from >= SITE_WIDE_MIN_PAGES pages.
     extract  re-run the real extraction on every page that still loads (paid: one mini-model
-             call each), WORKERS pages at a time. --limit N for a pilot.
+             call each), WORKERS pages at a time. --limit N for a pilot. --no-rules: only the
+             published calls where the engine finds no rule at all, and the accepted pages the old
+             fetch read badly (< MIN_SCOPE_CHARS of text, or broken characters), re-run even if done before (2026-10-13).
     report   compare old vs new per page -> data/refresh/report.md
     apply    write the results into data/raw/** and data/rejected/, and drop the changed ids from
              data/processed/opportunities.jsonl so the downstream stages redo them.
@@ -21,7 +23,7 @@ billed twice.
 
 Usage:
     uv run python scripts/reextract_corpus.py scan
-    uv run python scripts/reextract_corpus.py extract [--limit 20]
+    uv run python scripts/reextract_corpus.py extract [--limit 20] [--no-rules]
     uv run python scripts/reextract_corpus.py report
     uv run python scripts/reextract_corpus.py apply
 """
@@ -46,8 +48,9 @@ sys.path.append(REPO_ROOT)
 load_dotenv(os.path.join(REPO_ROOT, ".env"))
 
 from src.collectors.crawler import HEADERS  # noqa: E402
-from src.collectors.extraction import (SITE_WIDE_MIN_PAGES, SITE_WIDE_PDFS_PATH, deadline_has_passed,  # noqa: E402
-                                       extract_opportunity, find_pdf_links, source_language)
+from src.collectors.extraction import (MIN_SCOPE_CHARS, SITE_WIDE_MIN_PAGES, SITE_WIDE_PDFS_PATH,  # noqa: E402
+                                       content_scope, deadline_has_passed, extract_opportunity,
+                                       find_pdf_links, source_language)
 from src.collectors.jsonl import load_jsonl, write_jsonl  # noqa: E402
 from src.models.opportunity import RawOpportunity  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
@@ -62,6 +65,7 @@ EXTRACT_PATH = os.path.join(REFRESH_DIR, "reextract.jsonl")    # one line per re
 REPORT_PATH = os.path.join(REFRESH_DIR, "report.md")
 WORKERS = 6       # pages extracted at the same time: fetching + one model call is ~10-15 s per page
 PILOT_SEED = 20261012
+MOJIBAKE = ("Ã¼", "Ã¶", "Ã¤", "Ã©", "Ã¨", "â€")   # UTF-8 read as Latin-1: a page the old fetch read badly
 
 
 # -- shared helpers --------------------------------------------------------------------------------
@@ -141,7 +145,7 @@ def scan() -> None:
                 else:
                     # same soup and scope as fetch_page(), so the scan finds exactly what extraction will
                     soup = BeautifulSoup(resp.text, "html.parser")
-                    scope = soup.find("article") or soup.find("main") or soup
+                    scope = content_scope(soup)
                     row["pdfs"] = find_pdf_links(soup, scope, page["url"])
             except Exception as e:
                 row["error"] = f"{e.__class__.__name__}: {e}"[:200]
@@ -166,7 +170,19 @@ def scan() -> None:
 
 # -- stage 2: extract (paid) -----------------------------------------------------------------------
 
-def extract(limit: int | None) -> None:
+def no_rules_ids() -> set[str]:
+    """Published calls where the engine finds no rule at all: an empty requirements text, or only
+    sentences that are not about the applicant. Profile-independent, so an empty profile is enough."""
+    from src.eligibility.engine import EligibilityEngine
+    from src.eligibility.profile import ArtistProfile
+    from src.matching.corpus import load_opportunities
+
+    engine = EligibilityEngine()
+    return {o.id for o in load_opportunities()
+            if all(item.outcome == "INFO" for item in engine.evaluate(ArtistProfile(), o).items)}
+
+
+def extract(limit: int | None, no_rules: bool = False) -> None:
     from openai import OpenAI   # only this stage needs the API key
 
     pages = {p["id"]: p for p in load_pages()}
@@ -174,8 +190,19 @@ def extract(limit: int | None) -> None:
     # every page that still loads; a page that is itself a PDF loads too (extraction reads it)
     candidates = [i for i in pages if i in scanned and scanned[i]["error"] in (None, "page is itself a PDF")]
     done = load_done(EXTRACT_PATH)
-    todo = [i for i in candidates if i not in done]
-    if limit is not None:
+    if no_rules:
+        # re-run even if done: the newer line wins in load_done(), so report/apply see the new result
+        read_badly = {i for i, p in pages.items() if len(p["old"].get("source_text") or "") < MIN_SCOPE_CHARS
+                      or any(m in (p["old"].get("source_text") or "") for m in MOJIBAKE)}
+        wanted = no_rules_ids() | read_badly
+        todo = [i for i in candidates if i in wanted and pages[i]["status"] == "accepted"]
+    else:
+        todo = [i for i in candidates if i not in done]
+    if limit is not None and no_rules:
+        todo = sorted(todo)
+        random.Random(PILOT_SEED).shuffle(todo)
+        todo = todo[:limit]
+    elif limit is not None:
         # a pilot: a fixed random sample, half accepted and half rejected pages where possible
         rng = random.Random(PILOT_SEED)
         accepted = [i for i in todo if pages[i]["status"] == "accepted"]
@@ -380,8 +407,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("stage", choices=["scan", "extract", "report", "apply"])
     parser.add_argument("--limit", type=int, default=None, help="extract: only this many pages (a pilot)")
+    parser.add_argument("--no-rules", action="store_true",
+                        help="extract: only the published calls where the engine finds no rule (re-run)")
     args = parser.parse_args()
     if args.stage == "extract":
-        extract(args.limit)
+        extract(args.limit, args.no_rules)
     else:
         {"scan": scan, "report": report, "apply": apply}[args.stage]()

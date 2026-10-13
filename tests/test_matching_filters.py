@@ -24,6 +24,26 @@ def test_default_filters_only_hide_closed_calls():
     assert passes(opp(deadline_date=date(2026, 9, 1)), MatchFilters(open_only=False), TODAY)
 
 
+@pytest.mark.parametrize("title, deadline_raw, kept", [
+    # a deadline without a year was rolled to 2027, but the title says the call is past
+    ("ICO FEDS 2017: Film Exhibition Trainee Scheme", "3 January", False),
+    ("Call for Participation: LUX London Critical Forum 2015/16", None, False),
+    ("Open Call for 2023 Grant Applications", "Wednesday, 30 November", False),
+    # kept: this year or later, a season reaching this year, a deadline naming this year, no year,
+    # or a year about the content rather than the call
+    ("Residency 2026", None, True),
+    ("Video Art Open Call 2025-26", None, True),
+    ("Video Art Open Call 2025-2026", None, True),
+    ("Fellowship 2025", "1 December 2026", True),
+    ("Open call for artists", "3 January", True),
+    ("Artistic practices among immigrants to Norway 1970–2000", None, True),
+])
+def test_open_only_hides_calls_whose_title_names_only_past_years(title, deadline_raw, kept):
+    call = opp(title=title, title_en=title, deadline_raw=deadline_raw)
+    assert passes(call, MatchFilters(), TODAY) is kept
+    assert passes(call, MatchFilters(open_only=False), TODAY)
+
+
 def test_unknown_values_are_kept():
     unknown = opp()  # no deadline, no type, no discipline, no country, fee unknown
     strict = MatchFilters(opportunity_types=["Residency"], disciplines=["Music"], countries=["Norway"],

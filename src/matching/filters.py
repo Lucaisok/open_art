@@ -12,8 +12,13 @@ unknown is KEPT. A missing deadline, discipline or fee is "not stated", not
 One exception, on purpose: "funded only" asks for evidence of support, so a
 call whose funding is not stated is hidden by it (keeping it would make the
 filter mean nothing: 122 of the 479 calls state no funding).
+
+"Open only" also hides a call whose title names only past years ("ICO FEDS 2017", "Open Call for
+2023 Grant Applications"): the deadline parser rolls a deadline without a year ("3 January") to its
+next date, so these looked open. Product only: the corpus and the RQ1 data keep every call.
 """
 
+import re
 from datetime import date
 
 from pydantic import BaseModel, field_validator
@@ -81,9 +86,29 @@ def _contains_text(opp: ProcessedOpportunity, text: str) -> bool:
     return text.casefold() in " | ".join(f for f in fields if f).casefold()
 
 
+# a year in a title: "2025", or the end of a season "2025-26" / "2015/16"; years before 2010 are about
+# the content ("immigrants to Norway 1970–2000"), not the call
+_TITLE_YEAR_RE = re.compile(r"(?<!\d)(20[1-9]\d)(?:\s?[-/–]\s?(\d{2}))?(?!\d)")
+_FULL_YEAR_RE = re.compile(r"(?<!\d)20\d{2}(?!\d)")
+
+
+def title_says_past(opp: ProcessedOpportunity, today: date) -> bool:
+    """True if the title names a year and every one is before this year, and the deadline text
+    doesn't name this year or a later one ("Call for pitches—Mayday 2022"). No year: False."""
+    years = []
+    for title in (opp.title_en, opp.title):
+        for start, end in _TITLE_YEAR_RE.findall(title or ""):
+            years.append(int(start[:2] + end) if end else int(start))
+    if not years or max(years) >= today.year:
+        return False
+    return not any(int(y) >= today.year for y in _FULL_YEAR_RE.findall(opp.deadline_raw or ""))
+
+
 def passes(opp: ProcessedOpportunity, filters: MatchFilters, today: date) -> bool:
     """True if the artist's filters keep this call."""
     if filters.open_only and opp.deadline_date is not None and opp.deadline_date < today:
+        return False
+    if filters.open_only and title_says_past(opp, today):
         return False
     if filters.no_fee_only and opp.application_fee_has_fee is True:
         return False

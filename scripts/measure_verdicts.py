@@ -9,7 +9,7 @@ Two parts:
    multidisciplinary artist shaped like the author's own profile. For each: the share of ELIGIBLE /
    CHECK / LIKELY_NOT_ELIGIBLE verdicts, the mean number of open points (CHECK rows) per call, and
    the share of calls with none. Then where the open points come from (check kind x label).
-2. Gold verdicts (the step 6 and 6c sets, judged by reading the calls):
+2. Gold verdicts (the live set of 2026-10-13, plus the older step 6 and 6c sets), judged by reading the calls:
    - wrong NOT ELIGIBLE: engine rejects, judge did not      -> must stay 0
    - wrong ELIGIBLE: engine ELIGIBLE, judge NOT_ELIGIBLE     -> must not grow
    - eligible found: judged ELIGIBLE and engine ELIGIBLE     -> the number this plan raises
@@ -29,7 +29,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(REPO_ROOT)
 sys.path.append(os.path.join(REPO_ROOT, "scripts"))
 
-from evaluate_engine import FRESH_GOLD_PATH, GOLD_PATH, PERSONAS, TODAY, load_opportunities  # noqa: E402
+from evaluate_engine import FRESH_GOLD_PATH, GOLD_PATH, LIVE_GOLD_PATH, PERSONAS, TODAY, load_opportunities  # noqa: E402
 
 from src.eligibility.engine import EligibilityEngine  # noqa: E402
 from src.eligibility.profile import ArtistProfile  # noqa: E402
@@ -78,8 +78,14 @@ def gold_table(engine, opportunities) -> None:
     print("\nGold verdicts (judged by reading the calls):")
     print(f"  {'set':6s} {'wrong NOT ELIGIBLE':>19s} {'wrong ELIGIBLE':>15s} {'eligible found':>15s} "
           f"{'rejections found':>17s}")
-    for name, path in [("step 6", GOLD_PATH), ("fresh", FRESH_GOLD_PATH)]:
+    # the live set (2026-10-13) is the one to judge changes on; the older two lost calls to the re-extraction
+    for name, path in [("live", LIVE_GOLD_PATH), ("step 6", GOLD_PATH), ("fresh", FRESH_GOLD_PATH)]:
         gold = pd.read_csv(path)
+        # a re-extraction can drop a judged call from the live corpus: skip it, and say so
+        missing = ~gold.opportunity_id.isin(opportunities)
+        if missing.any():
+            print(f"  ({name}: {missing.sum()} judged pairs skipped, call no longer in the corpus)")
+        gold = gold[~missing]
         status = [engine.evaluate(PERSONAS[r.persona], opportunities[r.opportunity_id], today=TODAY).status
                   for r in gold.itertuples()]
         gold = gold.assign(engine=status)

@@ -47,6 +47,10 @@ FRESH_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verd
 # "Conclusive verdicts" step 6: a third sample (seed 2028, none of the step 6 / 6c calls), judged before the
 # engine was run on it, for the final number: the fresh set was iterated against, so it is no longer blind
 BLIND_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts_blind.csv")
+# after the 2026-10-12 re-extraction: a fourth sample (seed 2029, 60 calls, none of the earlier sets), drawn from
+# the live corpus because 32 of the 60 step 6 / 6c calls were dropped from it (workflow.MD, "live gold set")
+LIVE_GOLD_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "engine_gold_verdicts_live.csv")
+LIVE_SAMPLE_SIZE = 60
 
 TODAY = date(2026, 10, 1)  # fixed, so ages and the results are reproducible
 SEED = 2026
@@ -95,8 +99,8 @@ def load_opportunities() -> dict[str, ProcessedOpportunity]:
 
 
 def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedOpportunity],
-                  seed: int = SEED, exclude: set[str] = frozenset()) -> list[str]:
-    """30 calls, fixed seed: half that contain a reviewed sentence the engine could reject on
+                  seed: int = SEED, exclude: set[str] = frozenset(), size: int = SAMPLE_SIZE) -> list[str]:
+    """`size` calls (30 by default), fixed seed: half that contain a reviewed sentence the engine could reject on
     (otherwise a random sample has too few possible rejections to measure), half from the rest.
     The split uses the inputs (sentences + reviews), never a verdict."""
     def can_reject(opp_id: str) -> bool:
@@ -114,7 +118,7 @@ def select_sample(engine: EligibilityEngine, opportunities: dict[str, ProcessedO
         taken = 0
         for opp_id in ids:
             source = opportunities[opp_id].source
-            if (taken < SAMPLE_SIZE // 2 and opp_id not in picked and can_reject(opp_id) == want_reject
+            if (taken < size // 2 and opp_id not in picked and can_reject(opp_id) == want_reject
                     and per_source.get(source, 0) < MAX_PER_SOURCE):
                 picked.append(opp_id)
                 per_source[source] = per_source.get(source, 0) + 1
@@ -235,12 +239,18 @@ def main() -> None:
                         help="the fresh sample (step 6c): seed 2027, excluding every call in the step 6 gold file")
     parser.add_argument("--blind", action="store_true",
                         help="the blind sample of the conclusive-verdicts plan: seed 2028, excluding both earlier sets")
+    parser.add_argument("--live", action="store_true",
+                        help="the live sample after the re-extraction: seed 2029, 60 calls, excluding all earlier sets")
     args = parser.parse_args()
 
     engine = EligibilityEngine()
     opportunities = load_opportunities()
     if args.packet:
-        if args.blind:
+        if args.live:
+            judged = set().union(*(set(pd.read_csv(path)["opportunity_id"])
+                                   for path in (GOLD_PATH, FRESH_GOLD_PATH, BLIND_GOLD_PATH)))
+            sample = select_sample(engine, opportunities, seed=2029, exclude=judged, size=LIVE_SAMPLE_SIZE)
+        elif args.blind:
             judged = set(pd.read_csv(GOLD_PATH)["opportunity_id"]) | set(pd.read_csv(FRESH_GOLD_PATH)["opportunity_id"])
             sample = select_sample(engine, opportunities, seed=2028, exclude=judged)
         elif args.fresh:
@@ -250,7 +260,7 @@ def main() -> None:
             sample = select_sample(engine, opportunities)
         write_packet(args.packet, sample, opportunities)
     else:
-        evaluate(engine, opportunities, BLIND_GOLD_PATH if args.blind else FRESH_GOLD_PATH if args.fresh else GOLD_PATH)
+        evaluate(engine, opportunities, LIVE_GOLD_PATH if args.live else BLIND_GOLD_PATH if args.blind else FRESH_GOLD_PATH if args.fresh else GOLD_PATH)
 
 
 if __name__ == "__main__":

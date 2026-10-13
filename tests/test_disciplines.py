@@ -27,6 +27,12 @@ from src.eligibility.disciplines import discipline_match
     ("Support for literary translators", ["Literature/Writing"], None),
     ("Organisers of music festivals may apply.", ["Music"], None),
     ("for dance teachers in secondary schools", ["Dance"], None),
+    # not narrowing: "school age" is no role, and a role inside a list of examples illustrates a wider group
+    ("Visual artists with children who are not yet of compulsory school age.", ["Visual Arts"],
+     ("Visual Arts", "Visual artists")),
+    ("Funding is available for professional artists and cultural practitioners (such as curators, producers or "
+     "researchers) in all forms of art and culture.", ["Visual Arts"], ("Visual Arts", "all forms of art")),
+    ("Open to cultural workers such as translators and publishers.", ["Literature/Writing"], None),
 ])
 def test_discipline_match(text, disciplines, expected):
     assert discipline_match(text, disciplines) == expected

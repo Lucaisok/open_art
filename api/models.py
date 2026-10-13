@@ -101,3 +101,34 @@ class Profile(Base):
     reviewed_documents: Mapped[list] = mapped_column(JSONB, server_default="[]")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
+
+
+# -- projects: past, current and planned work, and interests (workflow.MD, "Projects page") ------------
+
+class Project(Base):
+    """One project or interest the artist saved: added by hand, or a suggestion read from their
+    documents by rules (src/rag/project_rules.py) that they accepted. Nothing is stored unreviewed."""
+    __tablename__ = "projects"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))              # "project" or "interest"
+    title: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str | None] = mapped_column(String(10))     # past / current / planned; None for an interest
+    years: Mapped[str | None] = mapped_column(String(30))      # "2025", "2024–"
+    summary: Mapped[str | None] = mapped_column(Text)
+    medium: Mapped[str | None] = mapped_column(Text)
+    venues: Mapped[list] = mapped_column(JSONB, server_default="[]")
+    sources: Mapped[list] = mapped_column(JSONB, server_default="[]")   # [{quote, citation}] when from documents
+    suggestion_key: Mapped[str | None] = mapped_column(Text)            # the suggestion it was accepted from
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                 onupdate=func.now())
+
+
+class DismissedSuggestion(Base):
+    """A suggestion the artist declined: not offered again (until its text changes)."""
+    __tablename__ = "dismissed_suggestions"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)

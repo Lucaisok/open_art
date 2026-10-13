@@ -6,6 +6,7 @@ import styles from "./Header.module.css";
 
 const LINKS = [
     { label: "Discover", href: "/discover", also: "/opportunities" },   // a call's page belongs to Discover
+    { label: "Projects", href: "/projects" },
     { label: "Documents", href: "/documents" },
     { label: "Profile", href: "/profile" },   // also where the account is deleted
 ];

@@ -215,7 +215,20 @@ def test_countries(profile, label, value, expected):
 ])
 def test_applicant_type(applicant_type, polarity, expected):
     profile = ArtistProfile(applicant_type=applicant_type)
-    assert one(profile, "APPLICANT_TYPE", {"types": ["individual", "group"]}, polarity)[0] == expected
+    assert one(profile, "APPLICANT_TYPE", {"types": ["individual"]}, polarity)[0] == expected
+
+
+@pytest.mark.parametrize("applicant_type, types, expected", [
+    # the group / organisation boundary is a check, never a reject (live gold set, 2026-10-13)
+    ("group", ["individual", "organisation"], "CHECK"),    # "private individuals, organisations, enterprises"
+    ("organisation", ["group", "individual"], "CHECK"),    # "individual, as a duo or in group": a company?
+    # clear cases still reject
+    ("group", ["individual"], "FAIL"),
+    ("group", ["organisation"], "FAIL"),
+    ("organisation", ["individual"], "FAIL"),
+])
+def test_applicant_type_boundary(applicant_type, types, expected):
+    assert one(ArtistProfile(applicant_type=applicant_type), "APPLICANT_TYPE", {"types": types})[0] == expected
 
 
 @pytest.mark.parametrize("profile, value, polarity, expected", [

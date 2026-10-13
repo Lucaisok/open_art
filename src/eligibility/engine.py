@@ -251,7 +251,17 @@ def _country_membership(label: str, value: dict, profile: ArtistProfile):
 def _applicant_type_membership(value: dict, profile: ArtistProfile):
     if profile.applicant_type is None:
         return None, "your applicant type (individual / group / organisation) is not in your profile"
-    return profile.applicant_type in value.get("types", []), f"you apply as: {profile.applicant_type}"
+    types, yours = value.get("types", []), profile.applicant_type
+    detail = f"you apply as: {yours}"
+    if yours in types:
+        return True, detail
+    # the group / organisation boundary is fuzzy, so it never rejects (live gold set, 2026-10-13): a duo may
+    # apply through one member or as an association when both people and organisations can, and a company
+    # may count as a "group" of artists
+    if (yours == "group" and {"individual", "organisation"} <= set(types)) or \
+            (yours == "organisation" and "group" in types):
+        return None, detail + "; check whether yours counts"
+    return False, detail
 
 
 def _student_membership(value: dict, profile: ArtistProfile, dates):

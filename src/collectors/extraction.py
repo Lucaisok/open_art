@@ -272,7 +272,8 @@ def build_extraction_system_prompt() -> str:
         "duties if selected, documents to send, how selection works, "
         "deadlines, the different routes or steps to apply ('There are two ways "
         "to apply'), and list headers with nothing after them ('The residency "
-        "is open to:' - copy it together with the items that follow it).\n"
+        "is open to:' - copy it together with the items that follow it), and the "
+        "fields of an application form ('Year of birth', 'Nationality', 'Address').\n"
         "- project_requirements: VERBATIM, conditions the PROJECT or WORK must "
         "meet to be eligible (theme, format, site, duration, budget rules) "
         "and duties if selected (be present, deliver a work, report), or null. "
@@ -407,6 +408,29 @@ def fetch_pdf_text(url: str) -> str:
     return text
 
 
+MIN_SCOPE_CHARS = 300  # an <article> shorter than this is a fragment (OCA: only "Apply here"), not the call
+
+
+def content_scope(soup: BeautifulSoup):
+    """The part of the page holding the call: <article>, else <main>, else the whole page. One that is
+    nearly empty is skipped for the next, larger one."""
+    for scope in (soup.find("article"), soup.find("main")):
+        if scope is not None and len(scope.get_text(" ", strip=True)) >= MIN_SCOPE_CHARS:
+            return scope
+    return soup
+
+
+def strip_page_chrome(scope) -> None:
+    """Removes menus and the site header / footer, so they don't fill the MAX_PAGE_CHARS budget
+    (VKKF: the menus used it all and the call's rules were cut off). A <header> or <footer> inside the
+    content (an article's own title block) stays."""
+    for tag in scope.find_all("nav"):
+        tag.decompose()
+    for tag in scope.find_all(["header", "footer"]):
+        if tag.find_parent(["article", "main", "section"]) is None:
+            tag.decompose()
+
+
 def fetch_page(url: str) -> tuple[str, list[tuple[str, str]], list[str]]:
     """Fetch a page, returning (visible_text, candidate_links, pdf_urls).
 
@@ -429,13 +453,18 @@ def fetch_page(url: str) -> tuple[str, list[tuple[str, str]], list[str]]:
     if "application/pdf" in content_type or url.lower().endswith(".pdf"):
         return extract_pdf_text(resp.content)[:MAX_PAGE_CHARS], [], []
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    scope = soup.find("article") or soup.find("main") or soup
-    text = scope.get_text(" ", strip=True)[:MAX_PAGE_CHARS]
+    # without a charset in the header requests assumes Latin-1 ("KÃ¼nstler" on kunststiftung_nrw): give
+    # BeautifulSoup the bytes then, so it reads the page's own <meta charset>
+    soup = BeautifulSoup(resp.text if "charset" in content_type.lower() else resp.content, "html.parser")
+    scope = content_scope(soup)
+    # links and PDFs from the whole scope, menus included; the text without them (below)
     links = gather_candidate_links(str(scope), url)
+    pdf_links = find_pdf_links(soup, scope, url)
+    strip_page_chrome(scope)
+    text = scope.get_text(" ", strip=True)[:MAX_PAGE_CHARS]
 
     pdf_urls = []
-    for pdf_url, label in find_pdf_links(soup, scope, url):
+    for pdf_url, label in pdf_links:
         pdf_text = fetch_pdf_text(pdf_url)
         if pdf_text:
             text += f"\n\n--- Attached document: {label} ({pdf_url}) ---\n{pdf_text[:MAX_PDF_CHARS]}"
@@ -534,13 +563,9 @@ def source_language(source_name: str) -> str:
     return _SOURCE_LANGUAGES.get(source_name, "en")
 
 
-def extract_opportunity(
-    client: OpenAI, url: str, source_name: str
-) -> tuple[RawOpportunity | None, str | None]:
-    """Returns (record, rejection_reason) - record is None iff rejected. Writes no file."""
-    text, links, pdf_urls = fetch_page(url)
+def _ask_model(client: OpenAI, url: str, text: str, links: list[tuple[str, str]]) -> ExtractedOpportunity:
+    """One extraction call on the text given (the page and its PDFs)."""
     links_block = "\n".join(f"- [{text_}]({link_url})" for link_url, text_ in links) or "(none found)"
-
     response = client.chat.completions.parse(
         model=MODEL,
         temperature=0,  # accept/reject and field extraction should be repeatable for the
@@ -559,6 +584,15 @@ def extract_opportunity(
     )
     extracted = response.choices[0].message.parsed
     _drop_placeholder_leaks(extracted)
+    return extracted
+
+
+def extract_opportunity(
+    client: OpenAI, url: str, source_name: str
+) -> tuple[RawOpportunity | None, str | None]:
+    """Returns (record, rejection_reason) - record is None iff rejected. Writes no file."""
+    text, links, pdf_urls = fetch_page(url)
+    extracted = _ask_model(client, url, text, links)
 
     if not extracted.is_open_call:
         return None, extracted.rejection_reason or "not an open call"

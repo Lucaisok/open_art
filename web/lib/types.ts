@@ -16,3 +16,6 @@ export type SearchResults = components["schemas"]["SearchOut"];
 export type SearchResult = components["schemas"]["ResultOut"];
 export type Opportunity = components["schemas"]["OpportunityOut"];
 export type VerdictStatus = SearchResult["status"];
+export type ProjectsData = components["schemas"]["ProjectsOut"];
+export type ProjectItem = components["schemas"]["ProjectOut"];
+export type ProjectInput = components["schemas"]["ProjectIn"];
