@@ -483,6 +483,16 @@ for TF-IDF — which is what motivated round 2.)*
 > F1, get determinism, zero per-call cost and local execution.** A
 > stated preference becomes an evidence-based choice.
 
+**Per category** (same 696 sentences, seed-42 folds; notebook cells 14
+and 21). Averages: macro-F1 0.70 (bge-base) vs 0.76 (GPT), weighted-F1
+0.73 vs 0.76, accuracy 0.74 vs 0.75. 7 of 11 categories are within
+~0.03 F1. GPT's macro lead comes mostly from the two rarest, vaguest
+classes: EDUCATION (15 sentences, 0.45 vs 0.73) and OTHER_ELIGIBILITY
+(30, 0.25 vs 0.49). The local model wins PRIOR_FUNDING (0.73 vs 0.67).
+GPT over-assigns some labels (high recall, low precision on
+APPLICANT_TYPE 0.52, PRIOR_FUNDING 0.54, OTHER 0.38); the local model's
+precision and recall stay close in almost every class.
+
 ### "Why not let GPT extract the requirements?" — second key presentation point (2026-10-13)
 
 Model 4 asked GPT to *classify* sentences. The stronger alternative is

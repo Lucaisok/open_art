@@ -88,30 +88,36 @@ def scope_queue(full_texts: set[str]) -> pd.DataFrame:
             .rename(columns={"text": "chunk_text"}))
 
 
-def write_batches(frame: pd.DataFrame, kind: str) -> int:
+def write_batches(frame: pd.DataFrame, kind: str, round_dir: str) -> int:
     for start in range(0, len(frame), BATCH_SIZE):
         frame.iloc[start:start + BATCH_SIZE].to_csv(
-            os.path.join(ROUND_DIR, f"{kind}_batch{start // BATCH_SIZE + 1}.csv"), index=False)
+            os.path.join(round_dir, f"{kind}_batch{start // BATCH_SIZE + 1}.csv"), index=False)
     return -(-len(frame) // BATCH_SIZE)
 
 
-def queue(prefix: str) -> None:
-    """prefix names a later pass ("pass2_"), so its batches don't overwrite applied ones."""
-    os.makedirs(ROUND_DIR, exist_ok=True)
+def queue(prefix: str, round_dir: str | None = None) -> tuple[int, int]:
+    """prefix names a later pass ("pass2_"), so its batches don't overwrite applied ones.
+    round_dir: another round's folder (the automatic review passes its own). Returns the row counts."""
+    round_dir = round_dir or ROUND_DIR
+    os.makedirs(round_dir, exist_ok=True)
     full = pending_review()
     scope = scope_queue(set(full["chunk_text"]))
-    print(f"full:  {len(full)} sentence/label rows -> {write_batches(full, prefix + 'full')} batch(es)")
-    print(f"scope: {len(scope)} sentences -> {write_batches(scope, prefix + 'scope')} batch(es)  in {ROUND_DIR}")
+    print(f"full:  {len(full)} sentence/label rows -> {write_batches(full, prefix + 'full', round_dir)} batch(es)")
+    print(f"scope: {len(scope)} sentences -> {write_batches(scope, prefix + 'scope', round_dir)} batch(es)  in {round_dir}")
+    return len(full), len(scope)
 
 
-def apply(prefix: str) -> None:
+def apply(prefix: str, round_dir: str | None = None, reviewed_by: str | None = None) -> int:
+    """Validate the round's *_reviewed.csv files and append them to the reviews file. Returns the rows written."""
+    round_dir, reviewed_by = round_dir or ROUND_DIR, reviewed_by or REVIEWED_BY
+    reviewed_on = REVIEWED_ON if round_dir == ROUND_DIR else date.today().isoformat()
     queued = {}
-    for path in glob.glob(os.path.join(ROUND_DIR, f"{prefix}*_batch*.csv")):
+    for path in glob.glob(os.path.join(round_dir, f"{prefix}*_batch*.csv")):
         if not path.endswith("_reviewed.csv"):
             for row in pd.read_csv(path, keep_default_na=False).to_dict("records"):
                 queued[(row["chunk_text"], row["label"])] = row
     new_rows, kept_applicant = [], 0
-    for path in sorted(glob.glob(os.path.join(ROUND_DIR, f"{prefix}*_reviewed.csv"))):
+    for path in sorted(glob.glob(os.path.join(round_dir, f"{prefix}*_reviewed.csv"))):
         if not prefix and os.path.basename(path).startswith("pass"):
             continue   # a later pass, applied with its own --prefix
         with open(path, encoding="utf-8", newline="") as f:
@@ -132,7 +138,7 @@ def apply(prefix: str) -> None:
                     "scope": "" if row["scope"] == APPLICANT else row["scope"], "applies_to": row["applies_to"],
                     "reason": row["reason"], "occurrences": source.get("occurrences", ""),
                     "example_chunk_id": source.get("example_chunk_id", ""),
-                    "reviewed_by": REVIEWED_BY, "reviewed_on": REVIEWED_ON})
+                    "reviewed_by": reviewed_by, "reviewed_on": reviewed_on})
     with open(REVIEWED_PATH, encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         fields, existing = reader.fieldnames, {(r["chunk_text"], r["label"]) for r in reader}
@@ -142,6 +148,7 @@ def apply(prefix: str) -> None:
         csv.DictWriter(f, fieldnames=fields).writerows(new_rows)
     print(f"{len(new_rows)} review rows appended to {os.path.relpath(REVIEWED_PATH, REPO_ROOT)}; "
           f"{kept_applicant} scope-only sentences confirmed APPLICANT (unchanged)")
+    return len(new_rows)
 
 
 if __name__ == "__main__":
