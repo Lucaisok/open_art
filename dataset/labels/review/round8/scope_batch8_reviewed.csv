@@ -1,0 +1,30 @@
+chunk_text,label,scope,decision,reason
+"The programme is focused on film projects - fiction, creative documentaries, experimental, animation and any possible kind of cinema form - at an advanced stage of development.",DISCIPLINE,PROJECT,scope,project type and development stage
+"At least a first draft of the script in English must be presented when applying (or an analogue document, according to the type of project).",OTHER_ELIGIBILITY,PROJECT,scope,script draft required with the application
+"Only one project application per year, per filmmaker, can be submitted.",PRIOR_FUNDING,NOT_A_CONDITION,scope,submission rule: one application per year
+"A project that is refused one year, can be resubmitted another year if the project has gone through substantial changes.",PRIOR_FUNDING,WIDENING,scope,refused projects may be resubmitted
+"The same project cannot be submitted a third time, if rejected the second time around.",PRIOR_FUNDING,PROJECT,scope,limit on resubmitting the same project
+"Directors who have participated in a previous edition of FeatureLab (formerly called Framework) cannot apply to FeatureLab 2027, but they are eligible and welcome to take part in other TFL programmes.",OTHER_ELIGIBILITY,APPLICANT,,past FeatureLab directors excluded
+"Applicants must confirm their full availability for all the residential and online workshops, as well as for the TFL Meeting Event.",OTHER_ELIGIBILITY,APPLICANT,,full availability required to apply
+"The working language of all workshops, meetings and events is English ; thus, a good knowledge of English is essential in order to participate, and all written materials, all versions and drafts of the project, must be translated into English.",OTHER_ELIGIBILITY,APPLICANT,,good English essential
+"Are considered long features all those films over 60 minutes including fiction feature films, experimental films, animations and documentaries.",DISCIPLINE,NOT_A_CONDITION,scope,definition of long feature
+In case of co-direction and Tv-product the committee can discuss the eligibility of the project.,OTHER_ELIGIBILITY,NOT_A_CONDITION,scope,procedural: committee may discuss eligibility
+addressed to emerging Italian producers in team with directors working on feature film projects and taking their first steps into international co-production.,CAREER_STAGE,APPLICANT,,emerging Italian producers
+"A programme for professional scriptwriters coming from all over the world and planning a career in or a co-production with Europe, wanting to boost their experience in drama series writing and training the skills required in a writers’ room.",CAREER_STAGE,APPLICANT,,professional scriptwriters
+"The programme provides the participants, who represent diverse backgrounds and reflect voices that are underrepresented in the European TV industry .",CAREER_STAGE,APPLICANT,,participants from underrepresented backgrounds
+The programme is open to 5 international writers .,RESIDENCE,NOT_A_CONDITION,scope,number of places
+"Applicants have completed relevant international artistic projects, appeared in established international exhibitions and have a clear concept of their own artistic approach as well as an interest in TUD as an academic institution and its cultural, political and social context.",CAREER_STAGE,APPLICANT,,international project and exhibition record
+you are an active professional with relevant education or experience within your field.,CAREER_STAGE,APPLICANT,,active professional with education or experience
+you must be able to fund your journey and living expenses.,OTHER_ELIGIBILITY,APPLICANT,,must self-fund travel and living
+The Festival is committed to discovering new works as well as emerging filmmakers and artists.,DISCIPLINE,PREFERENCE,scope,festival interest in emerging filmmakers
+"Open to first shorts or short films made within an academic context, Opening Scenes is a section dedicated to the next generation of international creative documentary filmmakers.",DISCIPLINE,PROJECT,scope,first shorts or academic shorts
+VKKF grants funding to a legal entity or a natural person…,APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+VKKF grants funding to a legal or natural person…,APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+VKKF allocates funding to a legal entity or a natural person…,APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+The VKKF grants funding to a legal or natural person…,APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+"VKKF provides funding to a legal entity or a natural person… The objectives, tasks, eligible applicants and other matters related to the conduct of the programme competition are set out in the competition regulations of each programme.",APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+VKKF provides funding to a legal entity or a natural person…,APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+"VKKF grants funding to a legal entity or a natural person… The objectives, tasks, pool of applicants and other issues related to the conduct of the programme competition are laid down in the competition regulations of each targeted programme.",APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+"The State Culture Capital Foundation (VKKF) grants funding to a legal entity or a natural person… The objectives, tasks, eligible applicants, and other matters related to the implementation of the programme competition are set out in the competition regulations of each targeted programme.",APPLICANT_TYPE,APPLICANT,,cut-off VKKF sentence: stays a check (as round 7)
+"independent project spaces, platforms, initiatives, curators and artists based in Berlin",DISCIPLINE,APPLICANT,,"Berlin-based spaces, curators and artists"
+The residency is not eligible for:,RESIDENCE,NOT_A_CONDITION,scope,list lead-in; the exclusions are the following items

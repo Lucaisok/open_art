@@ -183,6 +183,31 @@ def classify_links(
     return response.choices[0].message.parsed
 
 
+def known_call_urls(source: dict, seen_ids: set[str], discovered_at: datetime) -> list[DiscoveredUrl]:
+    """The source's `call_urls` from sources.yaml, recorded as discovered without any LLM call.
+
+    A call page a person already found (e.g. a hand-collected list) must not depend on the
+    listing page linking to it: some organisers have no listing page at all (a festival with
+    only a submit page), others link the call from somewhere the crawler doesn't look.
+    """
+    discovered = []
+    for call in source.get("call_urls") or []:
+        link_id = make_id(call["url"], source["name"])
+        if link_id in seen_ids:
+            continue
+        seen_ids.add(link_id)
+        discovered.append(
+            DiscoveredUrl(
+                id=link_id,
+                url=call["url"],
+                source=source["name"],
+                title_guess=call.get("title") or "",
+                discovered_at=discovered_at,
+            )
+        )
+    return discovered
+
+
 def crawl_source(
     client: OpenAI,
     source: dict,
@@ -190,17 +215,23 @@ def crawl_source(
     page_hashes: dict[str, str],
     max_pages: int = MAX_PAGES_PER_SOURCE,
 ) -> list[DiscoveredUrl]:
-    discovered: list[DiscoveredUrl] = []
-    url = source["listing_url"]
     discovered_at = datetime.now(timezone.utc)
+    discovered = known_call_urls(source, seen_ids, discovered_at)
+    url = source.get("listing_url")
+    if not url:
+        return discovered  # no listing page: the source is just its known call pages
 
     for page_num in range(max_pages):
         try:
             resp = requests.get(url, headers=HEADERS, timeout=20)
             resp.raise_for_status()
         except requests.RequestException as e:
-            if page_num == 0:
+            if page_num == 0 and not discovered:
                 raise  # first page failing means this source itself is broken - surface it
+            if page_num == 0:
+                # the known call_urls are still worth keeping when only the listing page fails
+                print(f"  {source['name']}: listing page fetch failed ({e}), keeping its call_urls only")
+                break
             print(f"  {source['name']}: pagination fetch failed ({e}), stopping at page {page_num}")
             break
         candidates = gather_candidate_links(resp.text, url)

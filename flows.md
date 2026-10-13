@@ -483,7 +483,46 @@ for TF-IDF — which is what motivated round 2.)*
 > F1, get determinism, zero per-call cost and local execution.** A
 > stated preference becomes an evidence-based choice.
 
+### "Why not let GPT extract the requirements?" — second key presentation point (2026-10-13)
 
+Model 4 asked GPT to *classify* sentences. The stronger alternative is
+to let GPT return each call's requirements with their values ("max age
+35", "must live in Portugal") and compare them with the profile in
+Python, with no classifier. `scripts/compare_llm_extraction.py` tests it:
+one `gpt-5.4-mini` call per call, its requirements run through the real
+engine, scored on the gold verdicts. Full method: `workflow.MD`, "LLM
+extraction vs the classifier pipeline".
+
+```
+pipeline:   call text → classifier tags sentences → LLM-reviewed values → engine (Python)
+GPT alone:  call text → GPT returns requirements + values ───────────────→ engine (Python)
+agreement:  GPT's value counts only where the classifier tagged the same requirement
+```
+
+On 37 calls never used for tuning (185 persona × call pairs):
+
+| | Pipeline (today) | GPT alone | Agreement |
+|---|---|---|---|
+| **Wrong NOT ELIGIBLE** (must be 0) | **0** / 88 | 14 | 6 |
+| Wrong ELIGIBLE | 4 / 97 | 3 | 4 |
+| Eligible found | **22** / 50 | 16 | 7 |
+| Rejections found | 33 / 97 | **61** | 39 |
+
+> **GPT decides more often, and wrongly more often.** It finds about
+> twice the rejections, but it rejects artists the call doesn't rule
+> out, mostly by reading "artists" as "individuals only". Even gated by
+> the classifier, wrong values get through: the classifier checks the
+> topic, not the value. The pipeline gets 0 wrong rejections because a
+> value can only reject after review, and it says CHECK when the text is
+> ambiguous.
+>
+> **What it shows for RQ1:** the classifier is not a stand-in waiting
+> for an LLM to replace it. Classifier + reviewed values + deterministic
+> engine is the safer design, measured, and it runs locally with no
+> per-call cost at request time.
+
+Caveats: 92 calls in all, gold judged by an LLM, one prompt on the cheap
+model tier.
 
 ### Embedding runtime
 

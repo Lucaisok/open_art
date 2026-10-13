@@ -92,11 +92,13 @@ _EXPLICIT_YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 # date already captured, with no day/month of its own, so whatever
 # search_dates defaults its day/month to is noise, not a second
 # candidate deadline. Confirmed it can still win max() over the
-# already-fixed, more specific match otherwise. Dropped from
-# consideration once there's a more specific match to prefer instead -
-# gated on the same "exactly one explicit year" condition as the
-# borrowing above, so it only fires when we're actually confident this
-# bare year isn't itself the one distinct date being reported.
+# already-fixed, more specific match otherwise. Always dropped (since
+# 2026-10-13; before, only when a more specific match existed): a bare
+# year on its own has no day or month, search_dates fills both from
+# *today*, so "le 1er novembre 2026" (day not understood) read as "closes
+# today" and the call was rejected as past. A deadline whose only date is
+# a bare year is now unparsed (None); past years are still caught by
+# deadline_has_passed()'s "every year written is before this one" rule.
 _BARE_YEAR = re.compile(r"^(?:19|20)\d{2}$")
 
 # A bare "D.M.YYYY" string with nothing else around it (no surrounding
@@ -132,14 +134,38 @@ MAX_YEAR_DRIFT = 10
 # corpus-wide for one source's quirk.
 EXTRA_DATE_LANGUAGES: dict[str, list[str]] = {
     "kunst_dk_denmark": ["da"],
+    "annecy_lac_photo": ["fr"],   # English page, French deadline ("le 1er novembre 2026 minuit")
 }
 
 
+# French ordinal day "1er" / "1re" ("le 1er novembre 2026"): dateparser doesn't read it and falls
+# back to the bare year, so the whole deadline becomes today (Annecy Lac Photo, 2026-10-13)
+_FRENCH_ORDINAL_DAY = re.compile(r"(?<!\d)1(?:er|re)\b")
+
+
 def _clean(text: str) -> str:
+    text = _FRENCH_ORDINAL_DAY.sub("1", text)
     text = _TIME_COLON_SPACING.sub(":", text)
     text = _SPACE_BEFORE_PUNCT.sub(r"\1", text)
     text = _SPACE_AFTER_OPEN_PAREN.sub(r"\1", text)
     return text
+
+
+# numeric day.month.year ("19.1.2026", "04.11. 2025"): read directly, day first, because
+# search_dates() misreads runs of them ("19.1.2026 16.2.2026 7.5.2026" came out as 16 October
+# 2026) and a lone ambiguous one month first ("02.11.2026" -> 11 February, even with "de").
+# Dots between day and month are the European order on every source in this corpus.
+_NUMERIC_DATE = re.compile(r"(?<!\d)(\d{1,2})\.\s?(\d{1,2})\.\s?(20\d{2})(?!\d)")
+
+
+def numeric_dates(text: str) -> list[date]:
+    found = []
+    for day, month, year in _NUMERIC_DATE.findall(text):
+        try:
+            found.append(date(int(year), int(month), int(day)))
+        except ValueError:
+            pass   # not a real date (e.g. a version number): ignore it
+    return found
 
 
 def parse_deadline(deadline_raw: str | None, language: str, source: str | None = None) -> date | None:
@@ -150,6 +176,10 @@ def parse_deadline(deadline_raw: str | None, language: str, source: str | None =
     for extra in EXTRA_DATE_LANGUAGES.get(source, []):
         if extra not in languages:
             languages.append(extra)
+
+    numeric = numeric_dates(deadline_raw)
+    if numeric:
+        return max(numeric)   # latest round, as below
 
     cleaned = _clean(deadline_raw)
     matches = search_dates(cleaned, languages=languages, settings=SETTINGS) or []
@@ -180,16 +210,18 @@ def parse_deadline(deadline_raw: str | None, language: str, source: str | None =
                         pass  # Feb 29 into a non-leap borrowed year - keep search_dates' own parse
         dates.append((matched_text, dt))
 
-    whole = parse_date(cleaned, languages=languages, settings=SETTINGS)
+    whole = None if _BARE_YEAR.fullmatch(cleaned.strip()) else parse_date(cleaned, languages=languages, settings=SETTINGS)
     if whole:
         dates.append((_WHOLE_STRING_MARKER, whole))
 
     if not dates:
         return None
 
-    non_bare_year = [(t, d) for t, d in dates if not _BARE_YEAR.fullmatch(t.strip())]
-    if non_bare_year and len(string_years) == 1:
-        dates = non_bare_year
+    # a bare year ("2026") gives no day or month: dateparser fills both from today, so on its own
+    # it would read as "closes today" (and a whole-page call as closed). Never a date by itself.
+    dates = [(t, d) for t, d in dates if not _BARE_YEAR.fullmatch(t.strip())]
+    if not dates:
+        return None
 
     today = date.today()
     plausible = [dt for _, dt in dates if abs(dt.year - today.year) <= MAX_YEAR_DRIFT]

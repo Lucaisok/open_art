@@ -512,28 +512,16 @@ def verbatim_misses(record: RawOpportunity, source_text: str) -> list[str]:
 
 
 _ANY_YEAR = re.compile(r"(?<!\d)20\d{2}(?!\d)")
-# numeric day.month.year ("19.1.2026", "04.11. 2025"): read directly, because search_dates() misreads
-# runs of them ("19.1.2026 16.2.2026 7.5.2026" came out as 16 October 2026 in the full run)
-_NUMERIC_DATE = re.compile(r"(?<!\d)(\d{1,2})\.\s?(\d{1,2})\.\s?(20\d{2})(?!\d)")
-
-
-def _numeric_dates(text: str) -> list[date]:
-    found = []
-    for day, month, year in _NUMERIC_DATE.findall(text):
-        try:
-            found.append(date(int(year), int(month), int(day)))
-        except ValueError:
-            pass   # not a real date (e.g. a version number): ignore it
-    return found
-
-
+_TITLE_YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 def deadline_has_passed(record: RawOpportunity, language: str, today=None) -> bool:
     """True if the call's deadline is on or before today (author's rule, 2026-10-12).
 
     Decided here, not by the model (see build_extraction_system_prompt). Always the LATEST date in
     the text, so a call with several rounds is closed only after its last round. In order:
     - never closed: a rolling call, no deadline, or a deadline that names no year ("15.01. /
-      15.05. / 15.09." are rounds that recur every year; the parser turns them into today);
+      15.05. / 15.09." are rounds that recur every year; the parser turns them into today) -
+      unless the title names exactly one year: then the deadline is read in that year
+      ("15 de març" on "Premi Miquel Casablancas 2019", an archive page of a past edition);
     - closed if every year written is before this one ("1 February 2015": parse_deadline() drops
       dates more than 10 years away, so it would otherwise read as no date at all);
     - numeric D.M.YYYY dates are read by a plain regex;
@@ -542,13 +530,18 @@ def deadline_has_passed(record: RawOpportunity, language: str, today=None) -> bo
     today = today or date.today()
     if record.rolling_deadline or not record.deadline:
         return False
-    years = [int(y) for y in _ANY_YEAR.findall(record.deadline)]
+    deadline = record.deadline
+    years = [int(y) for y in _ANY_YEAR.findall(deadline)]
     if not years:
-        return False
+        # 19xx counted too: a title naming a period ("migration to Norway 1970–2000") is not an edition
+        title_years = set(_TITLE_YEAR.findall(record.title or ""))
+        if len(title_years) != 1 or not title_years <= set(_ANY_YEAR.findall(record.title or "")):
+            return False   # recurring rounds, or a title naming several years: can't tell
+        (title_year,) = title_years
+        deadline, years = f"{deadline} {title_year}", [int(title_year)]
     if max(years) < today.year:
         return True
-    numeric = _numeric_dates(record.deadline)
-    deadline_date = max(numeric) if numeric else parse_deadline(record.deadline, language, record.source)
+    deadline_date = parse_deadline(deadline, language, record.source)
     return deadline_date is not None and deadline_date <= today
 
 

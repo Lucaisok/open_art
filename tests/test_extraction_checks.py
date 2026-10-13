@@ -67,3 +67,33 @@ def test_numeric_dates_are_read_directly_latest_one_counts():
     assert deadline_has_passed(make(deadline="19.1.2026 16.2.2026 7.5.2026"), "sk", today)
     assert deadline_has_passed(make(deadline="04.11. 2025"), "nb", today)
     assert not deadline_has_passed(make(deadline="19.1.2026 16.2.2026 7.11.2026"), "sk", today)
+
+
+def test_a_bare_year_is_not_a_deadline_of_today():
+    # "le 1er novembre 2026" on an "en" source: only "2026" was understood, and dateparser filled
+    # the day and month from today, so a call open until November was rejected as past
+    today = date.today()
+    assert not deadline_has_passed(make(deadline="le 1er novembre 2026 minuit"), "en", today)
+    assert not deadline_has_passed(make(deadline=str(today.year)), "en", today)
+
+
+def test_french_ordinal_day_is_read():
+    from src.processing.deadline import parse_deadline
+    assert parse_deadline("le 1er novembre 2026 minuit", "fr") == date(2026, 11, 1)
+
+
+def test_yearless_deadline_takes_the_year_named_in_the_title():
+    today = date(2026, 10, 13)
+    past = make(title="Concurs d'Arts Visuals Premi Miquel Casablancas 2019", deadline="15 de març a les 24h")
+    assert deadline_has_passed(past, "ca", today)
+    this_year = make(title="Convocatòria Miquel Casablancas 2026", deadline="1 March at 23:59")
+    assert deadline_has_passed(this_year, "en", today)
+    upcoming = make(title="Open Call 2027", deadline="15 March")
+    assert not deadline_has_passed(upcoming, "en", today)
+    # no year anywhere: recurring rounds, kept as before
+    assert not deadline_has_passed(make(title="Translation grants", deadline="15.01. / 15.05."), "de", today)
+
+
+def test_a_period_in_the_title_is_not_an_edition_year():
+    research = make(title="Practices among immigrants to Norway 1970–2000", deadline="Neste søknadsfrist ikke bestemt")
+    assert not deadline_has_passed(research, "no", date(2026, 10, 13))

@@ -1,0 +1,61 @@
+chunk_text,label,scope,decision,reason
+The application is open for all professional artists.,CAREER_STAGE,APPLICANT,,Open to professional artists
+"A new person(ality) brings a new vision, new perspectives, and it renews the collective.",APPLICANT_TYPE,NOT_A_CONDITION,scope,description of the collective
+"As we view ourselves as an ever-changing and growing collective, we aim to open up the core of DomestiCity.",APPLICANT_TYPE,NOT_A_CONDITION,scope,description of the collective
+The Rencontres d’Arles curatorial research grant is aimed at exhibition curators wishing to carry out an original project relating to image or photography.,DISCIPLINE,APPLICANT,,Aimed at exhibition curators
+You can familiarize yourself with the current sanctions list on the website of the Verkhovna Rada of Ukraine at the link: https://zakon.rada.gov.ua/laws/show/n0004525-20#Text legal entities or individual enterpreneurs and / or participants of such entities or individuals who have violated the Law of Ukraine “On Ensuring the Rights and Freedoms of Citizens and the Legal Regime in the Temporarily Occupied Territory of Ukraine” dated 15.04.2014 № 1207-VII.,OTHER_ELIGIBILITY,APPLICANT,,Sanctions-related exclusion of applicants
+Open for: instrumentalists and vocalists of all nationalities NEW!,DISCIPLINE,APPLICANT,,Open to instrumentalists and vocalists
+Bands may have up to 6 performing musicians and they may include: instrumentalists and vocalists instrumentalists vocalists Individual musicians can apply for the Jam Session section.,DISCIPLINE,APPLICANT,,Band composition limits for applicants
+"The Première Early Music competition on historical instruments seeks to promote young musicians who bring their artistic, scholarly, and rhetorical approach to the fore.",CAREER_STAGE,APPLICANT,,Aimed at young musicians
+Teachers from the DKO or (professional) musicians who want to apply the language of soundpainting in their own teaching or artistic practice.,DISCIPLINE,APPLICANT,,Teachers or musicians applying soundpainting
+"Curious about the cosmos, consciousness, the nature of the mind, and the unknown?",DISCIPLINE,PREFERENCE,scope,rhetorical invitation to those interested in the theme
+"You are active in the visual arts, performing arts, and/or classical music.",DISCIPLINE,APPLICANT,,Must be active in listed disciplines
+Or you did not follow the traditional path of art education as an artist.,EDUCATION,APPLICANT,,List item of who may apply
+Or you have experience in supporting or guiding artists who are at the start of their professional careers.,CAREER_STAGE,APPLICANT,,List item of who may apply
+Or you are experiencing social barriers to starting your career.,CAREER_STAGE,APPLICANT,,List item of who may apply
+You have a degree in the arts or relevant experience in the arts sector – you share a work-in-progress or an experiment (max 15min) – your work is suitable for the location (limited technical resources) – your work-in-progress should have a performative character,EDUCATION,APPLICANT,,Degree or experience in the arts required
+Focus on performing arts,DISCIPLINE,APPLICANT,,Discipline focus: performing arts
+"We are looking for classical vocal performers (classical alt, baritone or tenor, f/m/x) to join an innovative international trajectory at the intersection of live performance, music, movement, and XR technology.",DISCIPLINE,APPLICANT,,condition on who may apply
+_have a classical alt / baritone/tenor vocal range,DISCIPLINE,APPLICANT,,condition on who may apply
+_are comfortable with live performance and embodied presence,DISCIPLINE,APPLICANT,,condition on who may apply
+"_have affinity with music theatre, contemporary music, and/or ritual practices",DISCIPLINE,APPLICANT,,condition on who may apply
+"You are available for the entire period, from November 16 to November 30, on site (departure no later than November 15 and return no earlier than December 1, 2025).",OTHER_ELIGIBILITY,APPLICANT,,condition on who may apply
+"Teatri Riflessi Festival has opened its 2027 call for short performances: live works no longer than 15 minutes of contemporary dance, theatre, circus or multidisciplinary performance.",DISCIPLINE,APPLICANT,,work must be dance/theatre/circus performance: effectively a discipline gate
+"●		have experience with or affinity for the cultural, literary, or feminist sector;",DISCIPLINE,APPLICANT,,condition on who may apply
+"●		want to contribute to conversations about inclusion, representation, and collective creation;",APPLICANT_TYPE,APPLICANT,,list item of board-member profile
+"You must be available for the entire period, from 19 to 29 November, on site (departure no later than 18 November and return no earlier than 30 November 2026).",OTHER_ELIGIBILITY,APPLICANT,,condition on who may apply
+Are you an experienced performer with or without a disability and do you want to deepen your knowledge of inclusive dance practices with a strong focus on reflection?,DISCIPLINE,APPLICANT,,condition on who may apply
+"The week is intended for dancers and performance artists or makers who, for whatever reason, feel that they do not quite belong.",DISCIPLINE,APPLICANT,,condition on who may apply
+Artists from other disciplines - such as musicians and writers - are also encouraged to apply.,DISCIPLINE,WIDENING,scope,other disciplines also encouraged
+artists from around the world,DISCIPLINE,APPLICANT,,condition on who may apply
+emerging artists,CAREER_STAGE,APPLICANT,,condition on who may apply
+The residency is not eligible for: BA or MA students.,STUDENT_STATUS,APPLICANT,,BA and MA students excluded
+"The professional artist must have completed a relevant professional education and have worked, or is currently working in art, media, and culture on a professional level.",CAREER_STAGE,APPLICANT,,condition on who may apply
+You must be a professional artist in the field of visual arts or design.,CAREER_STAGE,APPLICANT,,condition on who may apply
+"You have an artistic practice in, for example, the visual arts, photography, design, crafts, illustration, textile art or architecture.",DISCIPLINE,APPLICANT,,condition on who may apply
+"To be considered a professional artist, you must earn a living entirely or partly from your artistic activities and regularly present your art to an audience or in an artistic context.",CAREER_STAGE,APPLICANT,,condition on who may apply
+"You may not have any debts to the state or municipality that have been transferred for collection to the Swedish Enforcement Authority (Kronofogdemyndigheten), nor be declared bankrupt.",NATIONALITY,APPLICANT,,no state debts or bankruptcy
+"we welcome artists from performance art, choreography, contemporary theatre, experimental dance, and visual art who are ready to deepen their work through critical inquiry.",DISCIPLINE,APPLICANT,,discipline list of welcomed artists
+"If you are an artist with a relentless spirit of experimentation, an ambition to grow, and a commitment to artmaking as a lifelong practice in open dialogue with peers and audiences, you will find a home here.",CAREER_STAGE,PREFERENCE,scope,"describes the ideal applicant, nothing excludes"
+"While we’re primary looking for new works to present, if you think that something you've already made could fit, we'd like to hear from you too.",DISCIPLINE,WIDENING,scope,existing works also considered
+international artists or collectives,DISCIPLINE,APPLICANT,,international artists or collectives
+Applications that have been rejected once cannot be submitted again.,PRIOR_FUNDING,APPLICANT,,condition on who may apply
+Artists at the beginning of their careers and independent project spaces can submit their applications via the AUFTAKT application procedure.,CAREER_STAGE,APPLICANT,,condition on who may apply
+A completed degree from an art academy/art university is required.,EDUCATION,APPLICANT,,condition on who may apply
+"The travel grant is aimed at persons and duos working artistically or curatorially in literature, music, performing arts, and visual art who already have a professional portfolio.",DISCIPLINE,APPLICANT,,artists/curators in listed fields with a professional portfolio
+A prerequisite for your application is that you have already made initial contacts with actors or institutions on site with whom you would like to collaborate.,OTHER_ELIGIBILITY,APPLICANT,,prior contacts on site required
+a programme for particularly gifted young artists in contemporary visual art.,CAREER_STAGE,APPLICANT,,gifted young visual artists
+Artists at the beginning of their careers and independent project spaces can submit their applications through the AUFTAKT application procedure.,CAREER_STAGE,APPLICANT,,early-career artists and project spaces
+Artists at the beginning of their careers,CAREER_STAGE,APPLICANT,,condition on who may apply
+persons working artistically or curatorially,DISCIPLINE,APPLICANT,,persons working artistically or curatorially
+A prerequisite for your application is that you have already made initial contact with local actors or institutions with whom you would like to collaborate.,OTHER_ELIGIBILITY,APPLICANT,,prior contacts on site required
+English language skills are a prerequisite,OTHER_ELIGIBILITY,APPLICANT,,condition on who may apply
+Artists are awarded who have obtained a degree from a German art academy or another comparable foreign degree and who completed their studies 5 years ago or more.,CAREER_STAGE,APPLICANT,,art academy degree completed 5+ years ago
+The prerequisite for all applicants is outstanding work in one of the disciplines named above.,EDUCATION,APPLICANT,,outstanding work in named disciplines
+Residencies are not designed to support artists at the start of their careers.,CAREER_STAGE,APPLICANT,,early-career artists excluded
+"Past recipients of a Landis & Gyr grant (artist residency, travel grant or artist grant) must wait at least three years before submitting a new application.",PRIOR_FUNDING,APPLICANT,,past recipients must wait three years
+Those who have applied for a fellowship three times without success must wait three years before applying again.,PRIOR_FUNDING,APPLICANT,,three unsuccessful applicants must wait three years
+"The programme is intended for cultural professionals—including curators, festival directors, cultural institution leaders, programmers, critics, and reviewers—who are invited to visit Lithuania to explore the country’s artistic and cultural landscape.",OTHER_ELIGIBILITY,APPLICANT,,condition on who may apply
+"Accepted Media : Photograph y , video, digital visual design",DISCIPLINE,APPLICANT,,accepted media: discipline gate; kept as a check
+Artists working with the moving image,DISCIPLINE,APPLICANT,,condition on who may apply
+"Available to attend the mandatory 1st meeting on 16 July, 6:45 – 8pm",OTHER_ELIGIBILITY,APPLICANT,,condition on who may apply

@@ -1,0 +1,61 @@
+chunk_text,label,scope,decision,reason
+Applicant: producer,DISCIPLINE,APPLICANT,,applicant must be a producer
+Applicant: director or producer,DISCIPLINE,APPLICANT,,Restricts applicants to directors or producers
+"In the SHORT FILM programme, producers and directors have the right to submit.",DISCIPLINE,APPLICANT,,Defines which applicant types may submit
+Plans of producers who have defaulted on their contractual obligations to EKKOMED from their previous works ... are considered ineligible and are not evaluated until they respond and fully restore or settle their contractual obligations.,PRIOR_FUNDING,APPLICANT,,Excludes producers in default with the funder
+Applicant: screenwriter or producer,DISCIPLINE,APPLICANT,,Restricts applicants to screenwriters or producers
+Eligible applicants are screenwriters or screenwriter-directors or producers who have entered into an agreement with the screenwriter of the project.,DISCIPLINE,APPLICANT,,Defines eligible applicant types
+A maximum of 2 works may be submitted per author*in for the festival.,DISCIPLINE,NOT_A_CONDITION,scope,submission limit per author
+Eligible are works with the year of completion 2026 or 2027.,PRIOR_FUNDING,PROJECT,scope,works must be completed in 2026 or 2027
+"If the original language of a work is not English, it must be submitted for the selection screening with English subtitles.",DISCIPLINE,PROJECT,scope,subtitle rule for submitted works
+PhD candidates and emerging artists of any age and academic background may apply.,EDUCATION,APPLICANT,,PhD candidates and emerging artists may apply; also widens age
+"An open call to composers, worldwide.",DISCIPLINE,APPLICANT,,open to composers
+One submission per composer.,DISCIPLINE,NOT_A_CONDITION,scope,one submission per composer
+"We accept applications from those doing creative and scholarly work in the following fields: Literature including: Fiction, Non-Fiction, Poetry, Playwriting, Screenwriting, Journalism, Songwriting.",DISCIPLINE,APPLICANT,,discipline list of who may apply
+"Visual Arts including: Painting, Drawing, Sculpture, Architecture, Paper/ Textile arts, Photography, Graphic Design, Fashion Design, Digital Art, Illustration, Mixed Media, Film/Video.",DISCIPLINE,APPLICANT,,discipline list of who may apply
+"Arts & Humanities, Philosophy & Research, and Food Art .",DISCIPLINE,APPLICANT,,discipline list of who may apply
+Other – feel free to write in your own unique discipline,DISCIPLINE,WIDENING,scope,any other discipline may be written in
+Applications submitted in any other language cannot be processed.,DISCIPLINE,NOT_A_CONDITION,scope,application language (procedure)
+"Separate applications are required for each resident, even if they are presenting the same project description.",RESIDENCE,NOT_A_CONDITION,scope,one application per resident (procedure)
+"We invite cultural workers, artists, researchers, community organisers, memory practitioners, and civil society initiatives based in Ukraine and across Europe to develop projects that approach remembrance as a careful, inclusive, and community-led practice.",RESIDENCE,APPLICANT,,cultural workers and artists based in Ukraine and Europe
+Composers,DISCIPLINE,APPLICANT,,list item: composers
+Composers / Performers,DISCIPLINE,APPLICANT,,list item: composers/performers
+Please note: composer/performer applications are not open to pianists or drummers.,DISCIPLINE,APPLICANT,,excludes pianists and drummers
+Eligible for submission are short films up to 30 minutes running time (incl. credits) - exception: Central German Competition.,DISCIPLINE,PROJECT,scope,film running time limit
+"For the National and International Competition, only short fiction and animation films (incl. hybrid forms such as AnimaDoc, experimental or documentary fiction) will be considered.",NATIONALITY,APPLICANT,,only fiction and animation films: genre gate for filmmakers; kept as a check
+Running time max.,EDUCATION,PROJECT,scope,film running time fragment
+Applicants must demonstrate a professional artistic practice and/or hold a degree from an art school.,CAREER_STAGE,APPLICANT,,professional practice or art degree required
+"To be eligible, applicants must show a recent and sustained track record over the past five years, through several exhibitions (solo and/or group), publications (monographs, catalogues), or participation in artist residencies",CAREER_STAGE,APPLICANT,,five-year exhibition track record required
+"Frame’s grants are available to artists, contemporary art professionals, and local and international contemporary art organisations.",APPLICANT_TYPE,APPLICANT,,eligible applicant types
+"In addition, project grants are available to artists and organisations for the purpose of producing international art publications.",APPLICANT_TYPE,WIDENING,scope,"in addition, publication grants for artists and organisations"
+These scholarships are for high-potential young students with limited financial means who are entering a public university or polytechnic for the first time with an average grade of 17 (170 points) or higher.,EDUCATION,APPLICANT,,Targets first-time students with grade 17+ and limited means
+"Admission grade for higher education equal to or higher than 170 points through the general access and admission competition for the 2026/27 academic year, in the programme in which the applicant is enrolled.",EDUCATION,APPLICANT,,Admission grade threshold for the applicant
+Applications from holders of a higher education degree will not be accepted.,EDUCATION,APPLICANT,,Excludes degree holders
+"People of any nationality may apply, provided that they entered higher education through the general admissions process.",EDUCATION,APPLICANT,,Opens nationality but requires general admissions entry
+The candidate having previously received a Gulbenkian Institute for Advanced Study Fellowship within the last five years.,EDUCATION,APPLICANT,,List item excluding prior fellows of the last five years
+Have an average grade of 16.5 or above (on a 20-point scale) in the curricular units completed in the bachelor’s program to date.,EDUCATION,APPLICANT,,Minimum grade requirement
+"Be (i) a Master or PhD degree student or (ii) a researcher in the field of Armenian Studies, wishing to conduct field research or pursue small research projects, or to engage in other relevant activities related to their work (including international conference attendance or summer school participation).",DISCIPLINE,APPLICANT,,Must be a Master/PhD student or researcher in Armenian Studies
+Applicants should have at least a moderate level of spoken English and feel comfortable discussing their work in English.,OTHER_ELIGIBILITY,APPLICANT,,English language requirement
+"Unless specifically stated, due to our limited facilities we are unable to offer residencies to artistic duos or collectives.",APPLICANT_TYPE,APPLICANT,,duos and collectives excluded
+"Conceived as a professional development opportunity for an early-career curator with a connection to the Baltic region, the Fellowship offers sustained experience across Gasworks’ exhibitions, residencies, public programmes and wider artistic activity.",CAREER_STAGE,APPLICANT,,Targets early-career curators with a Baltic connection; kept as a check
+The residency is offered subject to approval of visa application.,RESIDENCE,APPLICANT,,visa approval needed; kept as a check
+You should have at least a moderate level of spoken English and feel comfortable discussing your work in English.,OTHER_ELIGIBILITY,APPLICANT,,English language requirement
+"They should have some experience (participating in group and/or solo exhibitions, for example) but haven't yet had numerous international solo exhibitions nor institutional shows.",CAREER_STAGE,APPLICANT,,Experience range defining eligible early-career artists
+Open to international artists of all nationalities.,OTHER_ELIGIBILITY,WIDENING,scope,open to all nationalities
+"For the New Arrivals Competition we accept short fiction, documentary, animation, and experimental films made in European film schools.",DISCIPLINE,APPLICANT,,films from European film schools: effectively film-school makers
+"(In case of non-English dialogue (or unclear spoken English), English subtitles are mandatory.",OTHER_ELIGIBILITY,PROJECT,scope,subtitle rule for the film
+"If the film has Dutch dialogues, the subtitles are only required after a selection.)",OTHER_ELIGIBILITY,PROJECT,scope,subtitle rule for the film
+"Video games, VR/XR, performances, and installations adhere to the same eligibility rules as films in Go Short competitions.",DISCIPLINE,PROJECT,scope,other formats follow the film rules
+"Be a journalist, communications professional, content creator, influencer or media host/presenter;",DISCIPLINE,APPLICANT,,Applicant must be a media professional
+"Have between two and five years of professional experience in communications, journalism, media or content creation;",CAREER_STAGE,APPLICANT,,Two to five years of professional experience
+"Demonstrate a strong interest in performing arts, music and, more broadly, the cultural and creative industries;",DISCIPLINE,APPLICANT,,Required list item: demonstrated interest in performing arts and music
+Fluency in French or English is mandatory.,OTHER_ELIGIBILITY,APPLICANT,,Language requirement
+"The mentoring program is destined for professionals in the performing arts and music industries, in early career (2 to 5 years of experience required) and living and working in sub-Saharan Africa.",CAREER_STAGE,APPLICANT,,Early-career professionals living in sub-Saharan Africa
+These programmes are aimed at French artists or artists who are professionally established in France.,CAREER_STAGE,APPLICANT,,Aimed at French artists or artists established in France
+"Members of the French cultural network abroad (cultural services of embassies, Instituts français, Alliances Françaises, binational cultural centers).",OTHER_ELIGIBILITY,APPLICANT,,List item of eligible applicant types
+"When projects are not led by the French cultural network, they must be accompanied by a letter of support issued by the French cultural network abroad (cultural services of embassies, Instituts français, Alliances Françaises, or binational cultural centers).",RESIDENCE,APPLICANT,,support letter required to apply; kept as a check
+"French cultural network abroad (Instituts français, Alliances françaises)",OTHER_ELIGIBILITY,APPLICANT,,List item of eligible applicant types
+The cultural services of embassies are eligible provided they have a partner capable of receiving and committing the funds.,OTHER_ELIGIBILITY,APPLICANT,,Embassies eligible only with a partner able to receive funds
+"Artists, set designers, curators, collectives, companies",DISCIPLINE,APPLICANT,,List item of eligible applicant types
+"The competition is aimed at curatorə and researchə who have experience in the following disciplines: art history, contemporary art, architecture, history or related subjects.",CAREER_STAGE,APPLICANT,,curators/researchers with experience in listed fields
+Double applications are not accepted.,APPLICANT_TYPE,NOT_A_CONDITION,scope,no double applications (procedure)

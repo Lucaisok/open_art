@@ -23,6 +23,10 @@ Usage:
     uv run python scripts/review_round7.py queue
     uv run python scripts/review_round7.py apply
     uv run python scripts/review_round7.py queue --prefix pass2_   # a later pass, own batch files
+    uv run python scripts/review_round7.py queue --round 8         # a later round, own folder and label
+
+Round 8 (2026-10-13) reviews the calls added from the author's hand-collected list
+(workflow.MD, "Adding a hand-collected list of calls").
 """
 
 import argparse
@@ -31,6 +35,7 @@ import glob
 import json
 import os
 import sys
+from datetime import date
 
 import pandas as pd
 
@@ -63,9 +68,9 @@ def scope_queue(full_texts: set[str]) -> pd.DataFrame:
     suspected = rows["suspected_label"] if "suspected_label" in rows else pd.Series(None, index=rows.index)
     rows["shown_label"] = rows["label"].where(rows["label"] != "NONE", suspected)
     reviewed_texts = {text for text, _ in load_reviews()}
-    # sentences already read in this round: a scope-only APPLICANT answer is not written to the
-    # reviews file (it changes nothing), so it is only remembered here
-    for path in glob.glob(os.path.join(ROUND_DIR, "*_reviewed.csv")):
+    # sentences already read in any round: a scope-only APPLICANT answer is not written to the
+    # reviews file (it changes nothing), so it is only remembered in the round folders
+    for path in glob.glob(os.path.join(REPO_ROOT, "dataset", "labels", "review", "round*", "*_reviewed.csv")):
         reviewed_texts |= set(pd.read_csv(path, keep_default_na=False)["chunk_text"])
     # check-only sentences, and every safety-net sentence: one whose suspected class could reject is
     # in no other queue (pending_review() only takes classified sentences), found after the first pass
@@ -143,5 +148,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("stage", choices=["queue", "apply"])
     parser.add_argument("--prefix", default="", help='a later pass, e.g. "pass2_" (its own batch files)')
+    parser.add_argument("--round", type=int, default=7, help="review round: its folder and reviewed_by label")
     args = parser.parse_args()
+    if args.round != 7:
+        ROUND_DIR = os.path.join(REPO_ROOT, "dataset", "labels", "review", f"round{args.round}")
+        REVIEWED_BY = f"Claude Code (claude-opus-5-5) round {args.round} review of newly added calls, no human spot check"
+        REVIEWED_ON = date.today().isoformat()
     {"queue": queue, "apply": apply}[args.stage](args.prefix)
