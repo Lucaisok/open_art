@@ -419,3 +419,42 @@ p16_textile,norwegian_crafts_34054079ef3e,2,claude,craft workshops incl. textile
 p16_textile,norwegian_crafts_ec6cbcf93e7d,2,claude,international craft exhibition support for craft artists
 p16_textile,sound_and_music_7c7eeaa75306,1,claude,no-strings artist grant; generic
 p16_textile,statens_vaerksteder_for_kunst_a543d1a88fd3,2,claude,workshop residency for craftspeople and material research
+p06_composer,kunstlerhaus_bethanien_47bd8d99d9f0,0,claude,visual art studio programme; not for composers
+p07_photographer,kunstlerhaus_bethanien_47bd8d99d9f0,1,claude,generic visual art studio programme
+p10_digital,kunstlerhaus_bethanien_47bd8d99d9f0,1,claude,generic visual art studio programme
+p12_public_art,matadero_madrid_25c8a4ecf086,1,claude,art-design-society research residency; generic
+p15_architecture,kunstlerhaus_bethanien_47bd8d99d9f0,0,claude,visual art studio programme; not for architects
+p06_composer,astor_piazzolla_competition_3b25860a187c,1,claude,music competition with composition category; Piazzolla-specific
+p15_architecture,kunstpunt_groningen_329de4764bea,2,claude,site-specific pavilion work responding to architecture
+p08_ceramicist,danish_arts_foundation_craft_design_6b153f4756c7,2,claude,craft project funding
+p08_ceramicist,plas_bodfa_90db5f1b238d,1,claude,open landscape trail; sculpture and craft welcome
+p08_ceramicist,alpaca_69c3f57186d4,0,claude,algorithmic pattern festival; performances and talks
+p08_ceramicist,norwegian_crafts_ec6cbcf93e7d,2,claude,craft exhibitions and fairs funding
+p12_public_art,mondriaan_fund_927ae2095ba6,1,claude,generic visual artist work grant
+p12_public_art,mall_galleries_d7f9d1e80073,1,claude,annual exhibition accepting sculpture; not public art
+p12_public_art,fondation_francois_schneider_1c73efed7f64,1,claude,water-themed competition; sculpture projects possible
+p09_theatre,kunstpunt_groningen_2118ebb6ed29,0,claude,master's degree programme; not a theatre opportunity
+p09_theatre,plas_bodfa_1e959ec58e0a,0,claude,visual art river commission
+p16_textile,plas_bodfa_90db5f1b238d,1,claude,landscape trail open to craft and participatory work
+p16_textile,alpaca_69c3f57186d4,1,claude,pattern festival includes heritage crafts workshops
+p16_textile,norwegian_crafts_9363a83bff3a,0,claude,glass school training; not textile
+p16_textile,danish_arts_foundation_craft_design_6b153f4756c7,2,claude,craft project funding
+p16_textile,drac_centre_val_de_loire_e6e9650c49b1,1,claude,participatory art residencies in health settings
+p04_documentary,torinofilmlab_3b35a24c5f40,1,claude,feature film development lab; climate storytelling
+p04_documentary,torinofilmlab_c569a47c63ea,0,claude,programme for producers; not directors
+p04_documentary,tampere_film_festival_6c9bfff5d5a0,1,claude,short film festival; includes documentary
+p11_painter,kunstverein_muensterland_be7d1d9c4cc0,1,claude,visual art prize including painting
+p11_painter,kunstpunt_groningen_a9c9d9a00b37,1,claude,generic visual art studio residency
+p11_painter,mall_galleries_890d130d37e1,0,claude,pastel and dry media only
+p11_painter,kunsthalle_wilhelmshaven_4488477a35ba,1,claude,regional visual art prize and exhibition
+p11_painter,mall_galleries_316fbb153889,0,claude,watercolour-specific exhibition
+p11_painter,fondation_francois_schneider_1c73efed7f64,1,claude,water-themed visual art competition
+p13_performance,rijksakademie_355e23d52adb,1,claude,generic visual art residency; interdisciplinary
+p13_performance,fondation_francois_schneider_1c73efed7f64,1,claude,water-themed competition; video or installation possible
+p02_printmaker,plas_bodfa_90db5f1b238d,0,claude,outdoor sculpture trail; not works on paper
+p02_printmaker,saal_digital_766b7ec24895,0,claude,photography competition
+p02_printmaker,velferden_5187bf75bdb8,1,claude,self-directed residency for artists
+p02_printmaker,mall_galleries_d7f9d1e80073,2,claude,exhibition explicitly accepting printmaking
+p01_sound_water,plas_bodfa_90db5f1b238d,2,claude,landscape trail welcoming sound and environmental work
+p07_photographer,emaf_33029fa306ba,0,claude,experimental film and media art festival
+p07_photographer,kunstverein_muensterland_be7d1d9c4cc0,1,claude,visual art prize including photography

@@ -30,8 +30,12 @@ class FakeEmbedder:
 
 
 class FakeEngine:
-    def __init__(self, statuses):
+    def __init__(self, statuses, unanalysed=()):
         self.statuses = statuses
+        self.missing = list(unanalysed)
+
+    def unanalysed(self, opportunities):
+        return self.missing
 
     def evaluate(self, profile, opportunity, today=None):
         return Verdict(opportunity_id=opportunity.id, title=opportunity.title_en, source_url=opportunity.source_url,
@@ -148,3 +152,14 @@ def test_get_and_kept():
                 [[1, 0], [0, 1]])
     assert m.get("a").id == "a" and m.get("missing") is None
     assert [o.id for o in m.kept(MatchFilters(opportunity_types=["Residency"]), TODAY)] == ["a"]
+
+
+def test_a_stale_constraints_file_is_reported_at_startup(caplog):
+    # calls missing from eligibility_constraints.jsonl would all say "not analysed yet": log it once
+    index = OpportunityIndex(ids=["a"], hashes=[text_hash(opportunity_text(opp("a")))],
+                             vectors=np.array([[1.0, 0.0]], dtype=np.float32), model="fake",
+                             fastembed_version=version("fastembed"))
+    with caplog.at_level("WARNING"):
+        Matcher(opportunities=[opp("a")], index=index, engine=FakeEngine({}, unanalysed=["a"]),
+                embedder=FakeEmbedder())
+    assert "1 of 1 opportunities have no eligibility constraints" in caplog.text

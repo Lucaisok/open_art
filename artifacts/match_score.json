@@ -1,0 +1,66 @@
+{
+ "features": [
+  "z",
+  "shared",
+  "mismatch"
+ ],
+ "coefficients": [
+  1.0202,
+  0.6176,
+  -0.2077
+ ],
+ "intercept": -3.525,
+ "label": "clear fit (grade 2)",
+ "trained_on": {
+  "calls": 459,
+  "positives": 112,
+  "personas": 16,
+  "date": "2026-10-13"
+ },
+ "cross_validation": {
+  "folds": 4,
+  "grouped_by": "persona",
+  "base_rate": {
+   "roc_auc": 0.5,
+   "brier": 0.1845,
+   "log_loss": 0.5557
+  },
+  "z_only": {
+   "roc_auc": 0.685,
+   "brier": 0.1679,
+   "log_loss": 0.5167
+  },
+  "model": {
+   "roc_auc": 0.734,
+   "brier": 0.1553,
+   "log_loss": 0.4876
+  },
+  "calibration": [
+   {
+    "calls": 92,
+    "predicted": 0.069,
+    "observed": 0.13
+   },
+   {
+    "calls": 92,
+    "predicted": 0.123,
+    "observed": 0.12
+   },
+   {
+    "calls": 92,
+    "predicted": 0.173,
+    "observed": 0.13
+   },
+   {
+    "calls": 92,
+    "predicted": 0.273,
+    "observed": 0.261
+   },
+   {
+    "calls": 91,
+    "predicted": 0.579,
+    "observed": 0.582
+   }
+  ]
+ }
+}

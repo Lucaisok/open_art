@@ -494,6 +494,8 @@ def test_engine_reads_the_files(tmp_path):
     assert engine.evaluate(ArtistProfile(residence_country="BE"), opportunity("opp")).status == "ELIGIBLE"
     # a call that was never classified is not silently ELIGIBLE
     assert engine.evaluate(BELGIAN, opportunity("unknown")).status == "CHECK"
+    # ... and the engine can list such calls (the API logs them at startup)
+    assert engine.unanalysed([opportunity("opp"), opportunity("unknown")]) == ["unknown"]
 
 
 def test_a_discipline_that_does_not_match_says_what_is_asked():

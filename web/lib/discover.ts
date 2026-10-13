@@ -167,3 +167,9 @@ export const VERDICTS: Record<VerdictStatus, { icon: string; label: string }> = 
     CHECK: { icon: "○", label: "Check" },
     LIKELY_NOT_ELIGIBLE: { icon: "✕", label: "Likely not eligible" },
 };
+
+// The match percentage's band (api/discover.py match_percent): the percentage is the chance the call is
+// a clear fit, and about 1 in 4 graded calls was one (artifacts/match_score.json), so 25% is "as likely
+// as any call" and 50% "more likely a clear fit than not"
+export const matchBand = (percent: number): string =>
+    percent >= 50 ? "Strong match" : percent >= 25 ? "Good match" : "Possible match";

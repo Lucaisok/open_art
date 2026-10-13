@@ -766,6 +766,13 @@ class EligibilityEngine:
         self.chunks_by_opportunity = load_constraints(constraints_path)
         self.reviews = load_reviews(reviewed_path)
 
+    def unanalysed(self, opportunities: list[ProcessedOpportunity]) -> list[str]:
+        """Ids of the calls that state requirements but have no classified sentences: they would show
+        "This call has not been analysed yet". Non-empty means eligibility_constraints.jsonl is older
+        than the corpus (on the VPS: the hand-copied file wasn't updated, deploy/sync_data.sh)."""
+        return [o.id for o in opportunities
+                if o.requirements_text.strip() and o.id not in self.chunks_by_opportunity]
+
     def evaluate(self, profile: ArtistProfile, opportunity: ProcessedOpportunity,
                  today: date | None = None) -> Verdict:
         common = dict(opportunity_id=opportunity.id, title=opportunity.title_en, source_url=opportunity.source_url)

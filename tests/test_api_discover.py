@@ -43,6 +43,9 @@ class RecordingEngine:
     def __init__(self):
         self.profiles: list[ArtistProfile] = []
 
+    def unanalysed(self, opportunities):
+        return []
+
     def evaluate(self, profile, opportunity, today=None):
         self.profiles.append(profile)
         items = [item("Applicants must be under 35.", "CHECK", "your birth date is not in your profile"),
@@ -235,7 +238,9 @@ def test_ranked_cards_say_what_they_share_with_the_documents(artist, described_m
     why = {r["id"]: r["why"] for r in search(artist, mode="matched")["results"]}
     assert {"sound", "water"} <= {w.lower() for w in why["near"]["shared"]}
     # "Print grant" shares nothing specific with a sound artist: a broad match, said as such
-    assert why["far"] == {"shared": []}
+    assert why["far"]["shared"] == []
+    # the match percentage: more likely a clear fit with shared words (and the closer cosine)
+    assert 0 <= why["far"]["match"] < why["near"]["match"] <= 100
 
 
 def test_the_call_page_says_why_it_is_suggested(artist, described_matcher):
@@ -246,6 +251,7 @@ def test_the_call_page_says_why_it_is_suggested(artist, described_matcher):
     assert why["your_document"] == "statement.md" and "water" in why["your_highlight"]
     assert "water" in why["your_sentence"]
     assert artist.get("/api/opportunities/far").json()["why"]["shared"] == []
+    assert why["match"] == search(artist, mode="matched")["results"][0]["why"]["match"]   # same as the card
 
 
 def test_opportunity_page(artist):

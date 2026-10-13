@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ClampedText from "@/components/ClampedText/ClampedText";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
-import { deadlineLabel, placeLabel } from "@/lib/discover";
+import { deadlineLabel, matchBand, placeLabel } from "@/lib/discover";
 import type { SearchResult } from "@/lib/types";
 import styles from "./ResultCard.module.css";
 
@@ -49,35 +49,40 @@ const ResultCard = ({ result, onOpen }: ResultCardProps) => (
                 {result.title}
             </Link>
             {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
-            {/* why "Matched to you" ranks it here (api/discover.py CardWhyOut): the specific words it
-                shares with the artist's documents, or, when it shares none, that it is a broad match.
-                The sentences holding the words are on the call page. None when ordered by deadline */}
-            {result.why && (
-                <div className={styles.why}>
-                    {result.why.shared.length > 0 ? (
-                        <>
-                            <span className={styles.whyLabel}>In common with your documents</span>
-                            <span className={styles.shared}>
-                                {result.why.shared.map((word) => (
-                                    <span key={word} className={styles.sharedWord}>
-                                        {word.toLowerCase()}
-                                    </span>
-                                ))}
-                            </span>
-                        </>
-                    ) : (
-                        <span className={styles.broad}>
-                            Broad match: close to your documents in general, nothing specific in common
-                        </span>
-                    )}
-                </div>
-            )}
             <span className={styles.facts}>
                 <span>{placeLabel(result.city, result.countries)}</span>
                 <span className={result.deadline ? styles.highlight : undefined}>{deadlineLabel(result.deadline)}</span>
                 {result.funding && <span className={styles.highlight}>{result.funding}</span>}
             </span>
             <div className={styles.bottom}>
+                {/* why "Matched to you" ranks it here (api/discover.py CardWhyOut): the specific words it
+                    shares with the artist's documents, or, when it shares none, that it is a broad match.
+                    The sentences holding the words are on the call page. None when ordered by deadline.
+                    Just above the verdict's dividing line, under the facts */}
+                {result.why && (
+                    <div className={styles.why}>
+                        {/* the chance it is a clear fit (src/matching/score.py), shown, never used to rank */}
+                        <span className={styles.match}>
+                            {matchBand(result.why.match)} · {result.why.match}%
+                        </span>
+                        {result.why.shared.length > 0 ? (
+                            <>
+                                <span className={styles.whyLabel}>In common with your documents</span>
+                                <span className={styles.shared}>
+                                    {result.why.shared.map((word) => (
+                                        <span key={word} className={styles.sharedWord}>
+                                            {word.toLowerCase()}
+                                        </span>
+                                    ))}
+                                </span>
+                            </>
+                        ) : (
+                            <span className={styles.broad}>
+                                Broad match: close to your documents in general, nothing specific in common
+                            </span>
+                        )}
+                    </div>
+                )}
                 <div className={styles.verdict}>
                     <VerdictBadge status={result.status} />
                     <ClampedText className={styles.reason}>{result.reason}</ClampedText>

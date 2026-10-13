@@ -324,6 +324,8 @@ export interface components {
         CardWhyOut: {
             /** Shared */
             shared: string[];
+            /** Match */
+            match: number;
         };
         /** DeleteAccountIn */
         DeleteAccountIn: {
@@ -875,6 +877,8 @@ export interface components {
         WhyOut: {
             /** Shared */
             shared: string[];
+            /** Match */
+            match: number;
             /** Call Sentence */
             call_sentence: string | null;
             /** Call Highlight */

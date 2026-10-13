@@ -46,7 +46,8 @@ from src.eligibility.profile import ArtistProfile
 from src.matching.filters import ANY_COUNTRY, NOT_FUNDING, MatchFilters, is_funded
 from src.matching.explain import ArtistText, explain
 from src.matching.index import EMBEDDING_MODEL, OpportunityIndex, embed_query
-from src.matching.matcher import Group, Match, Matcher
+from src.matching.matcher import Group, Match, Matcher, discipline_mismatch
+from src.matching.score import ArtistStats, MatchScore, features
 from src.models.processed_opportunity import FundingComponent, ProcessedOpportunity
 from src.processing.canonicalize import CANONICAL_DISCIPLINES, CANONICAL_OPPORTUNITY_TYPES
 from src.rag.query_suggestion import suggest_query
@@ -73,6 +74,19 @@ def get_matcher() -> Matcher:
     # the shared model is EMBEDDING_MODEL: an index built with another one needs its own
     embedder = get_embedder() if index.model == EMBEDDING_MODEL else None
     return Matcher(index=index, embedder=embedder)
+
+
+@lru_cache
+def get_match_score() -> MatchScore:
+    """The match percentage's weights (artifacts/match_score.json), read once per process."""
+    return MatchScore()
+
+
+def match_percent(matcher: Matcher, o: ProcessedOpportunity, vector: np.ndarray, stats: ArtistStats,
+                  shared: int, mismatch: bool) -> int:
+    """The card's "NN% match": the chance the call is a clear fit (src/matching/score.py). Shown only."""
+    cosine = float(matcher.index.vectors[matcher._row[o.id]] @ vector)
+    return round(100 * get_match_score().probability(features(cosine, stats, shared, mismatch)))
 
 
 def saved_profile(db, user_id) -> tuple[ArtistProfile, bool]:
@@ -129,6 +143,7 @@ class CardWhyOut(BaseModel):
     """Why a ranked call is on the list (src/matching/explain.py). The card shows only the words: the
     sentences that hold them are on the call page (WhyOut)."""
     shared: list[str]           # specific words it shares with the artist's documents; [] = a broad match
+    match: int                  # "NN% match": the chance it is a clear fit for the artist (match_percent)
 
 
 class ResultOut(BaseModel):
@@ -189,12 +204,14 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
     groups = {group: sum(m.group == group for m in matches) for group in ("fit", "other_discipline", "not_eligible")}
     page = matches[body.offset:body.offset + body.limit]
     artist = ArtistText(ranking_documents(db, user.id, matcher)) if vector is not None else None
+    stats = ArtistStats.of(matcher.index.vectors, vector) if vector is not None else None
     results = []
     for m in page:
         o, why = matcher.get(m.opportunity_id), None
         if artist is not None:
             e = explain(matcher.explainer, artist, o)
-            why = CardWhyOut(shared=e.shared)
+            mismatch = discipline_mismatch(o, m.verdict, profile)
+            why = CardWhyOut(shared=e.shared, match=match_percent(matcher, o, vector, stats, len(e.shared), mismatch))
         results.append(_result(m, o, why))
     return SearchOut(results=results, total=len(matches), groups=groups, order=order, ranked_by=ranked_by,
                      profile_filled=filled)
@@ -289,6 +306,7 @@ class WhyOut(BaseModel):
     with the artist's documents, and the sentence on each side holding most of them. shared = []: a broad
     match, nothing specific in common."""
     shared: list[str]
+    match: int                  # as on the card (match_percent)
     call_sentence: str | None
     call_highlight: list[str]
     your_sentence: str | None
@@ -325,13 +343,16 @@ class OpportunityOut(BaseModel):
     why: WhyOut | None = None   # None without documents (nothing ranks the call)
 
 
-def why_matched(db, user_id: uuid.UUID, o: ProcessedOpportunity, matcher: Matcher) -> WhyOut | None:
+def why_matched(db, user_id: uuid.UUID, o: ProcessedOpportunity, matcher: Matcher,
+                mismatch: bool) -> WhyOut | None:
     """What the call shares with the artist's documents; None when they have none to rank by."""
     documents = ranking_documents(db, user_id, matcher)
-    if not documents:
+    _, vector = ranking_vector(db, user_id, matcher)
+    if not documents or vector is None:
         return None
     e = explain(matcher.explainer, ArtistText(documents), o)
-    return WhyOut(shared=e.shared, call_sentence=e.call_sentence, call_highlight=e.call_highlight,
+    percent = match_percent(matcher, o, vector, ArtistStats.of(matcher.index.vectors, vector), len(e.shared), mismatch)
+    return WhyOut(shared=e.shared, match=percent, call_sentence=e.call_sentence, call_highlight=e.call_highlight,
                   your_sentence=e.your_sentence, your_highlight=e.your_highlight, your_document=e.your_document)
 
 
@@ -490,6 +511,7 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
     if o is None:
         raise HTTPException(404, "No such call.")
     profile, filled = saved_profile(db, user.id)
+    verdict = matcher.engine.evaluate(profile, o)   # once: the page's checks and the match's mismatch
     city, countries = _place(o)
     return OpportunityOut(
         id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
@@ -505,5 +527,5 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
         selection_criteria=o.selection_criteria_en or o.selection_criteria,
         application_language=o.application_language_en or o.application_language,
         submission_method=o.submission_method, program_dates=o.program_dates_en or o.program_dates,
-        verdict=verdict_out(matcher.engine.evaluate(profile, o)), profile_filled=filled,
-        why=why_matched(db, user.id, o, matcher))
+        verdict=verdict_out(verdict), profile_filled=filled,
+        why=why_matched(db, user.id, o, matcher, discipline_mismatch(o, verdict, profile)))

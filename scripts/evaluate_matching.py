@@ -40,9 +40,11 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 from src.eligibility.profile import ArtistProfile  # noqa: E402
+from src.matching.explain import ArtistText, call_text  # noqa: E402
 from src.matching.filters import MatchFilters  # noqa: E402
 from src.matching.index import embed_passages, embed_query  # noqa: E402
 from src.matching.matcher import Matcher, discipline_mismatch  # noqa: E402
+from src.matching.score import ArtistStats, features  # noqa: E402
 from src.rag.knowledge_base import ArtistKnowledgeBase  # noqa: E402
 from src.rag.query_suggestion import suggest_query  # noqa: E402
 
@@ -50,7 +52,9 @@ EVAL_DIR = os.path.join(REPO_ROOT, "dataset", "matching_eval")
 PERSONAS_PATH = os.path.join(EVAL_DIR, "personas.json")
 JUDGMENTS_PATH = os.path.join(EVAL_DIR, "judgments.csv")
 POOL_PATH = os.path.join(EVAL_DIR, "pool.json")
-RANKINGS_PATH = os.path.join(EVAL_DIR, "rankings.json")   # persona -> {"status": {id: status}, "tops": {variant: ids}}
+RANKINGS_PATH = os.path.join(EVAL_DIR, "rankings.json")
+# persona -> {"status": {id: status}, "tops": {variant: ids},
+#             "features": {id: the match score's inputs (src/matching/score.py), for every kept call}}
 
 TODAY = date(2026, 10, 13)
 K = 10                 # the first screen of results
@@ -82,14 +86,20 @@ def persona_rows(matcher: Matcher, persona: dict, rich_vectors: dict, cross_enco
         kb.add_document(path, "statement.md")
         query = suggest_query(kb, documents=["statement.md"]).query
     vector = embed_query(matcher.embedder, query)
+    # the match score's inputs, built as the app builds them (api/discover.py)
+    stats = ArtistStats.of(matcher.index.vectors, vector)
+    artist = ArtistText([("statement.md", query)])
 
     kept = matcher.kept(MatchFilters(disciplines=profile.disciplines), TODAY)
     rows = []
     for o in kept:
         verdict = matcher.engine.evaluate(profile, o, today=TODAY)
-        rows.append({"id": o.id, "status": verdict.status, "mismatch": discipline_mismatch(o, verdict, profile),
-                     "sim": float(matcher.index.vectors[matcher._row[o.id]] @ vector),
-                     "rich_sim": float(rich_vectors[o.id] @ vector)})
+        sim = float(matcher.index.vectors[matcher._row[o.id]] @ vector)
+        mismatch = discipline_mismatch(o, verdict, profile)
+        shared = len(matcher.explainer.shared_words(artist.words, call_text(o)))
+        rows.append({"id": o.id, "status": verdict.status, "mismatch": mismatch, "sim": sim,
+                     "rich_sim": float(rich_vectors[o.id] @ vector),
+                     "features": features(sim, stats, shared, mismatch)})
     # the app's own order, whatever it is in the code right now
     shipped = [m.opportunity_id for m in matcher.search_vector(vector, profile, MatchFilters(
         disciplines=profile.disciplines), k=K, today=TODAY)]
@@ -161,7 +171,8 @@ def rank_all(personas: list[dict], use_cross_encoders: bool) -> dict:
     rankings = {}
     for persona in personas:
         rows, shipped = persona_rows(matcher, persona, rich_vectors, cross_encoders)
-        rankings[persona["id"]] = {"status": {r["id"]: r["status"] for r in rows}, "tops": variants(rows, shipped)}
+        rankings[persona["id"]] = {"status": {r["id"]: r["status"] for r in rows}, "tops": variants(rows, shipped),
+                                   "features": {r["id"]: r["features"] for r in rows}}
         print(f"  {persona['id']}: {len(rows)} calls kept")
     with open(RANKINGS_PATH, "w", encoding="utf-8") as f:
         json.dump(rankings, f, indent=1)
@@ -181,6 +192,9 @@ def write_pool(personas: list[dict], rankings: dict, matcher: Matcher) -> None:
             pool.append({"persona_id": persona["id"], "statement": persona["statement"],
                          "profile_disciplines": persona["profile"]["disciplines"],
                          "calls": [call_for_judge(matcher.get(i)) for i in ids]})
+    if not pool:   # keep the last pool: it records what was judged
+        print("every call in a top 10 is judged already: nothing new to judge")
+        return
     with open(POOL_PATH, "w", encoding="utf-8") as f:
         json.dump(pool, f, ensure_ascii=False, indent=1)
     print(f"{sum(len(p['calls']) for p in pool)} calls to judge -> {os.path.relpath(POOL_PATH, REPO_ROOT)}")

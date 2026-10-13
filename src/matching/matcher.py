@@ -22,6 +22,7 @@ often eligible only because they state no rules (workflow.MD "Matching evaluatio
 now a badge and an "Eligible only" filter (api/discover.py) instead.
 """
 
+import logging
 from datetime import date
 from typing import Literal
 
@@ -36,6 +37,8 @@ from src.matching.explain import Explainer
 from src.matching.filters import ANY_DISCIPLINE, MatchFilters, passes
 from src.matching.index import OpportunityIndex, embed_query, load_embedder
 from src.models.processed_opportunity import ProcessedOpportunity
+
+logger = logging.getLogger(__name__)
 
 # the three groups of the list, in display order (see the module docstring)
 Group = Literal["fit", "other_discipline", "not_eligible"]
@@ -85,6 +88,12 @@ class Matcher:
         self.index = index or OpportunityIndex.load()
         self.index.check_matches(self.opportunities)  # refuse a stale index rather than score wrongly
         self.engine = engine or EligibilityEngine()
+        # a stale constraints file doesn't break anything, it only turns verdicts into "not analysed
+        # yet": say so in the API log at startup instead of finding out on the live site
+        if missing := self.engine.unanalysed(self.opportunities):
+            logger.warning("%d of %d opportunities have no eligibility constraints (e.g. %s): "
+                           "eligibility_constraints.jsonl is older than the corpus; run deploy/sync_data.sh",
+                           len(missing), len(self.opportunities), ", ".join(missing[:3]))
         self.embedder = embedder or load_embedder(self.index.model)
         self._row = {opp_id: i for i, opp_id in enumerate(self.index.ids)}
         # why a call is in an artist's results: the specific words they share (src/matching/explain.py)

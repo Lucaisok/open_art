@@ -2,7 +2,7 @@ import Link from "next/link";
 import ClampedText from "@/components/ClampedText/ClampedText";
 import Highlighted from "@/components/Highlighted/Highlighted";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
-import { deadlineFact, placeLabel } from "@/lib/discover";
+import { deadlineFact, matchBand, placeLabel } from "@/lib/discover";
 import type { Opportunity } from "@/lib/types";
 import BackToResults from "./BackToResults";
 import DraftButton from "./DraftButton";
@@ -21,11 +21,12 @@ const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "pa
 };
 
 // Where a requirement row comes from (api/discover.py RequirementOut): the RQ1 eligibility classifier,
-// a person's review, or the keyword safety net. Shown small under the reason, so the model's work is
-// visible and auditable; a merged row of generic checks has no source and shows none.
+// the keyword safety net, or a rule. Shown small under the reason, so the model's work is visible and
+// auditable; a merged row of generic checks has no source and shows none. A reviewed row shows as the
+// classifier's: the review kept the classifier's class (it only confirms or fixes the value), and
+// "reviewed" is annotation bookkeeping the artist doesn't need (author, 2026-10-13).
 const sourceLabel = (requirement: Requirement): string | null => {
     if (!requirement.label || !requirement.found_by) return null;
-    if (requirement.found_by === "reviewed") return "checked by hand";
     if (requirement.found_by === "keyword_check") return "flagged by keyword check";
     if (requirement.found_by === "rule") return "found by a rule";
     return requirement.confidence != null
@@ -116,6 +117,14 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             <h2 id="why-heading" className={styles.aboutHeading}>
                                 Why it&apos;s suggested to you
                             </h2>
+                            {/* the chance it is a clear fit for the artist (src/matching/score.py) */}
+                            <p className={styles.match}>
+                                {matchBand(call.why.match)} · {call.why.match}%
+                            </p>
+                            <p className={styles.matchNote}>
+                                The chance this call is a clear fit for your practice, learned from calls graded for
+                                test artists. It doesn&apos;t change the order or the eligibility check.
+                            </p>
                             {call.why.shared.length > 0 ? (
                                 <>
                                     <p className={styles.whyLabel}>In common with your documents</p>

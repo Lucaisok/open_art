@@ -226,7 +226,8 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
             "Every call in OpenArt, nearest deadline first. Filters still apply."
         ) : results.ranked_by.length > 0 ? (
             `Ranked by how close each call is to your ${results.ranked_by.join(", ")}. ` +
-            "Each card shows what the call has in common with them. Filters start from your profile."
+            "Each card shows what the call has in common with them, and the chance it is a clear fit (it also " +
+            "counts the shared words, so it doesn't always follow the order). Filters start from your profile."
         ) : (
             <>
                 <Link href="/documents" className={styles.noteLink}>

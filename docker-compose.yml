@@ -27,6 +27,7 @@ services:
       - ./dataset/opportunities.csv:/app/dataset/opportunities.csv:ro
       - ./dataset/labels/eligibility_constraints_reviewed.csv:/app/dataset/labels/eligibility_constraints_reviewed.csv:ro
       - ./artifacts/opportunity_index.npz:/app/artifacts/opportunity_index.npz:ro
+      - ./artifacts/match_score.json:/app/artifacts/match_score.json:ro   # the match percentage's weights
       - ./data/processed/eligibility_constraints.jsonl:/app/data/processed/eligibility_constraints.jsonl:ro
     depends_on:
       db:

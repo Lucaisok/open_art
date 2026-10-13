@@ -449,3 +449,17 @@
   line-height: 1.5;
   color: var(--color-grey-600);
 }
+
+.match {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.matchNote {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
