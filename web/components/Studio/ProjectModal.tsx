@@ -165,7 +165,7 @@ const ProjectModal = ({ project, category = "work", onClose, onSaved, onDelete }
             </label>
             <div className={styles.field}>
                 <span className={styles.label} id="what-label">What it is</span>
-                <div role="radiogroup" aria-labelledby="what-label" className={`${styles.segments} ${styles.four}`}>
+                <div role="radiogroup" aria-labelledby="what-label" className={styles.segments}>
                     {CATEGORIES.map((c) => (
                         <button key={c.value} type="button" role="radio" aria-checked={values.category === c.value}
                                 className={styles.segment} onClick={() => set("category", c.value)}>
@@ -176,7 +176,7 @@ const ProjectModal = ({ project, category = "work", onClose, onSaved, onDelete }
             </div>
             <div className={styles.field}>
                 <span className={styles.label} id="when-label">When</span>
-                <div role="radiogroup" aria-labelledby="when-label" className={`${styles.segments} ${styles.three}`}>
+                <div role="radiogroup" aria-labelledby="when-label" className={styles.segments}>
                     {WHEN.map((w) => (
                         <button key={w.value} type="button" role="radio" aria-checked={values.status === w.value}
                                 className={styles.segment} onClick={() => set("status", w.value)}>

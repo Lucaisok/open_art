@@ -18,11 +18,13 @@
   font-weight: 600;
 }
 
+/* Studio fields: white on the paper, an ink rule underneath instead of a box */
 .input,
 .textarea {
   width: 100%;
-  border: 3px solid var(--color-ink);
-  border-radius: 12px;
+  border: 0;
+  border-bottom: 2px solid var(--color-ink);
+  border-radius: 0;
   background-color: var(--color-white);
   color: var(--color-ink);
   font-family: inherit;
@@ -30,13 +32,18 @@
   font-weight: 700;
 }
 
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-grey-400);
+}
+
 .input {
-  height: 52px;
-  padding: 0 16px;
+  height: 48px;
+  padding: 0 14px;
 }
 
 .textarea {
-  padding: 12px 16px;
+  padding: 12px 14px;
   font-weight: 600;
   line-height: 1.5;
   resize: vertical;
@@ -48,48 +55,46 @@
   gap: 14px;
 }
 
-/* the segmented choices: What it is, When (role=radio buttons in a switch) */
+/* the choices: What it is, When (role=radio buttons), each with the Studio's square marker,
+   lime when chosen */
 .segments {
-  display: grid;
-  gap: 4px;
-  padding: 4px;
-  border: 3px solid var(--color-ink);
-  border-radius: 14px;
-  background-color: var(--color-white);
-}
-
-.four {
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-}
-
-.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 360px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
 }
 
 .segment {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 10px;
+  gap: 10px;
+  height: 44px;
+  padding: 0;
   border: 0;
-  border-radius: 10px;
   background: transparent;
-  color: var(--color-ink);
+  color: var(--color-grey-600);
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.segment[aria-checked="true"] {
-  background-color: var(--color-ink);
-  color: var(--color-paper);
+.segment::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  outline: 2px solid var(--color-ink);
 }
 
-.segment:hover[aria-checked="false"] {
-  background-color: var(--color-grey-100);
+.segment[aria-checked="true"] {
+  color: var(--color-ink);
+}
+
+.segment[aria-checked="true"]::before {
+  background-color: var(--color-lime);
+}
+
+.segment:hover {
+  color: var(--color-ink);
 }
 
 .imagesHead {
@@ -166,8 +171,8 @@
   right: 4px;
   width: 28px;
   height: 28px;
-  border: 2px solid var(--color-ink);
-  border-radius: 50%;
+  border: 0;
+  border-radius: 2px;
   background-color: var(--color-white);
   color: var(--color-ink);
   font-family: inherit;
@@ -185,8 +190,9 @@
 
 .arrow {
   height: 30px;
-  border: 2px solid var(--color-ink);
-  border-radius: 8px;
+  border: 0;
+  border-bottom: 2px solid var(--color-ink);
+  border-radius: 0;
   background-color: var(--color-white);
   color: var(--color-ink);
   font-family: inherit;
@@ -210,8 +216,8 @@
   gap: 2px;
   aspect-ratio: 1;
   padding: 6px;
-  border: 3px dashed var(--color-ink);
-  border-radius: 10px;
+  border: 2px dashed var(--color-ink);
+  border-radius: 2px;
   font-size: 13px;
   font-weight: 900;
   text-align: center;

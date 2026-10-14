@@ -142,7 +142,7 @@ const ProfileModal = ({ initial, options, onClose, onSaved }: ProfileModalProps)
                 ))}
             </div>
 
-            <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className={styles.panel}>
+            <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className={`${styles.panel} ${editor.inModal}`}>
                 {tab === "about" && (
                     <>
                         <Field {...field("name")}>

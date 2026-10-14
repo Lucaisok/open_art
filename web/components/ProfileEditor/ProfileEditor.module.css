@@ -676,3 +676,138 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* -- inside a Studio modal (Edit profile) --------------------------------------------------- */
+/* The same controls in the Studio's editorial language: fields are white on the paper with an
+   ink rule underneath, choices carry the Studio's square marker (lime when chosen), no pills or
+   rounded boxes. Only under .inModal, so the profile page keeps its own look. */
+
+.inModal .input {
+  height: 48px;
+  max-width: none;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid var(--color-ink);
+  border-radius: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.inModal .input[aria-invalid="true"] {
+  border-bottom-style: dashed;
+}
+
+.inModal .inputYear {
+  max-width: 180px;
+}
+
+.inModal .select {
+  padding-right: 40px;
+  background-position: right 14px center;
+}
+
+.inModal .pills,
+.inModal .switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.inModal .choice,
+.inModal .switch .choice {
+  gap: 10px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-grey-600);
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.inModal .choice::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  outline: 2px solid var(--color-ink);
+}
+
+.inModal .choice:hover,
+.inModal .switch .choice:hover {
+  background: none;
+  color: var(--color-ink);
+}
+
+.inModal .choiceOn,
+.inModal .choiceOn:hover,
+.inModal .switch .choiceOn,
+.inModal .switch .choiceOn:hover {
+  background: none;
+  color: var(--color-ink);
+}
+
+.inModal .choiceOn::before {
+  background-color: var(--color-lime);
+}
+
+.inModal .chipsBox,
+.inModal .schools {
+  max-width: none;
+}
+
+.inModal .chip {
+  min-height: 36px;
+  padding: 0 4px 0 12px;
+  border-radius: 2px;
+  font-size: 14px;
+}
+
+.inModal .chipRemove {
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  font-size: 18px;
+}
+
+.inModal .secondaryButton {
+  height: 48px;
+  padding: 0 18px;
+  border: 2px solid var(--color-ink);
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+}
+
+/* a school: a block between rules rather than a grey box */
+.inModal .school {
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 2px solid var(--color-rule);
+  border-radius: 0;
+}
+
+.inModal .schoolList {
+  gap: 0;
+  border-top: 2px solid var(--color-rule);
+}
+
+.inModal .fieldError {
+  padding: 0 0 0 12px;
+  border: 0;
+  border-left: 4px solid #d92d20;
+  border-radius: 0;
+  background: none;
+}
+
+.inModal .quote blockquote {
+  border-left: 4px solid var(--color-lime);
+}

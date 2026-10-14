@@ -1,13 +1,13 @@
+/* the current file: a row between rules, like the Studio's documents column */
 .current {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
-  border: 3px solid var(--color-ink);
-  border-radius: 12px;
-  background-color: var(--color-paper);
+  padding: 14px 0;
+  border-top: 2px solid var(--color-rule);
+  border-bottom: 2px solid var(--color-rule);
 }
 
 .file {
@@ -38,9 +38,9 @@
   justify-content: center;
   gap: 10px;
   padding: 32px 20px;
-  border: 3px dashed var(--color-ink);
-  border-radius: 16px;
-  background-color: var(--color-paper);
+  border: 2px dashed var(--color-ink);
+  border-radius: 2px;
+  background-color: var(--color-white);
   text-align: center;
   cursor: pointer;
 }
@@ -60,15 +60,16 @@
 }
 
 .dropTitle {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  font-stretch: 112%;
+  font-stretch: 110%;
+  letter-spacing: -0.02em;
 }
 
 .choose {
   display: inline-flex;
   align-items: center;
-  height: 48px;
+  height: 46px;
   padding: 0 18px;
   border-radius: 10px;
   background-color: var(--color-ink);
@@ -100,11 +101,11 @@
   font-weight: 800;
 }
 
+/* a thin bar on a rule, like the Studio's application progress */
 .track {
   display: block;
-  height: 10px;
-  border-radius: 999px;
-  background-color: var(--color-grey-200);
+  height: 4px;
+  background-color: var(--color-rule);
   overflow: hidden;
 }
 
