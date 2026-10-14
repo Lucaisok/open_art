@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import type { ProfileOptions } from "@/lib/types";
 import styles from "./ProfileEditor.module.css";
 
@@ -13,21 +13,30 @@ type CountryChipsProps = {
     noun?: string;          // what is picked, in the messages: "country" (default) or "language"
 };
 
-// Several countries (nationalities) or languages: removable chips, and a text field with the
-// names as suggestions (<datalist>) plus an Add button. Enter in the field adds too.
+// Several countries (nationalities) or languages (design: OpenArt Profile prototype): removable
+// chips and a text field in one underlined box, with the names as suggestions (<datalist>).
+// A name is added when picked from the suggestions, on Enter, or when leaving the field with a
+// full name typed. Backspace in the empty field removes the last chip.
 const CountryChips = ({ id, codes, countries, onChange, describedBy, noun = "country" }: CountryChipsProps) => {
     const [text, setText] = useState("");
     const [problem, setProblem] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const nameOf = (code: string) => countries.find((c) => c.code === code)?.name ?? code;
+    const find = (typed: string) => {
+        const t = typed.trim().toLowerCase();
+        return countries.find((c) => c.name.toLowerCase() === t || c.code.toLowerCase() === t);
+    };
 
-    const add = () => {
-        const typed = text.trim().toLowerCase();
-        if (!typed) {
+    // adds the typed name; `quiet`: say nothing when it isn't one (leaving the field half-typed)
+    const add = (typed: string, quiet = false) => {
+        if (!typed.trim()) {
             return;
         }
-        const match = countries.find((c) => c.name.toLowerCase() === typed || c.code.toLowerCase() === typed);
+        const match = find(typed);
         if (!match) {
-            setProblem(`Pick a ${noun} from the suggestions.`);
+            if (!quiet) {
+                setProblem(`Pick a ${noun} from the suggestions.`);
+            }
             return;
         }
         if (!codes.includes(match.code)) {
@@ -37,51 +46,62 @@ const CountryChips = ({ id, codes, countries, onChange, describedBy, noun = "cou
         setProblem(null);
     };
 
+    const onType = (event: ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setProblem(null);
+        // picked from the suggestions (not typed letter by letter): add it at once
+        const inputType = (event.nativeEvent as InputEvent).inputType ?? "";
+        if (inputType !== "insertText" && !inputType.startsWith("delete") && find(value)) {
+            add(value);
+            return;
+        }
+        setText(value);
+    };
+
     const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Enter") {
             event.preventDefault(); // add it, don't submit the form
-            add();
+            add(text);
+        } else if (event.key === "Backspace" && text === "" && codes.length > 0) {
+            onChange(codes.slice(0, -1));
         }
     };
 
     return (
         <div className={styles.chipsBox}>
-            {codes.length > 0 && (
-                <ul className={styles.chips} aria-label="Added">
-                    {codes.map((code) => (
-                        <li key={code} className={styles.chip}>
-                            {nameOf(code)}
-                            <button
-                                type="button"
-                                className={styles.chipRemove}
-                                onClick={() => onChange(codes.filter((c) => c !== code))}
-                                aria-label={`Remove ${nameOf(code)}`}
-                            >
-                                ×
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <div className={styles.addRow}>
+            {/* a click anywhere in the box goes to the text field */}
+            <div className={styles.chipsField} onClick={() => inputRef.current?.focus()}>
+                {codes.length > 0 && (
+                    <ul className={styles.chips} aria-label="Added">
+                        {codes.map((code) => (
+                            <li key={code} className={styles.chip}>
+                                {nameOf(code)}
+                                <button
+                                    type="button"
+                                    className={styles.chipRemove}
+                                    onClick={() => onChange(codes.filter((c) => c !== code))}
+                                    aria-label={`Remove ${nameOf(code)}`}
+                                >
+                                    ×
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
                 <input
+                    ref={inputRef}
                     id={id}
                     type="text"
                     list={`${id}-list`}
-                    className={styles.input}
-                    placeholder={codes.length ? `Add another ${noun}` : `Start typing a ${noun}`}
+                    className={styles.chipsInput}
+                    placeholder={codes.length ? "Add another" : `Type a ${noun}`}
                     value={text}
-                    onChange={(event) => {
-                        setText(event.target.value);
-                        setProblem(null);
-                    }}
+                    onChange={onType}
                     onKeyDown={onKeyDown}
+                    onBlur={() => add(text, true)}
                     autoComplete="off"
                     aria-describedby={[describedBy, problem ? `${id}-problem` : null].filter(Boolean).join(" ") || undefined}
                 />
-                <button type="button" className={styles.secondaryButton} onClick={add}>
-                    Add
-                </button>
             </div>
             <datalist id={`${id}-list`}>
                 {countries.map((c) => (

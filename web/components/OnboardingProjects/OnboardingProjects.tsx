@@ -9,10 +9,10 @@ import type { DocumentInfo, ProjectsData } from "@/lib/types";
 import ProjectModal from "@/components/Studio/ProjectModal";
 import ReviewGroups, { keptCount, reviewPayload, startingPicks, type Picks } from "@/components/Studio/ReviewGroups";
 import { useToast } from "@/components/ui/Toast";
+import SetupSteps from "@/components/Onboarding/SetupSteps";
+import onboarding from "@/components/Onboarding/Onboarding.module.css";
 import buttons from "@/components/ui/buttons.module.css";
 import styles from "./OnboardingProjects.module.css";
-
-const STEPS = ["Documents", "Profile", "Projects"];
 
 type OnboardingProjectsProps = {
     initial: ProjectsData;
@@ -66,23 +66,13 @@ const OnboardingProjects = ({ initial, reading: startReading }: OnboardingProjec
     const empty = data.suggestions.length === 0;
     const added = data.projects.filter((p) => !p.from_documents);
     return (
-        <main id="main" className={styles.main}>
-            <ol aria-label="Setup steps" className={styles.steps}>
-                {STEPS.map((label, i) => (
-                    <li key={label} className={`${styles.step} ${i === 2 ? styles.stepCurrent : ""}`}
-                        aria-current={i === 2 ? "step" : undefined}>
-                        <span className={`${styles.mark} ${i < 2 ? styles.markDone : styles.markNow}`} aria-hidden="true">
-                            {i < 2 ? "✓" : "3"}
-                        </span>
-                        <span className={styles.stepLabel}>{label}</span>
-                    </li>
-                ))}
-            </ol>
+        <main id="main" className={onboarding.main}>
+            <SetupSteps current={2} />
 
             <div className={styles.intro}>
-                <div className={styles.introText}>
-                    <h1 className={styles.title}>Your projects</h1>
-                    <p className={styles.lead}>
+                <div className={`${onboarding.intro} ${styles.introText}`}>
+                    <h1 className={onboarding.title}>Your projects</h1>
+                    <p className={onboarding.lead}>
                         {empty
                             ? "Tell OpenArt what you're making so calls can be matched to it."
                             : "We found these in your documents. Untick anything that shouldn't be used, and mark what you're working on now."}
@@ -116,13 +106,13 @@ const OnboardingProjects = ({ initial, reading: startReading }: OnboardingProjec
                 </div>
             )}
 
-            <div className={styles.bar}>
-                <div className={styles.barInner}>
-                    <Link href="/profile" className={`${buttons.secondary} ${styles.back}`}>← Back</Link>
-                    <span className={styles.kept} aria-live="polite">
+            <div className={onboarding.bar}>
+                <div className={onboarding.barInner}>
+                    <Link href="/profile" className={`${buttons.secondary} ${onboarding.back}`}>← Back</Link>
+                    <span className={onboarding.status} aria-live="polite">
                         {error ?? (empty ? "" : `${keptCount(data.suggestions, picks)} kept`)}
                     </span>
-                    <button type="button" className={buttons.primary} onClick={finish} disabled={busy}>
+                    <button type="button" className={`${buttons.primary} ${onboarding.next}`} onClick={finish} disabled={busy}>
                         <span className={styles.continueLong}>{busy ? "Saving…" : "Continue to Discover →"}</span>
                         <span className={styles.continueShort}>{busy ? "Saving…" : "Continue →"}</span>
                     </button>

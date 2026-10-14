@@ -34,8 +34,9 @@ type UploadCardProps = {
     onBusyChange: (kind: DocumentKind, busy: boolean) => void; // tells the board, to disable Continue
 };
 
-// One slot of the Documents page (design: DOCUMENTS.md → Upload card). Choosing or dropping a
-// file uploads it at once; a new file replaces the slot's document. × removes it (or cancels).
+// One slot of the Documents page (design: OpenArt Documents prototype): number and status over an
+// ink rule, title, why we ask, then the file or the drop button. Choosing or dropping a file uploads
+// it at once; a new file replaces the slot's document. × removes it (or cancels the upload).
 const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: UploadCardProps) => {
     const [document, setDocument] = useState<DocumentInfo | null>(initialDocument);
     const [upload, setUpload] = useState<Upload | null>(null);
@@ -107,7 +108,7 @@ const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: Uplo
         }
     };
 
-    // what the card shows
+    // what the slot shows
     const tag = upload ? "Uploading" : document ? "Added" : "Not added";
     const row = upload
         ? {
@@ -117,12 +118,14 @@ const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: Uplo
         : document
           ? { name: document.file_name, meta: `${formatSize(document.size_bytes)} · ${slot.readResult(document.chunk_count)}` }
           : null;
-    const cardState = dragOver ? styles.cardDragOver : row ? styles.cardFilled : styles.cardEmpty;
+    // one file per slot: the drop button shows while the slot is empty, and while a file is dragged
+    // over a full slot (dropping replaces the file). Otherwise remove the file first to pick another.
+    const showDrop = !row || (dragOver && !upload);
 
     return (
         <section
             aria-labelledby={`${inputId}-title`}
-            className={`${styles.card} ${cardState}`}
+            className={styles.slot}
             onDragOver={(event) => {
                 event.preventDefault();
                 setDragOver(true);
@@ -138,9 +141,11 @@ const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: Uplo
                 <span className={styles.number} aria-hidden="true">
                     {slot.number}
                 </span>
-                <span
-                    className={`${styles.tag} ${upload ? styles.tagUploading : document ? styles.tagAdded : styles.tagEmpty}`}
-                >
+                <span className={styles.tag}>
+                    <span
+                        className={`${styles.dot} ${upload ? styles.dotHalf : document ? styles.dotOn : ""}`}
+                        aria-hidden="true"
+                    />
                     {tag}
                 </span>
             </div>
@@ -151,41 +156,41 @@ const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: Uplo
 
             <div className={styles.bottom}>
                 {row && (
-                    <div className={styles.fileRow}>
-                        <div className={styles.fileLine}>
-                            <span className={styles.ext} aria-hidden="true">
-                                {extensionOf(row.name)}
-                            </span>
-                            <div className={styles.fileText}>
-                                <p className={styles.fileName} title={row.name}>
-                                    {row.name}
-                                </p>
-                                {/* announced by screen readers as it changes: Uploading → Reading → result */}
-                                <p className={styles.fileMeta} aria-live="polite">
-                                    {row.meta}
-                                </p>
+                    <div className={styles.files}>
+                        <div className={styles.fileRow}>
+                            <div className={styles.fileLine}>
+                                <span className={styles.ext} aria-hidden="true">
+                                    {extensionOf(row.name)}
+                                </span>
+                                <div className={styles.fileText}>
+                                    <p className={styles.fileName} title={row.name}>
+                                        {row.name}
+                                    </p>
+                                    {/* announced by screen readers as it changes: Uploading → Reading → result */}
+                                    <p className={styles.fileMeta} aria-live="polite">
+                                        {row.meta}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={styles.remove}
+                                    onClick={remove}
+                                    aria-label={upload ? `Cancel uploading ${row.name}` : `Remove ${row.name}`}
+                                    title={upload ? "Cancel" : "Remove"}
+                                >
+                                    ×
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                className={styles.remove}
-                                onClick={remove}
-                                aria-label={upload ? `Cancel uploading ${row.name}` : `Remove ${row.name}`}
-                                title={upload ? "Cancel" : "Remove"}
-                            >
-                                ×
-                            </button>
+                            {upload && (
+                                <div className={styles.bar} aria-hidden="true">
+                                    <div className={styles.barFill} style={{ width: `${upload.progress * 100}%` }} />
+                                </div>
+                            )}
                         </div>
-                        {upload && (
-                            <div className={styles.bar} aria-hidden="true">
-                                <div className={styles.barFill} style={{ width: `${upload.progress * 100}%` }} />
-                            </div>
-                        )}
                     </div>
                 )}
 
-                {/* one file per slot: the button is shown only while the slot is empty.
-                    To replace a file, drop the new one on the card or remove the old one first. */}
-                {!row && (
+                {showDrop && (
                     <label htmlFor={inputId} className={`${styles.drop} ${dragOver ? styles.dropOver : ""}`}>
                         <input
                             ref={inputRef}
@@ -195,8 +200,8 @@ const UploadCard = ({ slot, initialDocument, onAddedChange, onBusyChange }: Uplo
                             className={styles.fileInput}
                             onChange={onPick}
                         />
-                        <span className={styles.dropLabel}>Choose file</span>
-                        <span className={styles.dropHint}>or drag it here</span>
+                        <span className={styles.dropLabel}>{row ? "Drop to replace" : "Choose file"}</span>
+                        {!row && <span className={styles.dropHint}>or drag it here</span>}
                     </label>
                 )}
 

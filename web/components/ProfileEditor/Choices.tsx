@@ -10,18 +10,20 @@ type SingleChoiceProps<T> = {
     options: Option<T>[];
     value: T | null;
     onChange: (value: T | null) => void;
-    look?: "pills" | "switch"; // switch: the Auth page's mode switch, for Yes / No / Not said
+    look?: "pills" | "switch"; // switch: used in the Studio's profile modal
+    withNone?: boolean; // a "Not said" option (= null). Without it, choosing the chosen one again clears it.
 };
 
-// One answer, plus "Not said" (= null): every profile field is optional
+// One answer or none: every profile field is optional
 export const SingleChoice = <T extends string | boolean>({
     name,
     options,
     value,
     onChange,
     look = "pills",
+    withNone = true,
 }: SingleChoiceProps<T>) => {
-    const all: Option<T | null>[] = [...options, { value: null, label: "Not said" }];
+    const all: Option<T | null>[] = withNone ? [...options, { value: null, label: "Not said" }] : options;
     return (
         <div className={look === "switch" ? styles.switch : styles.pills}>
             {all.map((option) => {
@@ -34,6 +36,12 @@ export const SingleChoice = <T extends string | boolean>({
                             className={styles.hiddenInput}
                             checked={checked}
                             onChange={() => onChange(option.value)}
+                            // a click (or Space) on the chosen one: no change event, so clear it here
+                            onClick={() => {
+                                if (checked && option.value !== null) {
+                                    onChange(null);
+                                }
+                            }}
                         />
                         {option.label}
                     </label>

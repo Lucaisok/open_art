@@ -3,22 +3,7 @@
 import { useState } from "react";
 import styles from "./ProfileEditor.module.css";
 
-const MONTHS = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-];
-
-type Parts = { day: string; month: string; year: string }; // month: "1".."12" or ""
+type Parts = { day: string; month: string; year: string }; // digits as typed, "" when empty
 
 type DatePartsProps = {
     id: string; // given to the Day box, so an error can move focus there
@@ -35,7 +20,7 @@ const fromIso = (value: string | null): Parts => {
         return { day: "", month: "", year: "" };
     }
     const [year, month, day] = value.split("-");
-    return { day: String(Number(day)), month: String(Number(month)), year };
+    return { day, month, year }; // "12", "03", "1994"
 };
 
 // "12", "3", "1994" -> "1994-03-12", or null if that day doesn't exist (31 February)
@@ -43,7 +28,7 @@ const toIso = ({ day, month, year }: Parts): string | null => {
     const d = Number(day);
     const m = Number(month);
     const y = Number(year);
-    if (!/^\d{1,2}$/.test(day) || !/^\d{4}$/.test(year) || !m) {
+    if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year)) {
         return null;
     }
     const date = new Date(Date.UTC(y, m - 1, d));
@@ -53,9 +38,9 @@ const toIso = ({ day, month, year }: Parts): string | null => {
     return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 };
 
-// A date as three boxes: Day, Month (a list), Year. For a birth date this is easier than a
-// calendar, where reaching 1994 means paging back decades. Each box has its own visible label;
-// the caller wraps them in a <fieldset> whose legend names the whole date.
+// A date as three boxes: DD, MM, YYYY (design: OpenArt Profile prototype). For a birth date this
+// is easier than a calendar, where reaching 1994 means paging back decades. Each box has its own
+// label for screen readers; the caller wraps them in a <fieldset> whose legend names the whole date.
 const DateParts = ({ id, value, onChange, onIncomplete, describedBy, invalid }: DatePartsProps) => {
     const [parts, setParts] = useState<Parts>(() => fromIso(value));
     const [shown, setShown] = useState(value); // the value the boxes were last filled from
@@ -89,61 +74,31 @@ const DateParts = ({ id, value, onChange, onIncomplete, describedBy, invalid }: 
 
     const common = { "aria-describedby": describedBy, "aria-invalid": invalid || undefined };
 
+    const box = (part: keyof Parts, boxId: string, label: string, placeholder: string, autoComplete: string) => (
+        <div className={styles.datePart}>
+            <label htmlFor={boxId} className={styles.srOnly}>
+                {label}
+            </label>
+            <input
+                id={boxId}
+                type="text"
+                inputMode="numeric"
+                autoComplete={autoComplete}
+                maxLength={placeholder.length}
+                placeholder={placeholder}
+                className={styles.input}
+                value={parts[part]}
+                onChange={(e) => update({ [part]: e.target.value.replace(/\D/g, "") } as Partial<Parts>)}
+                {...common}
+            />
+        </div>
+    );
+
     return (
         <div className={styles.dateParts}>
-            <div className={styles.datePart}>
-                <label htmlFor={id} className={styles.datePartLabel}>
-                    Day
-                </label>
-                <input
-                    id={id}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday-day"
-                    maxLength={2}
-                    className={`${styles.input} ${styles.inputDay}`}
-                    value={parts.day}
-                    onChange={(e) => update({ day: e.target.value.replace(/\D/g, "") })}
-                    {...common}
-                />
-            </div>
-            <div className={styles.datePart}>
-                <label htmlFor={`${id}-month`} className={styles.datePartLabel}>
-                    Month
-                </label>
-                <select
-                    id={`${id}-month`}
-                    autoComplete="bday-month"
-                    className={`${styles.input} ${styles.select} ${styles.inputMonth}`}
-                    value={parts.month}
-                    onChange={(e) => update({ month: e.target.value })}
-                    {...common}
-                >
-                    {/* empty = not chosen yet; the label above already says "Month" */}
-                    <option value="" />
-                    {MONTHS.map((name, i) => (
-                        <option key={name} value={String(i + 1)}>
-                            {name}
-                        </option>
-                    ))}
-                </select>
-            </div>
-            <div className={styles.datePart}>
-                <label htmlFor={`${id}-year`} className={styles.datePartLabel}>
-                    Year
-                </label>
-                <input
-                    id={`${id}-year`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday-year"
-                    maxLength={4}
-                    className={`${styles.input} ${styles.inputYear4}`}
-                    value={parts.year}
-                    onChange={(e) => update({ year: e.target.value.replace(/\D/g, "") })}
-                    {...common}
-                />
-            </div>
+            {box("day", id, "Day", "DD", "bday-day")}
+            {box("month", `${id}-month`, "Month", "MM", "bday-month")}
+            {box("year", `${id}-year`, "Year", "YYYY", "bday-year")}
         </div>
     );
 };

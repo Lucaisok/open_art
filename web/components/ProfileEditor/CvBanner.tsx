@@ -6,69 +6,55 @@ type CvBannerProps = {
     documents: string[]; // file names read for suggestions (not yet reviewed)
     found: number | null; // values read from them (null: everything already reviewed)
     filled: number; // empty fields we filled in
-    differing: number; // saved fields where a document says something else
+    differing: string[]; // labels of the saved fields where a document says something else
 };
 
 // "cv.pdf", "cv.pdf and statement.docx", "cv.pdf, statement.docx and portfolio.txt"
 const listNames = (names: string[]) =>
     names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
-// Above the form: what we did with the artist's documents. They were read by rules on our own
-// server (src/rag/cv_rules.py); nothing is sent anywhere.
+// Under the heading: what we did with the artist's documents (design: OpenArt Profile prototype,
+// a line with a left rule: lime when we filled fields in, ink otherwise). The documents were read
+// by rules on our own server (src/rag/cv_rules.py); nothing is sent anywhere.
 const CvBanner = ({ hasDocuments, documents, found, filled, differing }: CvBannerProps) => {
+    let title: string;
+    let text: string;
+    let filledIn = false;
+    let toDocuments = false;
     if (!hasDocuments && documents.length === 0 && found === null) {
-        return (
-            <aside className={styles.banner} aria-labelledby="cv-banner-title">
-                <p className={styles.bannerEyebrow}>From your documents</p>
-                <h2 id="cv-banner-title" className={styles.bannerTitle}>
-                    Let us fill this in.
-                </h2>
-                <p className={styles.bannerText}>
-                    Add your CV, statement or portfolio and we&apos;ll read your details from them: birth date,
-                    nationality, education, disciplines and more. They&apos;re read on OpenArt&apos;s own server and
-                    never sent anywhere else.
-                </p>
-                <Link href="/documents" className={styles.bannerLink}>
-                    Add your documents →
-                </Link>
-            </aside>
-        );
-    }
-    if (found === 0) {
-        return (
-            <aside className={styles.banner} aria-labelledby="cv-banner-title">
-                <p className={styles.bannerEyebrow}>From your documents</p>
-                <h2 id="cv-banner-title" className={styles.bannerTitle}>
-                    We couldn&apos;t find these details in {listNames(documents)}.
-                </h2>
-                <p className={styles.bannerText}>
-                    We look for lines like &ldquo;Born 12 March 1994&rdquo;, &ldquo;Citizenship: …&rdquo;,
-                    &ldquo;Based in …&rdquo;, degrees under Education, and what your statement says you make. Fill
-                    the fields in below; it takes a minute.
-                </p>
-            </aside>
-        );
-    }
-    if (filled === 0 && differing === 0) {
+        title = "No documents yet";
+        text = "Add your CV and we'll fill in what it says, with the line each value came from. You can also fill the form in yourself.";
+        toDocuments = true;
+    } else if (found === 0) {
+        title = "Nothing found in your documents";
+        text = `We read ${listNames(documents)}, but it doesn't state any of these facts. Fill in whatever applies below.`;
+    } else if (filled > 0) {
+        title = `We filled in ${filled} ${filled === 1 ? "field" : "fields"} from ${listNames(documents)}`;
+        text = "They're marked in lime with the line each value came from. Check them, then save. Nothing is saved until you do.";
+        filledIn = true;
+    } else if (differing.length > 0) {
+        title = `We read ${listNames(documents)}`;
+        text = "Nothing new to fill in, but some of it differs from what you saved.";
+    } else {
         return null; // nothing new (or everything already reviewed)
     }
+
     return (
-        <aside className={styles.banner} aria-labelledby="cv-banner-title">
-            <p className={styles.bannerEyebrow}>From your documents</p>
-            <h2 id="cv-banner-title" className={styles.bannerTitle}>
-                {filled > 0
-                    ? `We filled in ${filled} ${filled === 1 ? "field" : "fields"} from ${listNames(documents)}.`
-                    : `${listNames(documents)} differ from your profile.`}
-            </h2>
-            <p className={styles.bannerText}>
-                {filled > 0 && "Each is marked with the document it comes from, and the line is one click away. "}
-                {differing > 0 &&
-                    `Where a document says something different from what you saved (${differing} ${
-                        differing === 1 ? "field" : "fields"
-                    }), we kept yours and show what it says. `}
-                Change anything that&apos;s wrong, then save.
-            </p>
-        </aside>
+        <div role="status" className={`${styles.banner} ${filledIn ? styles.bannerLime : ""}`}>
+            <p className={styles.bannerTitle}>{title}</p>
+            <p className={styles.bannerText}>{text}</p>
+            {differing.length > 0 && (
+                <p className={styles.bannerConflicts}>
+                    {differing.length} {differing.length === 1 ? "field where your documents say" : "fields where your documents say"}{" "}
+                    something different from what&apos;s saved: {differing.join(", ")}. Choose which to keep below.
+                </p>
+            )}
+            {toDocuments && (
+                <Link href="/documents" className={styles.bannerLink}>
+                    ← Go to Documents
+                </Link>
+            )}
+        </div>
     );
 };
 

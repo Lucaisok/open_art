@@ -1,112 +1,100 @@
-/* One upload card (design: design_handoff_openart 2, DOCUMENTS.md → Upload card) */
+/* One upload slot (design: design_handoff_openart, OpenArt Documents prototype): no box, an ink
+   rule under the number and status, files between thin rules, a dashed drop button */
 
-.card {
+.slot {
   display: flex;
   flex-direction: column;
+  gap: 12px;
   width: 100%;
-  min-height: 460px;
-  padding: 28px;
-  border-radius: 16px;
-  transition: background-color 120ms;
-}
-
-.cardEmpty {
-  border: 3px dashed var(--color-ink);
-  background-color: transparent;
-}
-
-.cardFilled {
-  border: 3px solid var(--color-ink);
-  background-color: var(--color-paper);
-}
-
-.cardDragOver {
-  border: 3px solid var(--color-ink);
-  background-color: var(--color-lime);
+  min-width: 0;
 }
 
 .top {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-ink);
 }
 
 .number {
-  font-size: 15px;
-  font-weight: 900;
-  font-stretch: 110%;
-}
-
-.tag {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  white-space: nowrap;
 }
 
-/* "Not added": the design's #777773 text is under 4.5:1 on paper at 11px, so grey-600 here */
-.tagEmpty {
-  padding: 4px 8px;
-  border: 2px solid var(--color-grey-300);
-  color: var(--color-grey-600);
+/* "Not added" / "Uploading" / "Added", after a square marker */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.tagUploading {
-  background-color: var(--color-ink);
-  color: var(--color-paper);
+/* the marker: empty, half ink while uploading, lime once added */
+.dot {
+  display: block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  outline: 2px solid var(--color-ink);
 }
 
-.tagAdded {
+.dotHalf {
+  background: linear-gradient(90deg, var(--color-ink) 50%, transparent 50%);
+}
+
+.dotOn {
   background-color: var(--color-lime);
-  color: var(--color-ink);
 }
 
 .title {
-  margin-top: 28px;
-  font-size: 38px;
+  font-size: 26px;
   font-weight: 900;
-  font-stretch: 120%;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  font-stretch: 112%;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 
 .description {
-  margin-top: 12px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   color: var(--color-grey-600);
+  text-wrap: pretty;
 }
 
-/* pushed to the bottom, so file rows and buttons line up across the cards */
+/* pushed to the bottom, so file rows and buttons line up across the slots */
 .bottom {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: auto;
-  padding-top: 28px;
+  padding-top: 8px;
 }
 
-/* File row: same height as the empty drop button */
+/* File rows, between 2px rules */
+.files {
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid var(--color-rule);
+}
+
 .fileRow {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  height: 112px;
-  padding: 0 14px 0 18px;
-  border: 3px solid var(--color-ink);
-  border-radius: 12px;
-  background-color: var(--color-white);
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 2px solid var(--color-rule);
 }
 
 .fileLine {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .ext {
@@ -114,32 +102,34 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 2px;
   background-color: var(--color-ink);
   color: var(--color-paper);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.04em;
 }
 
 .fileText {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .fileName {
   overflow: hidden;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .fileMeta {
-  margin-top: 5px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-grey-600);
 }
@@ -149,15 +139,15 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: none;
   color: var(--color-ink);
   font-family: inherit;
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 900;
   cursor: pointer;
 }
 
@@ -165,12 +155,11 @@
   background-color: var(--color-grey-100);
 }
 
+/* upload progress: 4px on a rule-coloured track */
 .bar {
-  height: 6px;
-  margin-top: 10px;
-  overflow: hidden;
-  border-radius: 3px;
-  background-color: var(--color-grey-200);
+  display: block;
+  height: 4px;
+  background-color: var(--color-rule);
 }
 
 .barFill {
@@ -186,19 +175,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 112px;
-  border: 3px solid var(--color-ink);
+  gap: 4px;
+  height: 120px;
+  border: 3px dashed var(--color-ink);
   border-radius: 12px;
-  background-color: var(--color-white);
+  background-color: transparent;
   text-align: center;
   cursor: pointer;
+  transition: background-color 120ms;
 }
 
+/* a file dragged over the slot */
 .dropOver {
-  border-color: var(--color-ink);
-  background-color: var(--color-ink);
-  color: var(--color-lime);
+  border-style: solid;
+  background-color: var(--color-lime);
 }
 
 .drop:has(.fileInput:focus-visible) {
@@ -215,7 +205,7 @@
 }
 
 .dropLabel {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -228,7 +218,7 @@
 }
 
 .dropOver .dropHint {
-  color: var(--color-lime);
+  color: var(--color-ink);
 }
 
 /* touch screens can't drag files */
@@ -238,31 +228,15 @@
   }
 }
 
-/* same ink style as the auth error box, a size smaller */
+/* same as the profile page's field errors */
 .error {
-  padding: 10px 14px;
-  border: 3px solid var(--color-ink);
-  border-radius: 12px;
-  background-color: var(--color-white);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--color-red);
 }
 
 .formats {
-  margin-top: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-grey-600); /* design: #777773, under 4.5:1 at 12px */
-}
-
-@media (max-width: 480px) {
-  .card {
-    min-height: 0;
-    padding: 22px;
-  }
-
-  .title {
-    margin-top: 20px;
-    font-size: 32px;
-  }
+  color: var(--color-grey-600);
 }

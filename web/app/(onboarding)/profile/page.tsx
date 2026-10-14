@@ -7,11 +7,9 @@ import type { DocumentInfo, ProfileData, ProfileOptions } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Your profile · OpenArt" };
 
-// Onboarding step 3: the facts calls are checked against, by hand or from the documents, and the
-// projects found in them
+// Onboarding step 2: the facts calls are checked against, by hand or from the documents
 export default async function ProfilePage() {
-    const user = await getCurrentUser();
-    if (!user) {
+    if (!(await getCurrentUser())) {
         redirect("/"); // private page: logged-out visitors go to the login form
     }
     const [profile, options, documents] = await Promise.all([
@@ -19,5 +17,5 @@ export default async function ProfilePage() {
         apiGet<ProfileOptions>("/api/profile/options"),
         apiGet<DocumentInfo[]>("/api/documents"),
     ]);
-    return <ProfileEditor initial={profile} options={options} hasDocuments={documents.length > 0} email={user.email} />;
+    return <ProfileEditor initial={profile} options={options} hasDocuments={documents.length > 0} />;
 }

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { requestJson } from "@/lib/api";
 import { forgetSearch } from "@/lib/discover";
-import AccountSection from "./AccountSection";
+import SetupSteps from "@/components/Onboarding/SetupSteps";
+import onboarding from "@/components/Onboarding/Onboarding.module.css";
+import buttons from "@/components/ui/buttons.module.css";
 import type { ProfileData, ProfileOptions, ProfileValues, Suggestion } from "@/lib/types";
 import { MultiChoice, SingleChoice } from "./Choices";
 import CountryChips from "./CountryChips";
@@ -26,10 +28,10 @@ type ProfileEditorProps = {
     initial: ProfileData;
     options: ProfileOptions;
     hasDocuments: boolean;   // any document uploaded (one file may be CV, statement and portfolio at once)
-    email: string;        // the Account box: who is logged in
 };
 
-type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
+// "error": `fields` of them need fixing (0: the save itself failed)
+type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; fields: number };
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -82,11 +84,12 @@ export const startingPoint = (initial: ProfileData) => {
     return { values, evidence, differing, filled };
 };
 
-// The profile page: what the documents filled in (banner), the form (four groups: the fourth is the
-// projects found in the documents), and a footer bar with Save. Only Save writes anything
-// (PUT /api/profile): the values and projects from documents are suggestions until then, and Save also
-// marks the documents as reviewed so they aren't filled in again.
-const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorProps) => {
+// Onboarding step 2 (design: OpenArt Profile prototype): the setup steps, what the documents filled
+// in (banner), the form in three sections of field rows, and a fixed bar with the save status and
+// Save. Only Save writes anything (PUT /api/profile): the values from documents are suggestions until
+// then, and Save also marks the documents as reviewed so they aren't filled in again. Once saved,
+// the bar leads on to Projects (step 3). After the onboarding the profile is edited in the Studio.
+const ProfileEditor = ({ initial, options, hasDocuments }: ProfileEditorProps) => {
     const [start] = useState(() => startingPoint(initial));
     const [values, setValues] = useState<ProfileValues>(start.values);
     const [evidence, setEvidence] = useState<EvidenceMap>(start.evidence);
@@ -98,9 +101,6 @@ const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorP
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [birthIncomplete, setBirthIncomplete] = useState(false); // some date boxes filled, not all
     const neverSaved = initial.updated_at === null && saveState.kind !== "saved";
-    // this page is the onboarding's step 2 (after it, the profile is edited in the Studio): the footer
-    // leads back to Documents and, once saved, on to Projects (step 3)
-    const onboarding = true;
 
     // unsaved: values changed, or the documents' suggestions still need the artist's Save
     const dirty = useMemo(
@@ -157,12 +157,20 @@ const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorP
         }));
     };
 
+    // "Keep mine": the saved value stays, the document's one is no longer shown
+    const keepMine = (field: FieldName) =>
+        setDiffering((prev) => {
+            const next = { ...prev };
+            delete next[field];
+            return next;
+        });
+
     const save = async (event?: FormEvent) => {
         event?.preventDefault();
         if (birthIncomplete) {
             // checked here: a half-typed date never reaches the form's values
-            setErrors((prev) => ({ ...prev, birth_date: "Enter the full date: day, month and year." }));
-            setSaveState({ kind: "error", message: "Fix the field marked above." });
+            setErrors((prev) => ({ ...prev, birth_date: "Enter a full date: day, month and a four-digit year." }));
+            setSaveState({ kind: "error", fields: 1 });
             document.getElementById("field-birth_date")?.focus();
             return;
         }
@@ -174,11 +182,7 @@ const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorP
         });
         if (!result.ok) {
             setErrors(result.fieldErrors);
-            const count = Object.keys(result.fieldErrors).length;
-            setSaveState({
-                kind: "error",
-                message: count > 0 ? `Fix the ${count === 1 ? "field" : `${count} fields`} marked above.` : result.error,
-            });
+            setSaveState({ kind: "error", fields: Object.keys(result.fieldErrors).length });
             const first = Object.keys(result.fieldErrors)[0];
             if (first) {
                 // the control itself, or the first control of a group (pills, chips)
@@ -214,7 +218,9 @@ const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorP
                       value: formatValue(name, fromCv.value, options) ?? "",
                       quote: fromCv.quote,
                       source: fromCv.source,
+                      citation: fromCv.citation,
                       onUse: () => takeCvValue(name),
+                      onKeep: () => keepMine(name),
                   }
                 : undefined,
         };
@@ -229,323 +235,311 @@ const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorP
             ? THIS_YEAR - values.active_since
             : null;
 
-    const status =
+
+    // "3 of 5 filled" in each section's head: the fields shown in it that have a value
+    const filledLabel = (names: FieldName[]) =>
+        `${names.filter((name) => !isEmpty(values[name])).length} of ${names.length} filled`;
+    const degreeFields: FieldName[] = values.has_degree !== false ? ["degree_field", "graduation_year"] : [];
+    const sections = {
+        about: ["name", "birth_date", "nationalities", "residence_country", "residence_city", "languages"] as FieldName[],
+        practice: ["disciplines", "career_stage", "active_since", "applicant_type"] as FieldName[],
+        education: ["has_degree", ...degreeFields, "education", "currently_enrolled"] as FieldName[],
+    };
+    const sectionHead = (id: string, number: string, title: string, names: FieldName[]) => (
+        <div className={styles.sectionHead}>
+            <h2 id={id} className={styles.sectionTitle}>
+                {number} · {title}
+            </h2>
+            <span className={styles.sectionFilled}>{filledLabel(names)}</span>
+        </div>
+    );
+
+    // a year typed as text: digits only, four at most
+    const yearInput = (name: "active_since" | "graduation_year") => (
+        <input
+            id={`field-${name}`}
+            type="text"
+            inputMode="numeric"
+            maxLength={4}
+            className={`${styles.input} ${styles.inputYear}`}
+            placeholder="YYYY"
+            value={values[name] ?? ""}
+            onChange={(e) => set(name, toYear(e.target.value.replace(/\D/g, "")))}
+            {...ariaFor(name)}
+        />
+    );
+
+    // the bar's status, with its square marker: empty, half ink (unsaved), lime (saved), red (a problem)
+    const untouchedSuggestions =
+        reviewing.length > 0 &&
+        start.filled > 0 &&
+        JSON.stringify({ values, evidence }) === JSON.stringify({ values: start.values, evidence: start.evidence });
+    const [status, marker] =
         saveState.kind === "saving"
-            ? "Saving…"
+            ? ["Saving…", ""]
             : saveState.kind === "error"
-              ? saveState.message
-              : reviewing.length > 0 && start.filled > 0 && JSON.stringify({ values, evidence }) === JSON.stringify({ values: start.values, evidence: start.evidence })
-                ? "Filled in from your documents, not saved yet"
+              ? saveState.fields > 0
+                  ? [`${saveState.fields} ${saveState.fields === 1 ? "field needs" : "fields need"} fixing`, styles.dotRed]
+                  : ["Couldn't save your profile. Try again.", styles.dotRed]
+              : untouchedSuggestions
+                ? ["Filled in from your documents, not saved yet", styles.dotHalf]
                 : dirty
-                ? "Unsaved changes"
-                : saveState.kind === "saved"
-                  ? "Saved"
+                  ? ["Unsaved changes", styles.dotHalf]
                   : neverSaved
-                    ? "Not saved yet"
-                    : "All changes saved";
+                    ? ["Not saved yet", ""]
+                    : ["All changes saved", styles.dotOn];
+    const allSaved = !dirty && !neverSaved;
 
     return (
-        <>
-            <main id="main" className={styles.main}>
-                <h1 className={styles.title}>
-                    Your profile<span className={styles.stop}>.</span>
-                </h1>
-                <p className={styles.intro}>
+        <main id="main" className={onboarding.main}>
+            <SetupSteps current={1} />
+            <div className={onboarding.intro}>
+                <h1 className={onboarding.title}>Your profile</h1>
+                <p className={onboarding.lead}>
                     The facts calls are checked against. Every field is optional: an empty one never rules you out,
                     we just flag it for you to check.
                 </p>
+            </div>
 
-                <div className={styles.layout}>
-                    <CvBanner
-                        hasDocuments={hasDocuments}
-                        documents={initial.suggestions?.documents.map((d) => d.file_name) ?? []}
-                        found={initial.suggestions ? initial.suggestions.items.length : null}
-                        filled={start.filled}
-                        differing={Object.keys(start.differing).length}
-                    />
+            <CvBanner
+                hasDocuments={hasDocuments}
+                documents={initial.suggestions?.documents.map((d) => d.file_name) ?? []}
+                found={initial.suggestions ? initial.suggestions.items.length : null}
+                filled={start.filled}
+                differing={Object.keys(differing).map((name) => FIELD_LABELS[name as FieldName])}
+            />
 
-                    <form id="profile-form" className={styles.form} onSubmit={save} noValidate>
-                        <section className={styles.group} aria-labelledby="group-about">
-                            <div className={styles.groupHead}>
-                                <span className={styles.groupNumber} aria-hidden="true">
-                                    01
-                                </span>
-                                <h2 id="group-about" className={styles.groupTitle}>
-                                    About you
-                                </h2>
+            <form id="profile-form" onSubmit={save} noValidate>
+                <section className={styles.section} aria-labelledby="group-about">
+                    {sectionHead("group-about", "01", "About you", sections.about)}
+                    <div className={styles.fields}>
+                        <Field {...field("name")}>
+                            <input
+                                id="field-name"
+                                type="text"
+                                className={styles.input}
+                                maxLength={120}
+                                autoComplete="name"
+                                placeholder="As you sign your work"
+                                value={values.name ?? ""}
+                                onChange={(e) => set("name", e.target.value || null)}
+                                {...ariaFor("name")}
+                            />
+                        </Field>
+
+                        <Field {...field("birth_date")} group>
+                            <DateParts
+                                id="field-birth_date"
+                                value={values.birth_date ?? null}
+                                onChange={(v) => set("birth_date", v)}
+                                onIncomplete={setBirthIncomplete}
+                                describedBy={ariaFor("birth_date")["aria-describedby"]}
+                                invalid={Boolean(errors.birth_date)}
+                            />
+                        </Field>
+
+                        <Field {...field("nationalities")}>
+                            <CountryChips
+                                id="field-nationalities"
+                                codes={values.nationalities ?? []}
+                                countries={options.countries}
+                                onChange={(codes) => set("nationalities", codes)}
+                                describedBy={ariaFor("nationalities")["aria-describedby"]}
+                            />
+                        </Field>
+
+                        <Field {...field("residence_country")}>
+                            <select
+                                id="field-residence_country"
+                                className={`${styles.input} ${styles.select}`}
+                                value={values.residence_country ?? ""}
+                                onChange={(e) => set("residence_country", e.target.value || null)}
+                                {...ariaFor("residence_country")}
+                            >
+                                <option value="">Not set</option>
+                                {options.countries.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+
+                        <Field {...field("residence_city")}>
+                            <input
+                                id="field-residence_city"
+                                type="text"
+                                className={styles.input}
+                                maxLength={100}
+                                autoComplete="address-level2"
+                                placeholder="e.g. Berlin"
+                                value={values.residence_city ?? ""}
+                                onChange={(e) => set("residence_city", e.target.value || null)}
+                                {...ariaFor("residence_city")}
+                            />
+                        </Field>
+
+                        <Field {...field("languages")}>
+                            <CountryChips
+                                id="field-languages"
+                                noun="language"
+                                codes={values.languages ?? []}
+                                countries={options.languages}
+                                onChange={(codes) => set("languages", codes)}
+                                describedBy={ariaFor("languages")["aria-describedby"]}
+                            />
+                        </Field>
+                    </div>
+                </section>
+
+                <section className={styles.section} aria-labelledby="group-practice">
+                    {sectionHead("group-practice", "02", "Practice", sections.practice)}
+                    <div className={styles.fields}>
+                        <Field {...field("disciplines")} group full>
+                            <MultiChoice
+                                name="disciplines"
+                                options={options.disciplines}
+                                values={values.disciplines ?? []}
+                                onChange={(list) => set("disciplines", list)}
+                            />
+                        </Field>
+
+                        <Field {...field("career_stage")} group full>
+                            <SingleChoice
+                                name="career_stage"
+                                withNone={false}
+                                options={options.career_stages.map((s) => ({
+                                    value: s,
+                                    label: CAREER_STAGE_LABELS[s] ?? s,
+                                }))}
+                                value={values.career_stage ?? null}
+                                onChange={(v) => set("career_stage", v)}
+                            />
+                        </Field>
+
+                        <Field {...field("active_since")}>
+                            <div className={styles.yearRow}>
+                                {yearInput("active_since")}
+                                {yearsActive !== null && (
+                                    <span className={styles.yearNote}>
+                                        {yearsActive === 0
+                                            ? "This year"
+                                            : `${yearsActive} ${yearsActive === 1 ? "year" : "years"}`}
+                                    </span>
+                                )}
                             </div>
-                            <div className={styles.groupFields}>
+                        </Field>
 
-                            <Field {...field("name")}>
-                                <input
-                                    id="field-name"
-                                    type="text"
-                                    className={styles.input}
-                                    maxLength={120}
-                                    autoComplete="name"
-                                    placeholder="As you sign your work"
-                                    value={values.name ?? ""}
-                                    onChange={(e) => set("name", e.target.value || null)}
-                                    {...ariaFor("name")}
-                                />
-                            </Field>
+                        <Field {...field("applicant_type")} group>
+                            <SingleChoice
+                                name="applicant_type"
+                                withNone={false}
+                                options={APPLICANT_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                                value={values.applicant_type ?? null}
+                                onChange={(v) => set("applicant_type", v)}
+                            />
+                        </Field>
+                    </div>
+                </section>
 
-                            <Field {...field("birth_date")} group>
-                                <DateParts
-                                    id="field-birth_date"
-                                    value={values.birth_date ?? null}
-                                    onChange={(v) => set("birth_date", v)}
-                                    onIncomplete={setBirthIncomplete}
-                                    describedBy={ariaFor("birth_date")["aria-describedby"]}
-                                    invalid={Boolean(errors.birth_date)}
-                                />
-                            </Field>
+                <section className={styles.section} aria-labelledby="group-education">
+                    {sectionHead("group-education", "03", "Education", sections.education)}
+                    <div className={styles.fields}>
+                        <Field {...field("has_degree")} group>
+                            <SingleChoice
+                                name="has_degree"
+                                withNone={false}
+                                options={[
+                                    { value: true, label: "Yes" },
+                                    { value: false, label: "No" },
+                                ]}
+                                value={values.has_degree ?? null}
+                                onChange={(v) => {
+                                    set("has_degree", v);
+                                    if (v === false) {
+                                        // no degree: its field and year no longer apply
+                                        set("degree_field", null);
+                                        set("graduation_year", null);
+                                    }
+                                }}
+                            />
+                        </Field>
 
-                            <Field {...field("nationalities")}>
-                                <CountryChips
-                                    id="field-nationalities"
-                                    codes={values.nationalities ?? []}
-                                    countries={options.countries}
-                                    onChange={(codes) => set("nationalities", codes)}
-                                    describedBy={ariaFor("nationalities")["aria-describedby"]}
-                                />
-                            </Field>
-
-                            <Field {...field("residence_country")}>
-                                <select
-                                    id="field-residence_country"
-                                    className={`${styles.input} ${styles.select}`}
-                                    value={values.residence_country ?? ""}
-                                    onChange={(e) => set("residence_country", e.target.value || null)}
-                                    {...ariaFor("residence_country")}
-                                >
-                                    <option value="">Not said</option>
-                                    {options.countries.map((c) => (
-                                        <option key={c.code} value={c.code}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </Field>
-
-                            <Field {...field("residence_city")}>
-                                <input
-                                    id="field-residence_city"
-                                    type="text"
-                                    className={styles.input}
-                                    maxLength={100}
-                                    autoComplete="address-level2"
-                                    placeholder="e.g. Berlin"
-                                    value={values.residence_city ?? ""}
-                                    onChange={(e) => set("residence_city", e.target.value || null)}
-                                    {...ariaFor("residence_city")}
-                                />
-                            </Field>
-
-                            <Field {...field("languages")}>
-                                <CountryChips
-                                    id="field-languages"
-                                    noun="language"
-                                    codes={values.languages ?? []}
-                                    countries={options.languages}
-                                    onChange={(codes) => set("languages", codes)}
-                                    describedBy={ariaFor("languages")["aria-describedby"]}
-                                />
-                            </Field>
-                            </div>
-                        </section>
-
-                        <section className={styles.group} aria-labelledby="group-practice">
-                            <div className={styles.groupHead}>
-                                <span className={styles.groupNumber} aria-hidden="true">
-                                    02
-                                </span>
-                                <h2 id="group-practice" className={styles.groupTitle}>
-                                    Practice
-                                </h2>
-                            </div>
-                            <div className={styles.groupFields}>
-
-                            <Field {...field("disciplines")} group>
-                                <MultiChoice
-                                    name="disciplines"
-                                    options={options.disciplines}
-                                    values={values.disciplines ?? []}
-                                    onChange={(list) => set("disciplines", list)}
-                                />
-                            </Field>
-
-                            <Field {...field("career_stage")} group>
-                                <SingleChoice
-                                    name="career_stage"
-                                    options={options.career_stages.map((s) => ({
-                                        value: s,
-                                        label: CAREER_STAGE_LABELS[s] ?? s,
-                                    }))}
-                                    value={values.career_stage ?? null}
-                                    onChange={(v) => set("career_stage", v)}
-                                />
-                            </Field>
-
-                            <Field {...field("active_since")}>
-                                <div className={styles.yearRow}>
+                        {values.has_degree !== false && (
+                            <>
+                                <Field {...field("degree_field")}>
                                     <input
-                                        id="field-active_since"
-                                        type="number"
-                                        inputMode="numeric"
-                                        className={`${styles.input} ${styles.inputYear}`}
-                                        min={1900}
-                                        max={THIS_YEAR}
-                                        placeholder="e.g. 2016"
-                                        value={values.active_since ?? ""}
-                                        onChange={(e) => set("active_since", toYear(e.target.value))}
-                                        {...ariaFor("active_since")}
+                                        id="field-degree_field"
+                                        type="text"
+                                        className={styles.input}
+                                        maxLength={200}
+                                        placeholder="e.g. Fine Art"
+                                        value={values.degree_field ?? ""}
+                                        onChange={(e) => set("degree_field", e.target.value || null)}
+                                        {...ariaFor("degree_field")}
                                     />
-                                    {yearsActive !== null && (
-                                        <span className={styles.yearNote}>
-                                            {yearsActive} {yearsActive === 1 ? "year" : "years"} of practice
-                                        </span>
-                                    )}
-                                </div>
-                            </Field>
+                                </Field>
 
-                            <Field {...field("applicant_type")} group>
-                                <SingleChoice
-                                    name="applicant_type"
-                                    options={APPLICANT_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-                                    value={values.applicant_type ?? null}
-                                    onChange={(v) => set("applicant_type", v)}
-                                />
-                            </Field>
-                            </div>
-                        </section>
+                                <Field {...field("graduation_year")}>{yearInput("graduation_year")}</Field>
+                            </>
+                        )}
 
-                        <section className={styles.group} aria-labelledby="group-education">
-                            <div className={styles.groupHead}>
-                                <span className={styles.groupNumber} aria-hidden="true">
-                                    03
-                                </span>
-                                <h2 id="group-education" className={styles.groupTitle}>
-                                    Education
-                                </h2>
-                            </div>
-                            <div className={styles.groupFields}>
+                        <Field {...field("education")} group full>
+                            <SchoolsEditor
+                                id="field-education"
+                                schools={values.education ?? []}
+                                countries={options.countries}
+                                onChange={(schools) => set("education", schools)}
+                                describedBy={ariaFor("education")["aria-describedby"]}
+                            />
+                        </Field>
 
-                            <Field {...field("has_degree")} group>
-                                <SingleChoice
-                                    name="has_degree"
-                                    look="switch"
-                                    options={[
-                                        { value: true, label: "Yes" },
-                                        { value: false, label: "No" },
-                                    ]}
-                                    value={values.has_degree ?? null}
-                                    onChange={(v) => {
-                                        set("has_degree", v);
-                                        if (v === false) {
-                                            // no degree: its field and year no longer apply
-                                            set("degree_field", null);
-                                            set("graduation_year", null);
-                                        }
-                                    }}
-                                />
-                            </Field>
+                        <Field {...field("currently_enrolled")} group>
+                            <SingleChoice
+                                name="currently_enrolled"
+                                withNone={false}
+                                options={[
+                                    { value: true, label: "Yes" },
+                                    { value: false, label: "No" },
+                                ]}
+                                value={values.currently_enrolled ?? null}
+                                onChange={(v) => set("currently_enrolled", v)}
+                            />
+                        </Field>
+                    </div>
+                </section>
+            </form>
 
-                            {values.has_degree !== false && (
-                                <>
-                                    <Field {...field("degree_field")}>
-                                        <input
-                                            id="field-degree_field"
-                                            type="text"
-                                            className={styles.input}
-                                            maxLength={200}
-                                            placeholder="e.g. Painting and Graphic Arts"
-                                            value={values.degree_field ?? ""}
-                                            onChange={(e) => set("degree_field", e.target.value || null)}
-                                            {...ariaFor("degree_field")}
-                                        />
-                                    </Field>
-
-                                    <Field {...field("graduation_year")}>
-                                        <input
-                                            id="field-graduation_year"
-                                            type="number"
-                                            inputMode="numeric"
-                                            className={`${styles.input} ${styles.inputYear}`}
-                                            min={1900}
-                                            max={THIS_YEAR}
-                                            placeholder="e.g. 2021"
-                                            value={values.graduation_year ?? ""}
-                                            onChange={(e) => set("graduation_year", toYear(e.target.value))}
-                                            {...ariaFor("graduation_year")}
-                                        />
-                                    </Field>
-                                </>
-                            )}
-
-                            <Field {...field("education")} group>
-                                <SchoolsEditor
-                                    id="field-education"
-                                    schools={values.education ?? []}
-                                    countries={options.countries}
-                                    onChange={(schools) => set("education", schools)}
-                                    describedBy={ariaFor("education")["aria-describedby"]}
-                                />
-                            </Field>
-
-                            <Field {...field("currently_enrolled")} group>
-                                <SingleChoice
-                                    name="currently_enrolled"
-                                    look="switch"
-                                    options={[
-                                        { value: true, label: "Yes" },
-                                        { value: false, label: "No" },
-                                    ]}
-                                    value={values.currently_enrolled ?? null}
-                                    onChange={(v) => set("currently_enrolled", v)}
-                                />
-                            </Field>
-                            </div>
-                        </section>
-
-                    </form>
-
-                </div>
-
-                <AccountSection email={email} />
-            </main>
-
-            <footer className={styles.footer}>
-                <div className={styles.footerLeft}>
-                    {onboarding && (
-                        <Link href="/documents" className={styles.back}>
-                            ← Back
-                        </Link>
-                    )}
-                    <p
-                        className={`${styles.saveStatus} ${saveState.kind === "error" ? styles.saveStatusError : ""}`}
+            <div className={onboarding.bar}>
+                <div className={onboarding.barInner}>
+                    <Link href="/documents" className={`${buttons.secondary} ${onboarding.back}`}>
+                        ← Back
+                    </Link>
+                    <span
+                        className={`${onboarding.status} ${styles.status} ${saveState.kind === "error" ? styles.statusError : ""}`}
                         role={saveState.kind === "error" ? "alert" : "status"}
                     >
-                        {status}
-                    </p>
+                        <span className={`${styles.dot} ${marker}`} aria-hidden="true" />
+                        <span>{status}</span>
+                    </span>
+                    {/* everything saved: on to the last step, Projects */}
+                    {allSaved ? (
+                        <Link href="/projects" className={`${buttons.primary} ${onboarding.next}`}>
+                            Continue to Projects →
+                        </Link>
+                    ) : (
+                        <button
+                            type="submit"
+                            form="profile-form"
+                            className={`${buttons.primary} ${onboarding.next}`}
+                            disabled={saveState.kind === "saving"}
+                        >
+                            {saveState.kind === "saving" ? "Saving…" : "Save profile"}
+                        </button>
+                    )}
                 </div>
-                {/* everything saved: on to the last step, Projects */}
-                {onboarding && !dirty && !neverSaved ? (
-                    <Link href="/projects" className={styles.saveButton}>
-                        Continue to Projects →
-                    </Link>
-                ) : (
-                    <button
-                        type="submit"
-                        form="profile-form"
-                        className={styles.saveButton}
-                        disabled={!dirty || saveState.kind === "saving"}
-                    >
-                        {saveState.kind === "saving" ? "Saving…" : "Save profile"}
-                    </button>
-                )}
-            </footer>
-        </>
+            </div>
+        </main>
     );
 };
 

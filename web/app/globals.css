@@ -45,6 +45,8 @@
   --color-lime: #c6f432;
   --color-lime-hover: #b5e322;
   --color-lime-pressed: #a0cc14;
+  --color-red: #d92d20;        /* field errors, "N fields need fixing" */
+  --color-warn: #e6c33d;       /* a document says something else than the saved value */
 
   /* Spacing */
   --spacing-xs: 0.25rem;

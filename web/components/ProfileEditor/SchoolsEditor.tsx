@@ -14,8 +14,9 @@ type SchoolsEditorProps = {
 };
 
 // The schools the artist studied at (some calls are for alumni of a school, or for people who studied
-// in a country or region). One card per school: its name, city and country, each optional except the
-// name, and a Remove button; "Add a school" below. Native inputs only.
+// in a country or region). One row per school (design: OpenArt Profile prototype): its name, city
+// and country, each optional except the name, and × to remove it; "+ Add a school" below.
+// The boxes are labelled for screen readers; the placeholders say what goes where.
 const SchoolsEditor = ({ id, schools, countries, onChange, describedBy }: SchoolsEditorProps) => {
     const update = (index: number, change: Partial<School>) =>
         onChange(schools.map((school, i) => (i === index ? { ...school, ...change } : school)));
@@ -26,58 +27,53 @@ const SchoolsEditor = ({ id, schools, countries, onChange, describedBy }: School
                 <ul className={styles.schoolList}>
                     {schools.map((school, i) => (
                         <li key={i} className={styles.school}>
-                            <label className={styles.schoolLabel} htmlFor={`${id}-${i}-institution`}>
-                                School
+                            <label className={styles.srOnly} htmlFor={`${id}-${i}-institution`}>
+                                School {i + 1}
                             </label>
                             <input
                                 id={`${id}-${i}-institution`}
                                 type="text"
-                                className={styles.input}
+                                className={`${styles.input} ${styles.schoolName}`}
                                 maxLength={200}
-                                placeholder="e.g. Academy of Fine Arts Vienna"
+                                placeholder="School"
                                 value={school.institution}
                                 onChange={(e) => update(i, { institution: e.target.value })}
                             />
-                            <div className={styles.schoolPlace}>
-                                <div>
-                                    <label className={styles.schoolLabel} htmlFor={`${id}-${i}-city`}>
-                                        City
-                                    </label>
-                                    <input
-                                        id={`${id}-${i}-city`}
-                                        type="text"
-                                        className={styles.input}
-                                        maxLength={100}
-                                        value={school.city ?? ""}
-                                        onChange={(e) => update(i, { city: e.target.value || null })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={styles.schoolLabel} htmlFor={`${id}-${i}-country`}>
-                                        Country
-                                    </label>
-                                    <select
-                                        id={`${id}-${i}-country`}
-                                        className={`${styles.input} ${styles.select}`}
-                                        value={school.country ?? ""}
-                                        onChange={(e) => update(i, { country: e.target.value || null })}
-                                    >
-                                        <option value="">Not given</option>
-                                        {countries.map((c) => (
-                                            <option key={c.code} value={c.code}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            <label className={styles.srOnly} htmlFor={`${id}-${i}-city`}>
+                                City of school {i + 1}
+                            </label>
+                            <input
+                                id={`${id}-${i}-city`}
+                                type="text"
+                                className={`${styles.input} ${styles.schoolCity}`}
+                                maxLength={100}
+                                placeholder="City"
+                                value={school.city ?? ""}
+                                onChange={(e) => update(i, { city: e.target.value || null })}
+                            />
+                            <label className={styles.srOnly} htmlFor={`${id}-${i}-country`}>
+                                Country of school {i + 1}
+                            </label>
+                            <select
+                                id={`${id}-${i}-country`}
+                                className={`${styles.input} ${styles.select} ${styles.schoolCountry}`}
+                                value={school.country ?? ""}
+                                onChange={(e) => update(i, { country: e.target.value || null })}
+                            >
+                                <option value="">Country</option>
+                                {countries.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
                             <button
                                 type="button"
-                                className={styles.textButton}
+                                className={styles.iconButton}
                                 onClick={() => onChange(schools.filter((_, j) => j !== i))}
-                                aria-label={`Remove ${school.institution || "this school"}`}
+                                aria-label={`Remove ${school.institution || `school ${i + 1}`}`}
                             >
-                                Remove
+                                ×
                             </button>
                         </li>
                     ))}
@@ -86,10 +82,10 @@ const SchoolsEditor = ({ id, schools, countries, onChange, describedBy }: School
             <button
                 id={id}
                 type="button"
-                className={styles.secondaryButton}
+                className={styles.textButton}
                 onClick={() => onChange([...schools, { institution: "", city: null, country: null }])}
             >
-                {schools.length ? "Add another school" : "Add a school"}
+                {schools.length ? "+ Add another school" : "+ Add a school"}
             </button>
         </div>
     );

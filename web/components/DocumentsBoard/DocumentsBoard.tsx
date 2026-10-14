@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import type { DocumentInfo, DocumentKind } from "@/lib/types";
+import SetupSteps from "@/components/Onboarding/SetupSteps";
+import onboarding from "@/components/Onboarding/Onboarding.module.css";
 import UploadCard, { type SlotInfo } from "./UploadCard";
 import styles from "./DocumentsBoard.module.css";
 
-// The three slots (design: design_handoff_openart 2, DOCUMENTS.md → Slots). One file each:
+// The three slots (design: design_handoff_openart, DOCUMENTS.md → Slots). One file each:
 // the API keeps one document per slot, PDF / DOCX / TXT / MD up to 10 MB (src/rag/documents.py).
 const SLOTS: SlotInfo[] = [
     {
@@ -32,16 +34,11 @@ const SLOTS: SlotInfo[] = [
     },
 ];
 
-type DocumentsBoardProps = {
-    initialDocuments: DocumentInfo[];
-    onboarding: boolean;   // the profile was never saved: the footer bar leads on to the profile
-};
-
-// The Documents page body: title, the three upload cards and, during the onboarding only, the
-// footer bar ("N of 3 added", Skip, Continue). Each card uploads on its own; the board only counts.
-// Outside the onboarding there is no bar: uploads save themselves and the header leads everywhere.
-const DocumentsBoard = ({ initialDocuments, onboarding }: DocumentsBoardProps) => {
-    // which slots hold a document, and which are uploading: for the footer
+// Onboarding step 1 (design: OpenArt Documents prototype): the setup steps, the title, the three
+// upload slots and the fixed bar ("N of 3 added", Skip, Continue). Each slot uploads on its own;
+// the board only counts. After the onboarding, documents are managed in the Studio.
+const DocumentsBoard = ({ initialDocuments }: { initialDocuments: DocumentInfo[] }) => {
+    // which slots hold a document, and which are uploading: for the bar
     const [added, setAdded] = useState<Record<DocumentKind, boolean>>({
         cv: initialDocuments.some((d) => d.kind === "cv"),
         statement: initialDocuments.some((d) => d.kind === "statement"),
@@ -49,7 +46,7 @@ const DocumentsBoard = ({ initialDocuments, onboarding }: DocumentsBoardProps) =
     });
     const [busy, setBusy] = useState<Record<DocumentKind, boolean>>({ cv: false, statement: false, portfolio: false });
 
-    // stable callbacks (the cards call them from effects); unchanged values keep the same state object
+    // stable callbacks (the slots call them from effects); unchanged values keep the same state object
     const onAddedChange = useCallback(
         (kind: DocumentKind, value: boolean) =>
             setAdded((prev) => (prev[kind] === value ? prev : { ...prev, [kind]: value })),
@@ -66,60 +63,53 @@ const DocumentsBoard = ({ initialDocuments, onboarding }: DocumentsBoardProps) =
     const canContinue = addedCount > 0 && !anyBusy;
 
     return (
-        <>
-            <main id="main" className={styles.main}>
-                <h1 className={styles.title}>
-                    Your documents<span className={styles.stop}>.</span>
-                </h1>
-                <p className={styles.intro}>
+        <main id="main" className={onboarding.main}>
+            <SetupSteps current={0} />
+            <div className={onboarding.intro}>
+                <h1 className={onboarding.title}>Your documents</h1>
+                <p className={onboarding.lead}>
                     We read these to match you with calls, check eligibility and pull the right passages into your
                     drafts. You can replace them any time.
                 </p>
-                <ul className={styles.grid}>
-                    {SLOTS.map((slot) => (
-                        <li key={slot.kind} className={styles.gridItem}>
-                            <UploadCard
-                                slot={slot}
-                                initialDocument={initialDocuments.find((d) => d.kind === slot.kind) ?? null}
-                                onAddedChange={onAddedChange}
-                                onBusyChange={onBusyChange}
-                            />
-                        </li>
-                    ))}
-                </ul>
-            </main>
+            </div>
 
-            {onboarding && (
-                <footer className={styles.footer}>
-                    <div className={styles.footerLeft}>
-                        <p className={styles.progress} aria-live="polite">
-                            {addedCount} of 3 added
-                        </p>
-                    </div>
-                    <div className={styles.footerRight}>
+            <ul className={styles.grid}>
+                {SLOTS.map((slot) => (
+                    <li key={slot.kind} className={styles.gridItem}>
+                        <UploadCard
+                            slot={slot}
+                            initialDocument={initialDocuments.find((d) => d.kind === slot.kind) ?? null}
+                            onAddedChange={onAddedChange}
+                            onBusyChange={onBusyChange}
+                        />
+                    </li>
+                ))}
+            </ul>
+
+            <div className={onboarding.bar}>
+                <div className={onboarding.barInner}>
+                    {/* the first step: nothing to go back to (the login sends a logged-in artist here) */}
+                    <span className={onboarding.status} aria-live="polite">
+                        {addedCount} of 3 added
+                    </span>
+                    <span className={styles.barRight}>
                         <Link href="/profile" className={styles.skip}>
                             Skip for now
                         </Link>
                         {canContinue ? (
-                            <Link href="/profile" className={styles.continue}>
-                                <span>Continue</span>
-                                <span className={styles.arrow} aria-hidden="true">
-                                    →
-                                </span>
+                            <Link href="/profile" className={`${styles.continue} ${onboarding.next}`}>
+                                Continue →
                             </Link>
                         ) : (
                             // disabled until one document is added and nothing is uploading
-                            <button type="button" className={styles.continue} disabled>
-                                <span>Continue</span>
-                                <span className={styles.arrow} aria-hidden="true">
-                                    →
-                                </span>
+                            <button type="button" className={`${styles.continue} ${onboarding.next}`} disabled>
+                                Continue →
                             </button>
                         )}
-                    </div>
-                </footer>
-            )}
-        </>
+                    </span>
+                </div>
+            </div>
+        </main>
     );
 };
 
