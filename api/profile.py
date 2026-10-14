@@ -6,14 +6,17 @@ The artist's eligibility profile (web app step 4).
     GET  /api/profile/options   countries, disciplines, career stages for the form
 
 The artist's documents are read for profile values when /profile opens: plain rules
-(src/rag/cv_rules.py) on their stored passages, in milliseconds, nothing sent anywhere. The CV
-gives any field; the statement and portfolio only the Practice fields the CV left empty
-(disciplines, applying as, active since). Reading them then rather than at upload means an
-improved rule applies to documents already uploaded. /profile shows the values filled into
+(src/rag/cv_rules.py) on their stored passages, in milliseconds, nothing sent anywhere. Every
+document gets every rule (cv_rules.extract_all): an artist may upload one file that is CV and
+portfolio at once. The CV is read first, so its values win; the statement and portfolio fill
+only the fields still empty. Reading them then rather than at upload means an improved rule
+applies to documents already uploaded. /profile shows the values filled into
 the form, each marked "From your CV / statement / portfolio" with its quote. Human in the
 loop: they become the profile only when the artist presses Save (PUT), the only route that
-writes it. That Save also records which documents were reviewed, so their suggestions
-aren't offered again until a new one is uploaded.
+writes it. The projects found in the documents (api/projects.py) are reviewed here too: the page
+ticks them, and the same Save keeps the ticked ones and dismisses the others. That Save also
+records which documents were reviewed, so their suggestions aren't offered again until a new one
+is uploaded.
 
 Stored as the artist sees it, with "active since" (a year) instead of ArtistProfile's
 "years active", which would go stale every January: `to_artist_profile` does that
@@ -25,17 +28,19 @@ from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter
-from pydantic import BaseModel, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import select
 
 from api.auth import DB, CurrentUser
-from api.models import Document, KnowledgeChunkRow, Profile
+from api.models import Document, KnowledgeChunkRow, Profile, Project
+from api.images import images_pending
+from api.projects import ProjectOut, Status, pending_suggestions, review_suggestions, saved_projects
 from src.eligibility.geo import COUNTRIES
 from src.eligibility.languages import LANGUAGES
 from src.eligibility.study import EducationEntry
 from src.eligibility.profile import ApplicantType, ArtistProfile
 from src.processing.canonicalize import CANONICAL_DISCIPLINES
-from src.rag.cv_rules import extract_practice, extract_profile
+from src.rag.cv_rules import extract_all
 from src.rag.documents import Chunk
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -64,6 +69,7 @@ class ProfileValues(BaseModel):
     degree_field: str | None = None
     languages: list[str] = []               # ISO 639-1 codes: the languages the artist can work in
     education: list[EducationEntry] = []    # the schools the artist studied at
+    name: str | None = None                 # how the artist signs: the Studio's heading. Not for the engine
 
     @field_validator("birth_date")
     @classmethod
@@ -129,6 +135,14 @@ class ProfileValues(BaseModel):
             raise ValueError("Keep this under 200 characters.")
         return value or None
 
+    @field_validator("name")
+    @classmethod
+    def _tidy_name(cls, value: str | None) -> str | None:
+        value = " ".join((value or "").split())
+        if len(value) > 120:
+            raise ValueError("Keep this under 120 characters.")
+        return value or None
+
     @field_validator("residence_city")
     @classmethod
     def _tidy_city(cls, value: str | None) -> str | None:
@@ -152,10 +166,22 @@ class Evidence(BaseModel):
     source: str | None = None   # "cv" / "statement" / "portfolio"
 
 
+class AcceptedProject(BaseModel):
+    key: str = Field(max_length=300)   # a suggestion_key from ProfileOut.projects
+    status: Status | None = None       # the artist's "current project" tick; None keeps the rule's
+
+
+class ProjectsReview(BaseModel):
+    """The Projects group's ticks: the ticked suggestions are saved, the unticked ones dismissed."""
+    accept: list[AcceptedProject] = Field(default=[], max_length=500)
+    dismiss: list[str] = Field(default=[], max_length=500)
+
+
 class ProfileIn(BaseModel):
     values: ProfileValues
     evidence: dict[str, Evidence] = {}   # field name -> where the accepted value came from
     reviewed_documents: list[uuid.UUID] = []   # the documents whose suggestions the page showed
+    projects: ProjectsReview = ProjectsReview()
 
 
 class Suggestion(BaseModel):
@@ -178,11 +204,19 @@ class DocumentSuggestions(BaseModel):
     items: list[Suggestion]
 
 
+class ProfileProjects(BaseModel):
+    suggestions: list[ProjectOut] = []   # read from the documents, not yet saved or dismissed
+    saved: int = 0                       # projects and interests already saved (edited on /projects)
+    projects: list[ProjectOut] = []      # the saved projects themselves, with their images
+    images_pending: bool = False         # a PDF's images are still being read: the page asks again
+
+
 class ProfileOut(BaseModel):
     values: ProfileValues
     evidence: dict[str, Evidence] = {}
     updated_at: datetime | None = None              # None: never saved
     suggestions: DocumentSuggestions | None = None  # values from documents not reviewed yet
+    projects: ProfileProjects = ProfileProjects()
 
 
 class Option(BaseModel):
@@ -200,7 +234,7 @@ class Options(BaseModel):
 def to_artist_profile(values: ProfileValues, today: date | None = None) -> ArtistProfile:
     """What the eligibility engine reads: the same values, with years_active worked out today."""
     year = (today or date.today()).year
-    data = values.model_dump(exclude={"active_since"})
+    data = values.model_dump(exclude={"active_since", "name"})
     data["years_active"] = None if values.active_since is None else year - values.active_since
     return ArtistProfile(**data)
 
@@ -225,8 +259,7 @@ def _unreviewed_suggestions(db, user_id: uuid.UUID, profile: Profile | None) -> 
         rows = db.scalars(select(KnowledgeChunkRow).where(KnowledgeChunkRow.document_id == document.id)
                           .order_by(KnowledgeChunkRow.index))
         chunks = [Chunk(index=r.index, section=r.section, text=r.text, page=r.page) for r in rows]
-        found = (extract_profile(chunks, document.file_name) if document.kind == "cv"
-                 else extract_practice(chunks, document.file_name, document.kind))
+        found = extract_all(chunks, document.file_name, document.kind)
         taken = {item.field for item in items}
         items += [Suggestion(**vars(s), source=document.kind) for s in found if s.field not in taken]
     return DocumentSuggestions(
@@ -235,10 +268,15 @@ def _unreviewed_suggestions(db, user_id: uuid.UUID, profile: Profile | None) -> 
 
 def _out(db, user_id: uuid.UUID, profile: Profile | None) -> ProfileOut:
     suggestions = _unreviewed_suggestions(db, user_id, profile)
+    saved = list(db.scalars(select(Project).where(Project.user_id == user_id)))
+    documents = db.scalars(select(Document).where(Document.user_id == user_id))
+    projects = ProfileProjects(suggestions=pending_suggestions(db, user_id, saved), saved=len(saved),
+                               projects=saved_projects(db, user_id, saved),
+                               images_pending=any(images_pending(d) for d in documents))
     if profile is None:
-        return ProfileOut(values=ProfileValues(), suggestions=suggestions)
+        return ProfileOut(values=ProfileValues(), suggestions=suggestions, projects=projects)
     return ProfileOut(values=profile.values, evidence=profile.evidence, updated_at=profile.updated_at,
-                      suggestions=suggestions)
+                      suggestions=suggestions, projects=projects)
 
 
 @router.get("")
@@ -262,6 +300,8 @@ def save_profile(body: ProfileIn, user: CurrentUser, db: DB) -> ProfileOut:
     else:
         profile.values, profile.evidence = values, evidence
         profile.reviewed_documents = sorted(set(profile.reviewed_documents) | own)
+    # the Projects group: saved or dismissed with the same Save, in the same transaction
+    review_suggestions(db, user.id, {a.key: a.status for a in body.projects.accept}, body.projects.dismiss)
     db.commit()
     db.refresh(profile)
     return _out(db, user.id, profile)

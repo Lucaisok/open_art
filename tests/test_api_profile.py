@@ -197,6 +197,14 @@ def test_a_new_document_brings_new_suggestions(artist):
     assert {s["field"]: s["value"] for s in found["items"]}["nationalities"] == ["BR", "PT"]
 
 
+def test_a_cv_uploaded_as_portfolio_is_read_as_a_cv(artist):
+    """Every document gets every rule: one file holding the CV can go in any slot."""
+    upload(artist, "portfolio", os.path.join(ILKA, "cv.pdf"))
+    items = {s["field"]: s for s in suggestions(artist)["items"]}
+    assert items["birth_date"]["value"] == "1994-03-12" and items["birth_date"]["source"] == "portfolio"
+    assert items["nationalities"]["value"] == ["HU"] and items["residence_country"]["value"] == "AT"
+
+
 def test_documents_with_nothing_found_say_so(artist):
     artist.put("/api/documents/cv", files={"file": ("cv.txt", b"Portfolio on request.\nThank you for reading.")})
     found = suggestions(artist)
@@ -247,3 +255,71 @@ def test_options_for_the_form(client):
     assert names == sorted(names) and {"code": "HU", "name": "Hungary"} in body["countries"]
     assert "Visual Arts" in body["disciplines"]
     assert body["career_stages"] == ["Student", "Emerging/Early-Career", "Mid-Career", "Established/Professional"]
+
+
+# -- the Projects group: reviewed with the profile's Save ---------------------------------------------
+
+def found_projects(client) -> dict:
+    return {s["title"] or s["summary"]: s for s in client.get("/api/profile").json()["projects"]["suggestions"]}
+
+
+def test_projects_found_in_documents_come_with_the_profile_and_nothing_is_saved(artist):
+    upload(artist, "portfolio", os.path.join(TOMAS, "portfolio.txt"))
+    body = artist.get("/api/profile").json()
+    assert body["projects"]["saved"] == 0
+    rain = found_projects(artist)["Rain Score"]
+    assert (rain["category"], rain["status"], rain["sources"][0]["quote"]) == ("work", "past", "Rain Score, 2021")
+
+
+def test_save_keeps_the_ticked_projects_with_their_status_and_dismisses_the_rest(artist):
+    upload(artist, "portfolio", os.path.join(TOMAS, "portfolio.txt"))
+    found = found_projects(artist)
+    rain, choir, tidal = found["Rain Score"], found["Underwater Choir"], found["Tidal Bodies"]
+    review = {"accept": [{"key": tidal["suggestion_key"], "status": "current"},     # ticked as current
+                         {"key": rain["suggestion_key"]}],                          # kept as the rule read it
+              "dismiss": [choir["suggestion_key"]]}
+    assert artist.put("/api/profile", json={"values": {}, "projects": review}).status_code == 200
+    saved = {p["title"]: p for p in artist.get("/api/projects").json()["projects"]}
+    assert saved["Tidal Bodies"]["status"] == "current" and saved["Rain Score"]["status"] == "past"
+    assert saved["Rain Score"]["sources"][0]["quote"] == "Rain Score, 2021"     # quotes from the server
+    assert "Underwater Choir" not in saved
+    body = artist.get("/api/profile").json()
+    assert body["projects"]["suggestions"] == [] and body["projects"]["saved"] == 2   # nothing offered again
+    # the saved ones are shown on the profile too, current first
+    assert [p["title"] for p in body["projects"]["projects"]] == ["Tidal Bodies", "Rain Score"]
+    # saving again with the same ticks adds nothing
+    artist.put("/api/profile", json={"values": {}, "projects": review})
+    assert len(artist.get("/api/projects").json()["projects"]) == 2
+
+
+def test_unknown_or_forged_project_keys_are_ignored(artist):
+    upload(artist, "portfolio", os.path.join(TOMAS, "portfolio.txt"))
+    review = {"accept": [{"key": "project:invented", "status": "current"}], "dismiss": ["project:other"]}
+    assert artist.put("/api/profile", json={"values": {}, "projects": review}).status_code == 200
+    assert artist.get("/api/projects").json()["projects"] == []
+    assert len(found_projects(artist)) == 3
+    bad = {"accept": [{"key": "project:x", "status": "finished"}]}
+    assert artist.put("/api/profile", json={"values": {}, "projects": bad}).status_code == 422
+
+
+def test_the_profile_says_when_images_are_still_being_read(artist, monkeypatch):
+    """A PDF whose images aren't read yet (queued in the background): the page shows a note and asks again."""
+    from api import images
+    monkeypatch.setattr(images, "read_document_images", lambda document_id: None)   # the background task does nothing
+    monkeypatch.setattr(images, "start_reading", lambda document: None)
+    upload(artist, "cv", os.path.join(ILKA, "cv.pdf"))
+    assert artist.get("/api/profile").json()["projects"]["images_pending"] is True
+    # once read, it isn't
+    from api.models import Document
+    with Session(db.get_engine()) as session:
+        document = session.scalar(select(Document))
+        document.page_lines = []
+        session.commit()
+    assert artist.get("/api/profile").json()["projects"]["images_pending"] is False
+
+
+def test_the_artists_name_is_saved_tidied_and_not_given_to_the_engine(artist):
+    saved = save(artist, {"name": "  Paloma   Schnitzer "}).json()
+    assert saved["values"]["name"] == "Paloma Schnitzer"
+    assert to_artist_profile(ProfileValues(name="Paloma")).model_dump().get("name") is None
+    assert save(artist, {"name": "x" * 121}).status_code == 422

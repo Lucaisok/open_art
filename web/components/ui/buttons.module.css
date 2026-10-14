@@ -1,0 +1,124 @@
+/* the Studio's buttons (design: STUDIO.md → Visual language) */
+.primary,
+.dark,
+.secondary,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* lime: the one main action of a modal, "Continue to Discover" */
+.primary {
+  background-color: var(--color-lime);
+  color: var(--color-ink);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-lime-hover);
+}
+
+.dark {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.dark:hover:not(:disabled) {
+  background-color: var(--color-ink-hover);
+  color: var(--color-paper);
+}
+
+.secondary {
+  border: 3px solid var(--color-ink);
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-grey-100);
+}
+
+.danger {
+  background-color: #d92d20;
+  color: var(--color-white);
+}
+
+/* a main action not possible yet: grey, as the design's disabled Download / Use 0 images */
+.primary:disabled {
+  background-color: var(--color-grey-200);
+  color: var(--color-on-ink-faint);
+  cursor: default;
+}
+
+.dark:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* text buttons and links */
+.link,
+.linkDanger {
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linkDanger {
+  margin-right: auto;
+  color: #d92d20;
+}
+
+.small {
+  height: 44px;
+  padding: 0 16px;
+}
+
+/* a lime-ruled quote: where a value or project was read from */
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--color-lime);
+  background-color: var(--color-paper);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.quoteSource {
+  color: var(--color-grey-600);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.error {
+  color: #d92d20;
+  font-size: 14px;
+  font-weight: 800;
+}

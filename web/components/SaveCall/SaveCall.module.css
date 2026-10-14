@@ -1,0 +1,73 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 3px solid var(--color-ink);
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* saved: ink, with a lime bookmark (its ink outline on ink keeps the shape from the fill) */
+.button[aria-pressed="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.button[aria-pressed="true"] .icon path {
+  stroke: var(--color-ink);
+}
+
+.button:disabled {
+  cursor: progress;
+}
+
+/* on a Discover card: top right, above the title's link that covers the card */
+.card {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.page {
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.button:hover:not([aria-pressed="true"]) {
+  background-color: var(--color-grey-100);
+}
+
+.icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* the application page's header: outlined, 48 px, next to Download */
+.application {
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background-color: transparent;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.application .icon {
+  width: 16px;
+  height: 16px;
+}

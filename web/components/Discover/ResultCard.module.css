@@ -196,3 +196,14 @@
   font-size: 16px;
   font-weight: 900;
 }
+
+
+/* the chips leave room for the Save bookmark in the top-right corner */
+.types {
+  padding-right: 52px;
+}
+
+/* a card without chips: its title leaves the room instead */
+.card > .title:first-child {
+  padding-right: 52px;
+}

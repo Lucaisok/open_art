@@ -1,10 +1,10 @@
 """
 OpenArt — does eligibility_constraints.jsonl cover every published call?
 
-Run before copying the constraints file to the VPS (deploy/sync_data.sh does).
+Run before deploying the corpus (deploy/sync_data.sh does).
 A call that states requirements but has no classified sentences shows "This
 call has not been analysed yet" in the app. Exits 1 if there is any, so the
-sync stops before a stale file is copied.
+sync stops before a stale file is deployed.
 
     python scripts/check_constraints_coverage.py
     -> OK: all 371 calls with requirements text are classified (396 published).

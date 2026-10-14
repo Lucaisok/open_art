@@ -463,3 +463,11 @@
   line-height: 1.45;
   color: var(--color-grey-600);
 }
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

@@ -230,7 +230,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
             "counts the shared words, so it doesn't always follow the order). Filters start from your profile."
         ) : (
             <>
-                <Link href="/documents" className={styles.noteLink}>
+                <Link href="/studio" className={styles.noteLink}>
                     Upload your statement, CV or portfolio
                 </Link>{" "}
                 to rank calls by your practice. Until then: nearest deadline first.
@@ -324,7 +324,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
 
                 {!results.profile_filled && (
                     <p className={styles.banner}>
-                        <Link href="/profile" className={styles.bannerLink}>
+                        <Link href="/studio?edit=profile" className={styles.bannerLink}>
                             Verdicts use your saved profile. Fill it in for clearer answers →
                         </Link>
                     </p>

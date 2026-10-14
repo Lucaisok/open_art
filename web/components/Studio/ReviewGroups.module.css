@@ -1,0 +1,164 @@
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-ink);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.count {
+  margin-left: 6px;
+  color: var(--color-grey-600);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 0 40px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 0 20px;
+  border-bottom: 2px solid var(--color-rule);
+  transition: opacity 120ms ease;
+}
+
+/* unticked: faded (and the tick itself says it) */
+.off {
+  opacity: 0.45;
+}
+
+.keep {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.keep input,
+.current input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 4px 0 0;
+  accent-color: var(--color-ink);
+}
+
+.keepText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 19px;
+  font-weight: 900;
+  font-stretch: 105%;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--color-grey-600);
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.thumbs img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: var(--color-grey-200);
+  object-fit: cover;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: auto;
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.current input {
+  margin: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  height: 40px;
+  padding: 0 14px;
+  border: 2px solid var(--color-ink);
+  border-radius: 4px;
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}

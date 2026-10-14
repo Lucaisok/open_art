@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { requestJson, sendJson } from "@/lib/api";
-import type { ProfileData } from "@/lib/types";
+import type { User } from "@/lib/types";
 import styles from "./AuthForm.module.css";
 
 type AuthFormProps = {
@@ -77,14 +77,13 @@ const AuthForm = ({ mode }: AuthFormProps) => {
             setPending(false);
             return;
         }
-        // sign-up starts the onboarding (Documents). Login: Discover once the profile has been
-        // saved (the end of the onboarding), the onboarding before that, as app/(auth)/page.tsx does.
-        // Asked here, not by pushing "/": the form is already on "/", and a push to the same page
-        // can show the cached form again.
+        // sign-up starts the onboarding (Documents). Login: Discover once the onboarding is finished,
+        // the onboarding before that, as app/(auth)/page.tsx does. Asked here, not by pushing "/":
+        // the form is already on "/", and a push to the same page can show the cached form again.
         let destination = "/documents";
         if (mode === "login") {
-            const profile = await requestJson<ProfileData>("GET", "/api/profile");
-            if (profile.ok && profile.data.updated_at) {
+            const me = await requestJson<User>("GET", "/api/auth/me");
+            if (me.ok && me.data.onboarded_at) {
                 destination = "/discover";
             }
         }

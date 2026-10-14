@@ -682,6 +682,12 @@ flowchart LR
   (the application's memory, so the texts agree). It answers in the chat and rewrites the draft,
   which stays "not reviewed" until the artist confirms it. It never invents facts: a missing one
   becomes a [placeholder] and a question. A draft over the word limit is shortened once.
+- **Which projects.** The left column has "Projects for this application": the project being
+  **proposed** (or none, when the call is about the practice) and the past work to **mention**.
+  The ones closest to the call are pre-ticked by a rule (embeddings, no LLM), and the artist
+  changes them freely. One text can have its own choice ("past projects" lists more), from a
+  collapsed box above the chat. The assistant only sees the chosen projects, and if a text asks
+  about "your project" when none is proposed, it asks instead of guessing.
 - **Review, then download.** Each draft gets the artist's "I have reviewed this" (only on the
   saved text, and any later edit undoes it). A reviewed draft can be copied. "Download
   application" unlocks only when **everything** is ready: every text reviewed, and every item

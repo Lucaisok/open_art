@@ -1,19 +1,19 @@
-import Header from "@/components/Header/Header";
+import { redirect } from "next/navigation";
 import OnboardingHeader from "@/components/OnboardingHeader/OnboardingHeader";
-import { apiGet } from "@/lib/server-api";
 import { getCurrentUser } from "@/lib/session";
-import type { ProfileData } from "@/lib/types";
 import styles from "./layout.module.css";
 
-// Documents and Profile. During the onboarding (no profile saved yet): the step-pill header.
-// Afterwards they are ordinary pages of the site, reached from the main header, so they get it too.
-// Each page brings its own footer bar (Back, progress, Continue / Save).
+// The onboarding: Documents -> Profile -> Projects. Once the artist finished it ("Continue to
+// Discover" on Projects) these pages are gone from the app: documents, profile and projects are
+// edited in the Studio, so they send there. Each page brings its own footer bar.
 export default async function OnboardingLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-    const onboarded =
-        (await getCurrentUser()) !== null && (await apiGet<ProfileData>("/api/profile")).updated_at !== null;
+    const user = await getCurrentUser();
+    if (user?.onboarded_at) {
+        redirect("/studio");
+    }
     return (
         <div className={styles.shell}>
-            {onboarded ? <Header /> : <OnboardingHeader />}
+            <OnboardingHeader />
             {children}
         </div>
     );

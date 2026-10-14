@@ -155,3 +155,13 @@ def test_requests_from_our_site_are_accepted(client):
                            headers={"Origin": SITE})
     assert response.status_code == 201
 
+
+
+def test_finishing_the_onboarding_is_recorded_once(client):
+    signup(client)
+    assert client.get("/api/auth/me").json()["onboarded_at"] is None
+    assert client.post("/api/account/onboarded").status_code == 204
+    first = client.get("/api/auth/me").json()["onboarded_at"]
+    assert first is not None
+    client.post("/api/account/onboarded")
+    assert client.get("/api/auth/me").json()["onboarded_at"] == first      # done once

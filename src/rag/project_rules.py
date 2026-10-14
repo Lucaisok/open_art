@@ -10,26 +10,35 @@ Why projects: 64% of open calls ask mainly for a new project (workflow.MD, "Proj
 and the application agent needs to know which one. The artist reviews every suggestion; nothing is
 saved without that, and they can add projects by hand (a planned project is often in no document).
 
-Rules, per document kind:
+Rules, each run on every document whatever its slot (one file may hold CV, statement and works):
 
-  cv          lines with a year in a works section (exhibitions, performances, works, projects,
+  CV lists    lines with a year in a works section (exhibitions, performances, works, projects,
               commissions, screenings, concerts, productions; not "group" shows, whose title isn't the
               artist's work): "2025 | Tidal Bodies (installation) | Venue" or
-              "2025 Low Tide Archive, Galerie Nord, Vienna" -> title, year, medium, venue
-  portfolio   a "Title, 2025" line, and the lines under it up to the next one as its summary
-  statement   "Title (2024-) is ..." -> a titled project (open range = current); a section named
+              "2025 Low Tide Archive, Galerie Nord, Vienna" -> title, year, medium, venue;
+              "2025 New Fears Gallery, “Tender Is The Riot”, Berlin" (venue first) -> the quoted title.
+              A line ending in a comma or an open quote continues on the next one
+  works       a "Title, 2025" line, and the lines under it up to the next one as its summary; or a work
+              page: a title line, then a date line ("2026 - 1 channel video", "2025 - 2026", "Feature
+              film, in post-production. 2026-2027"), then its description up to a caption ("Installation
+              view at...", "..., still frame") or a page number. Never under Education, never a degree
+  prose       "Title (2024-) is ..." -> a titled project (open range = current); a section named
               current / ongoing / upcoming / future / plans / next, or a sentence saying "currently",
               "I am developing", "my next project", "I plan" -> an untitled current / planned project;
-              a "Themes" / "Interests" section or "I am interested in" -> an interest
+              a "Themes" / "Interests" section or "I am interested in" -> an interest. Not in a CV's
+              lists (Education, Exhibitions...): "(Upcoming)" there is not a project
 
 The same title in several documents is one project (CV year and venue + portfolio description).
+Each has a category: a CV list line takes its section's (Exhibitions -> exhibition, Performances ->
+performance, Commissions -> commission, Works / Projects / Productions -> work); everything else is a
+work. When mentions merge, work wins.
 """
 
 import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from src.rag.cv_rules import SENTENCE_END, _citation, _Line, _lines
+from src.rag.cv_rules import CAREER_SECTION, DEGREE, EDUCATION_SECTION, SENTENCE_END, _citation, _Line, _lines
 from src.rag.documents import Chunk
 
 PAST, CURRENT, PLANNED = "past", "current", "planned"
@@ -51,6 +60,7 @@ class ProjectSuggestion:
     medium: str | None = None     # "8-channel installation"
     venues: list[str] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
+    category: str = "work"        # work / exhibition / performance / commission (CATEGORY_OF_SECTION)
 
     @property
     def key(self) -> str:
@@ -77,6 +87,21 @@ YEAR = r"(?:19[5-9]\d|20\d\d)"
 WORKS_SECTION = re.compile(r"\b(exhibitions?|shows?|performances?|works|projects?|commissions?|screenings?|"
                            r"concerts?|productions?)\b", re.I)
 GROUP_SECTION = re.compile(r"\bgroup\b", re.I)
+# what a CV list line is, from its section. The first word that appears in the section name decides
+# ("Exhibitions and performances" -> exhibition). A production is a company's own piece: a work.
+WORK, EXHIBITION, PERFORMANCE, COMMISSION = "work", "exhibition", "performance", "commission"
+CATEGORY_OF_SECTION = [
+    (re.compile(r"\b(works|projects?|productions?)\b", re.I), WORK),
+    (re.compile(r"\b(exhibitions?|shows?|screenings?|festivals?)\b", re.I), EXHIBITION),
+    (re.compile(r"\b(performances?|concerts?)\b", re.I), PERFORMANCE),
+    (re.compile(r"\b(commissions?)\b", re.I), COMMISSION),
+]
+
+
+def _category_of(section: str) -> str:
+    found = [(match.start(), category) for pattern, category in CATEGORY_OF_SECTION
+             if (match := pattern.search(section))]
+    return min(found)[1] if found else WORK
 # "2025 | Tidal Bodies (8-channel installation) | Venue"  or  "2025 Low Tide Archive, Galerie Nord, Vienna"
 CV_WORK_LINE = re.compile(rf"^(?P<years>{YEAR}(?:\s*[–-]\s*(?:{YEAR}|present|today|now)?)?)\s*[|:,]?\s*(?P<rest>.+)$", re.I)
 TRAILING_MEDIUM = re.compile(r"\s*\((?P<medium>[^()]{3,60})\)\s*$")
@@ -114,31 +139,51 @@ def _tidy_years(years: str) -> str:
 
 # -- per document kind ----------------------------------------------------------------------------------
 
+# "2025 New Fears Gallery, “Tender Is The Riot”, Berlin": the venue first, the title in quotes
+QUOTED_TITLE = re.compile(r"[“\"](?P<title>[^”\"]{2,80})[”\"]")
+
+
+def _unfinished(text: str) -> bool:
+    """A CV entry wrapped onto the next line: it ends with a comma or leaves a quote open."""
+    return text.rstrip().endswith(",") or text.count("“") > text.count("”")
+
+
 def _from_cv(lines: list[_Line], document: str, today: date) -> list[ProjectSuggestion]:
     found = []
-    for line in lines:
+    for i, line in enumerate(lines):
         if not (line.section and WORKS_SECTION.search(line.section)) or GROUP_SECTION.search(line.section):
             continue
         match = CV_WORK_LINE.match(line.text)
         if not match:
             continue   # a heading row ("Year | Work | Venue") or prose
-        parts = [p.strip() for p in re.split(r"\s*\|\s*", match["rest"]) if p.strip()]
-        if len(parts) == 1:   # "Low Tide Archive, Galerie Nord, Vienna": title, then where
-            parts = [p.strip() for p in match["rest"].split(",", 1)]
-        title, venue = parts[0], ", ".join(parts[1:]) or None
+        rest, text = match["rest"], line.text
+        if _unfinished(rest) and i + 1 < len(lines) and not CV_WORK_LINE.match(lines[i + 1].text):
+            rest, text = f"{rest} {lines[i + 1].text}", f"{line.text} {lines[i + 1].text}"
+        if quoted := QUOTED_TITLE.search(rest):
+            title = quoted["title"].strip()
+            venue = ", ".join(p for p in (rest[:quoted.start()].strip(" ,"), rest[quoted.end():].strip(" ,.*"))
+                              if p) or None
+        else:
+            parts = [p.strip() for p in re.split(r"\s*\|\s*", rest) if p.strip()]
+            if len(parts) == 1:   # "Low Tide Archive, Galerie Nord, Vienna": title, then where
+                parts = [p.strip() for p in rest.split(",", 1)]
+            title, venue = parts[0], ", ".join(parts[1:]) or None
         medium = None
         if m := TRAILING_MEDIUM.search(title):
             medium, title = m["medium"], title[:m.start()].strip()
         years = _tidy_years(match["years"])
         found.append(ProjectSuggestion(title=title, status=_status_from_years(years, today), years=years,
                                        medium=medium, venues=[venue] if venue else [],
-                                       sources=[Source(line.text, _citation(document, line))]))
+                                       sources=[Source(text, _citation(document, line))],
+                                       category=_category_of(line.section)))
     return found
 
 
 def _from_portfolio(lines: list[_Line], document: str, today: date) -> list[ProjectSuggestion]:
     found: list[ProjectSuggestion] = []
     for line in lines:
+        if EDUCATION_SECTION.search(line.section or "") or DEGREE.search(line.text):
+            continue   # "BFA Photography, Tokyo Polytechnic University, 2008" is a study, not a work
         if match := PORTFOLIO_HEADING.match(line.text):
             years = _tidy_years(match["years"])
             found.append(ProjectSuggestion(title=match["title"].strip(), status=_status_from_years(years, today),
@@ -149,9 +194,86 @@ def _from_portfolio(lines: list[_Line], document: str, today: date) -> list[Proj
     return found
 
 
+# A work page in a portfolio: the title on its own line, then a date line, then the description.
+#   Surplus                                          City Loop                 Memorias
+#   2026 - 1 channel video - 14'30'' - Color         2018 - 6-Channel video... Feature film- in post-production. 2026-2027
+#   A film essay composed of archival footage...     Walk on rubbles. ...      An audiovisual self-portrait...
+# the date line: years first ("2025 - 2026", "2026 - 1 channel video"), or a short medium then the years
+DATE_FIRST_LINE = re.compile(rf"^(?P<years>{YEAR}(?:\s*[–-]\s*{YEAR})?)\s*(?:$|[–-]\s+(?P<medium>.+)$)")
+DATE_LAST_LINE = re.compile(rf"^(?P<medium>[^\d,]{{3,60}}?)[\s.;–-]+(?P<years>{YEAR}(?:\s*[–-]\s*{YEAR})?)\.?$")
+NOT_A_MEDIUM = re.compile(r"\b(since|from|in|until|born)\s*$", re.I)    # "Lives in Vienna since 2018"
+# image captions and page numbers end a work's description
+CAPTION = re.compile(r"^(installation view|exhibition view|still|video stills?|images?\s*:|photo(graph)?s?\s*:)|"
+                     r",\s*(video\s+)?stills?(\s+frames?)?\s*$", re.I)
+PAGE_NUMBER = re.compile(r"^\d{1,3}$")
+DIMENSIONS = re.compile(r"^\d+(?:[.,]\d+)?\s*(?:cm|m|mm)?\s*[×x]\s*\d")   # "23 × 23 × 100 cm each."
+SUBTITLE = re.compile(r"^\(.+\)$")                    # "(Torcer el rumbo de los signos)" under the title
+MAX_TITLE_WORDS = 12
+
+
+def _date_line(text: str) -> re.Match | None:
+    if match := DATE_FIRST_LINE.match(text):
+        return match
+    match = DATE_LAST_LINE.match(text)
+    if match and len(text.split()) <= 8 and not NOT_A_MEDIUM.search(match["medium"]):
+        return match
+    return None
+
+
+def _is_title(line: _Line) -> bool:
+    """A work's title line: short, capitalised, no comma ("Tidal Bodies, 2025" is the other rule), not a
+    sentence, caption, page number or degree ("MFA Painting" over "2016 - 2018" is a study, not a work)."""
+    text = line.text
+    return (len(text.split()) <= MAX_TITLE_WORDS and text[:1].isupper() and "," not in text
+            and text[-1] not in ".;:" and not PAGE_NUMBER.match(text) and not CAPTION.search(text)
+            and not DEGREE.search(text) and not EDUCATION_SECTION.search(line.section or ""))
+
+
+def _from_work_pages(lines: list[_Line], document: str, today: date) -> list[ProjectSuggestion]:
+    # first the works: (index of the date line, index of the title line, title, date match)
+    works = []
+    for i, line in enumerate(lines):
+        if not (match := _date_line(line.text)):
+            continue
+        j, subtitle = i - 1, None
+        if j >= 0 and SUBTITLE.match(lines[j].text):
+            subtitle, j = lines[j].text, j - 1
+        if j >= 0 and _is_title(lines[j]):
+            works.append((i, j, lines[j].text + (f" {subtitle}" if subtitle else ""), match))
+    # then each work's description: the lines after its date line, up to a caption, a page number or
+    # the next work's title
+    found = []
+    for n, (i, j, title, match) in enumerate(works):
+        end = works[n + 1][1] if n + 1 < len(works) else len(lines)
+        medium, k = match["medium"] or "", i + 1
+        # "2025 - 3-channel Video Installation - 20 min - no" / "sound - color - CRT monitors, MDF -" / "23 × ..."
+        while medium and k < end and (lines[k].text[:1].islower() or DIMENSIONS.match(lines[k].text)):
+            medium, k = f"{medium} {lines[k].text}", k + 1
+        summary = []
+        for line in lines[k:end]:
+            if CAPTION.search(line.text) or PAGE_NUMBER.match(line.text):
+                break
+            summary.append(line.text)
+        years = _tidy_years(match["years"])
+        medium = medium.strip(" .–-") or None
+        found.append(ProjectSuggestion(
+            title=title, status=_status_from_years(years, today), years=years, medium=medium,
+            summary=" ".join(summary) or None,
+            sources=[Source(f"{lines[j].text} / {lines[i].text}", _citation(document, lines[j]))]))
+    return found
+
+
 def _section_of(project: ProjectSuggestion) -> str | None:
     citation = project.sources[0].citation.split(" · ")
     return citation[-1] if len(citation) > 1 and not citation[-1].startswith("p. ") else None
+
+
+def _cv_list_section(section: str | None) -> bool:
+    """A CV list (Education, Exhibitions...): its "(Upcoming)" or "not currently enrolled" is not a
+    project. A "Current project" / "Future plans" section stays prose."""
+    section = section or ""
+    return bool(EDUCATION_SECTION.search(section) or CAREER_SECTION.search(section)) \
+        and not (CURRENT_SECTION.search(section) or PLANNED_SECTION.search(section))
 
 
 def _from_statement(lines: list[_Line], document: str, today: date) -> tuple[list[ProjectSuggestion], list[Interest]]:
@@ -160,6 +282,8 @@ def _from_statement(lines: list[_Line], document: str, today: date) -> tuple[lis
     # lines of one section back into a paragraph before cutting it into sentences
     paragraphs: list[_Line] = []
     for line in lines:
+        if _cv_list_section(line.section):
+            continue
         if paragraphs and paragraphs[-1].section == line.section:
             paragraphs[-1] = _Line(f"{paragraphs[-1].text} {line.text}", line.section, paragraphs[-1].page)
         else:
@@ -210,6 +334,8 @@ def _merge(projects: list[ProjectSuggestion]) -> list[ProjectSuggestion]:
         same.medium = same.medium or p.medium
         if p.summary and len(p.summary) > len(same.summary or ""):
             same.summary = p.summary
+        if p.category == WORK:
+            same.category = WORK     # a CV's exhibition line + the portfolio's work: one work, shown there
         if STATUS_ORDER[p.status] < STATUS_ORDER[same.status]:
             same.status = p.status   # "ongoing" in the statement beats a past CV line
         same.venues += [v for v in p.venues if v not in same.venues]
@@ -229,13 +355,13 @@ def extract_projects(documents: list[tuple[str, str, list[Chunk]]], today: date 
     order = {"cv": 0, "portfolio": 1, "statement": 2}
     projects, interests = [], []
     for kind, name, chunks in sorted(documents, key=lambda d: order.get(d[0], 3)):
+        # every rule on every document, whatever its slot: one file may hold CV, statement and works
+        # (as for the profile, cv_rules.extract_all). Each rule only reads its own layout.
         lines = _lines(chunks)
-        if kind == "cv":
-            projects += _from_cv(lines, name, today)
-        elif kind == "portfolio":
-            projects += _from_portfolio(lines, name, today)
-        else:
-            found, found_interests = _from_statement(lines, name, today)
-            projects += found
-            interests += found_interests
+        projects += _from_cv(lines, name, today)
+        projects += _from_portfolio(lines, name, today)
+        projects += _from_work_pages(lines, name, today)
+        found, found_interests = _from_statement(lines, name, today)
+        projects += found
+        interests += found_interests
     return Found(projects=sorted(_merge(projects), key=_sort_key), interests=interests)

@@ -1,0 +1,46 @@
+/* the live region is always there (so screen readers hear the change); the toast appears in it */
+.region {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 70;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 12px 12px;
+  border: 3px solid var(--color-ink);
+  border-radius: 14px;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.tick {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--color-lime);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.link {
+  color: var(--color-lime);
+  font-size: 14px;
+  text-decoration-color: var(--color-lime);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}

@@ -15,7 +15,7 @@ Routes so far (workflow.MD, "Web app — plan"):
 
 from fastapi import APIRouter, Depends, FastAPI
 
-from api import account, applications, auth, discover, documents, profile, projects
+from api import account, applications, auth, discover, documents, images, profile, projects, saved
 from api.security import check_origin
 
 app = FastAPI(
@@ -42,4 +42,6 @@ app.include_router(documents.router)
 app.include_router(profile.router)
 app.include_router(discover.router)
 app.include_router(projects.router)
+app.include_router(images.router)
 app.include_router(applications.router)
+app.include_router(saved.router)

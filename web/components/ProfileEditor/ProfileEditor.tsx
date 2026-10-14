@@ -25,7 +25,7 @@ import styles from "./ProfileEditor.module.css";
 type ProfileEditorProps = {
     initial: ProfileData;
     options: ProfileOptions;
-    cvName: string | null;
+    hasDocuments: boolean;   // any document uploaded (one file may be CV, statement and portfolio at once)
     email: string;        // the Account box: who is logged in
 };
 
@@ -34,7 +34,8 @@ type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { k
 const THIS_YEAR = new Date().getFullYear();
 
 // why we ask, shown under each label
-const HELPERS: Partial<Record<FieldName, string>> = {
+export const HELPERS: Partial<Record<FieldName, string>> = {
+    name: "Shown in your Studio. Not used to check calls.",
     birth_date: "Many calls have age limits.",
     nationalities: "Some calls are only for citizens of certain countries. Add every citizenship you hold.",
     residence_country: "Many calls require living in a country or region.",
@@ -51,15 +52,15 @@ const HELPERS: Partial<Record<FieldName, string>> = {
 };
 
 // "" in a number field means "not said"
-const toYear = (text: string): number | null => (text.trim() === "" ? null : Number.parseInt(text, 10));
+export const toYear = (text: string): number | null => (text.trim() === "" ? null : Number.parseInt(text, 10));
 
-const isEmpty = (value: unknown) =>
+export const isEmpty = (value: unknown) =>
     value === null || value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 
 // The form's starting point: the saved profile, with the suggestions read from the artist's documents
 // filled into the fields that are still empty. A saved value is never overwritten: where the
 // CV says something else, the suggestion is kept aside and shown under the field.
-const startingPoint = (initial: ProfileData) => {
+export const startingPoint = (initial: ProfileData) => {
     const values: ProfileValues = { ...initial.values };
     const evidence: EvidenceMap = { ...(initial.evidence ?? {}) };
     const differing: Partial<Record<FieldName, Suggestion>> = {};
@@ -81,10 +82,11 @@ const startingPoint = (initial: ProfileData) => {
     return { values, evidence, differing, filled };
 };
 
-// The profile page: what the CV filled in (banner), the form (three groups), and a footer bar
-// with Save. Only Save writes anything (PUT /api/profile): the values from documents are suggestions
-// until then, and Save also marks this CV as reviewed so they aren't filled in again.
-const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) => {
+// The profile page: what the documents filled in (banner), the form (four groups: the fourth is the
+// projects found in the documents), and a footer bar with Save. Only Save writes anything
+// (PUT /api/profile): the values and projects from documents are suggestions until then, and Save also
+// marks the documents as reviewed so they aren't filled in again.
+const ProfileEditor = ({ initial, options, hasDocuments, email }: ProfileEditorProps) => {
     const [start] = useState(() => startingPoint(initial));
     const [values, setValues] = useState<ProfileValues>(start.values);
     const [evidence, setEvidence] = useState<EvidenceMap>(start.evidence);
@@ -96,10 +98,9 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [birthIncomplete, setBirthIncomplete] = useState(false); // some date boxes filled, not all
     const neverSaved = initial.updated_at === null && saveState.kind !== "saved";
-    // opened during the onboarding (never saved): the footer also leads back to Documents and, once
-    // saved, on to Discover. Kept for the whole visit, so the first Save shows "Continue to Discover".
-    // Afterwards the footer is only the save bar: the header leads everywhere else.
-    const onboarding = initial.updated_at === null;
+    // this page is the onboarding's step 2 (after it, the profile is edited in the Studio): the footer
+    // leads back to Documents and, once saved, on to Projects (step 3)
+    const onboarding = true;
 
     // unsaved: values changed, or the documents' suggestions still need the artist's Save
     const dirty = useMemo(
@@ -256,7 +257,7 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
 
                 <div className={styles.layout}>
                     <CvBanner
-                        cvName={cvName}
+                        hasDocuments={hasDocuments}
                         documents={initial.suggestions?.documents.map((d) => d.file_name) ?? []}
                         found={initial.suggestions ? initial.suggestions.items.length : null}
                         filled={start.filled}
@@ -274,6 +275,20 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
                                 </h2>
                             </div>
                             <div className={styles.groupFields}>
+
+                            <Field {...field("name")}>
+                                <input
+                                    id="field-name"
+                                    type="text"
+                                    className={styles.input}
+                                    maxLength={120}
+                                    autoComplete="name"
+                                    placeholder="As you sign your work"
+                                    value={values.name ?? ""}
+                                    onChange={(e) => set("name", e.target.value || null)}
+                                    {...ariaFor("name")}
+                                />
+                            </Field>
 
                             <Field {...field("birth_date")} group>
                                 <DateParts
@@ -492,7 +507,9 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
                             </Field>
                             </div>
                         </section>
+
                     </form>
+
                 </div>
 
                 <AccountSection email={email} />
@@ -512,10 +529,10 @@ const ProfileEditor = ({ initial, options, cvName, email }: ProfileEditorProps) 
                         {status}
                     </p>
                 </div>
-                {/* everything saved: the onboarding is done, on to the calls */}
+                {/* everything saved: on to the last step, Projects */}
                 {onboarding && !dirty && !neverSaved ? (
-                    <Link href="/discover" className={styles.saveButton}>
-                        Continue to Discover →
+                    <Link href="/projects" className={styles.saveButton}>
+                        Continue to Projects →
                     </Link>
                 ) : (
                     <button

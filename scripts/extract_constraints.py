@@ -3,9 +3,14 @@ OpenArt — eligibility engine, ingestion step: split every opportunity's
 requirements_text_en into sentence chunks and classify each one with the RQ1
 multi-label model, once, so the engine never has to run a model at request time.
 
-    data/processed/opportunities.jsonl  ->  data/processed/eligibility_constraints.jsonl
+    data/processed/opportunities.jsonl  ->  dataset/labels/eligibility_constraints.jsonl
                                             (one row per (sentence, label), see
                                              src/models/classified_chunk.py)
+
+Only the calls published in dataset/opportunities.csv are classified (the export
+drops content-duplicates), so run scripts/export_dataset.py first. The output is
+published, like opportunities.csv: every sentence in it is quoted from the
+already-public requirements_text_en, and the rest is the model's own output.
 
 The whole file is rebuilt on every run rather than updated incrementally:
 classifying the full corpus takes about 5 minutes and has no API cost, and a
@@ -26,12 +31,15 @@ import os
 import sys
 from collections import Counter
 
+import pandas as pd
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(REPO_ROOT)
 
 from src.collectors.jsonl import load_jsonl, write_jsonl  # noqa: E402
 from src.eligibility.chunking import chunk_requirements  # noqa: E402
 from src.eligibility.classify import EligibilityClassifier  # noqa: E402
+from src.eligibility.engine import CONSTRAINTS_PATH  # noqa: E402
 from src.eligibility.polarity import polarity  # noqa: E402
 from src.eligibility.readings import sentence_readings  # noqa: E402
 from src.eligibility.safety_net import flag_missed_requirement  # noqa: E402
@@ -39,15 +47,19 @@ from src.models.classified_chunk import ClassifiedChunk  # noqa: E402
 from src.models.processed_opportunity import ProcessedOpportunity  # noqa: E402
 
 PROCESSED_PATH = os.path.join(REPO_ROOT, "data", "processed", "opportunities.jsonl")
-OUT_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
+PUBLISHED_PATH = os.path.join(REPO_ROOT, "dataset", "opportunities.csv")
+OUT_PATH = CONSTRAINTS_PATH  # dataset/labels/eligibility_constraints.jsonl, where the engine reads it
 
 # the engine's threshold for a constraint it may reject on (workflow.MD,
 # "Design principle"); used here only to report how many chunks reach it
 REJECT_CONFIDENCE = 0.7
 
 
-def extract_constraints(processed_path: str = PROCESSED_PATH, out_path: str = OUT_PATH) -> list[ClassifiedChunk]:
-    opportunities = load_jsonl(processed_path, ProcessedOpportunity)
+def extract_constraints(processed_path: str = PROCESSED_PATH, out_path: str = OUT_PATH,
+                        published_path: str = PUBLISHED_PATH) -> list[ClassifiedChunk]:
+    # only the published calls: the file is published too, and the app only shows these
+    published_ids = set(pd.read_csv(published_path, usecols=["id"])["id"])
+    opportunities = [o for o in load_jsonl(processed_path, ProcessedOpportunity) if o.id in published_ids]
     classifier = EligibilityClassifier()
     trained_on = classifier.metadata["trained_on"]
 

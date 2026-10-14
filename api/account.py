@@ -1,10 +1,10 @@
-"""The logged-in user's own account: change password, delete the account."""
+"""The logged-in user's own account: change password, finish the onboarding, delete the account."""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 
 from api import security
 from api.auth import DB, current_session, end_session_cookie
@@ -34,6 +34,15 @@ def change_password(body: PasswordChangeIn, session: CurrentSession, db: DB) -> 
     # log out every other browser: if the password leaked, the old sessions may be someone else's
     db.execute(delete(UserSession).where(UserSession.user_id == user.id, UserSession.id != session.id))
     db.commit()
+
+
+@router.post("/onboarded", status_code=204)
+def finish_onboarding(session: CurrentSession, db: DB) -> None:
+    """The last onboarding step's "Continue to Discover": from now on the app is Discover, Studio and
+    Account (the onboarding pages send to the Studio). Done once; later calls change nothing."""
+    if session.user.onboarded_at is None:
+        session.user.onboarded_at = func.now()
+        db.commit()
 
 
 @router.delete("", status_code=204)

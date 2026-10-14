@@ -41,6 +41,7 @@ class UserOut(BaseModel):
     id: uuid.UUID
     email: str
     created_at: datetime
+    onboarded_at: datetime | None = None   # None: still in the onboarding (Documents, Profile, Projects)
 
 
 # -- helpers ---------------------------------------------------------------------------------------

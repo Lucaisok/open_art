@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SaveCall from "@/components/SaveCall/SaveCall";
 import ClampedText from "@/components/ClampedText/ClampedText";
 import Highlighted from "@/components/Highlighted/Highlighted";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
@@ -105,7 +106,11 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
 
     return (
         <main id="main" className={styles.main}>
-            <BackToResults />
+            {/* back to the list, and Save next to it (design: DISCOVER prototype → Save control) */}
+            <div className={styles.topBar}>
+                <BackToResults />
+                <SaveCall id={call.id} title={call.title} initial={call.saved} look="page" />
+            </div>
 
             {call.types.length > 0 && (
                 <div className={styles.types}>
@@ -281,7 +286,7 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         {!call.profile_filled && (
                             <>
                                 {" "}
-                                <Link href="/profile" className={styles.noteLink}>
+                                <Link href="/studio?edit=profile" className={styles.noteLink}>
                                     Your profile is empty: fill it in for clearer answers →
                                 </Link>
                             </>
@@ -295,6 +300,7 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             →
                         </span>
                     </Link>
+
                 </section>
             </div>
         </main>

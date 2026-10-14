@@ -185,11 +185,6 @@ npm install
 npm run dev                        # http://localhost:3040
 ```
 
-> **Note:** the raw scraped pages and the curated source list are kept in a separate
-> private repository, because redistribution rights are not cleared for every source.
-> Everything the app and the notebooks need is published: the processed corpus and the
-> classified requirement sentences in `dataset/`, and the trained models and search
-> index in `artifacts/`. Only re-running the collection pipeline needs the private data.
 
 ### Notebooks, tests and tools
 
@@ -200,12 +195,5 @@ uv run pytest                                   # the test suite
 uv run python scripts/search_opportunities.py "sound installations about water" --type Residency
 ```
 
-## Status
-
-A capstone data science project, deployed as a working MVP. The eligibility
-classifier (RQ1) is the graded research component. Matching, RAG and the
-application agent make up the product around it.
-
----
 
 *All artist personas and CVs in `examples/` are fictional.*

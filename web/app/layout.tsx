@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
+import ToastProvider from "@/components/ui/Toast";
 import "./globals.css";
 
 // Archivo is variable in weight and width: the display type uses font-stretch 110–125%,
@@ -28,7 +29,7 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

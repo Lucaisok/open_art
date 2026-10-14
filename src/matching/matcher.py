@@ -92,7 +92,7 @@ class Matcher:
         # yet": say so in the API log at startup instead of finding out on the live site
         if missing := self.engine.unanalysed(self.opportunities):
             logger.warning("%d of %d opportunities have no eligibility constraints (e.g. %s): "
-                           "eligibility_constraints.jsonl is older than the corpus; run deploy/sync_data.sh",
+                           "eligibility_constraints.jsonl is older than the corpus; run scripts/extract_constraints.py",
                            len(missing), len(self.opportunities), ", ".join(missing[:3]))
         self.embedder = embedder or load_embedder(self.index.model)
         self._row = {opp_id: i for i, opp_id in enumerate(self.index.ids)}

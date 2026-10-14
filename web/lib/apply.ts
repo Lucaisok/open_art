@@ -7,6 +7,7 @@ export const STATES: Record<ApplicationItem["state"], { icon: string; label: str
     draft: { icon: "✎", label: "Draft, not reviewed yet" },
     confirmed: { icon: "✓", label: "Reviewed by you" },
     uploaded: { icon: "✓", label: "Uploaded" },
+    chosen: { icon: "✓", label: "Images chosen" },
     ticked: { icon: "✓", label: "You have it" },
     missing: { icon: "○", label: "To get" },
 };

@@ -1,7 +1,7 @@
 # one (sentence, label) pair of an opportunity's requirements_text_en: the
 # sentence as split by src/eligibility/chunking.py, the label from the RQ1
 # multi-label classifier (src/eligibility/classify.py). Written by
-# scripts/extract_constraints.py to data/processed/eligibility_constraints.jsonl,
+# scripts/extract_constraints.py to dataset/labels/eligibility_constraints.jsonl,
 # so every verdict the engine gives can be traced back to the sentence it came from.
 #
 # A sentence stating two requirements ("over 18 ... and reside in Senegal")

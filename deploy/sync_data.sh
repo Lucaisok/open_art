@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # OpenArt — bring the VPS corpus up to date with this machine (workflow.MD, "Deploying the corpus").
 #
-# The API reads five data files. Four are in git and arrive with `git pull`:
-#   dataset/opportunities.csv, dataset/labels/eligibility_constraints_reviewed.csv,
+# The API reads five data files, all in git, so they arrive with `git pull`:
+#   dataset/opportunities.csv, dataset/labels/eligibility_constraints.jsonl,
+#   dataset/labels/eligibility_constraints_reviewed.csv,
 #   artifacts/opportunity_index.npz, artifacts/match_score.json
-# The fifth, data/processed/eligibility_constraints.jsonl, is in the private data/ folder
-# (git-ignored), so it has to be copied by hand. Forgetting it makes new calls show
-# "This call has not been analysed yet". This script does the steps in order:
+# A constraints file older than the corpus makes new calls show "This call has not
+# been analysed yet". This script does the steps in order:
 #   1. check locally that the constraints file covers every published call;
-#   2. check that the git files are committed and pushed (the VPS gets them from git);
-#   3. git pull on the VPS, copy the constraints file, rebuild/restart the API.
+#   2. check that the five files are committed and pushed (the VPS gets them from git);
+#   3. git pull on the VPS, rebuild/restart the API.
 # The web app (Next) is not touched: rebuild it separately when web/ changed.
 #
 # Usage:
@@ -24,7 +24,7 @@ echo "1/3  Checking that the constraints cover every published call..."
 uv run python scripts/check_constraints_coverage.py
 
 echo "2/3  Checking that the corpus files in git are committed and pushed..."
-GIT_FILES="dataset/opportunities.csv dataset/labels/eligibility_constraints_reviewed.csv artifacts/opportunity_index.npz artifacts/match_score.json"
+GIT_FILES="dataset/opportunities.csv dataset/labels/eligibility_constraints.jsonl dataset/labels/eligibility_constraints_reviewed.csv artifacts/opportunity_index.npz artifacts/match_score.json"
 for f in $GIT_FILES; do
     if ! git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
         echo "NOT OK: $f is not in git. Commit and push it first: the API needs it on the VPS."
@@ -44,8 +44,6 @@ fi
 
 echo "3/3  Updating the VPS..."
 ssh "$VPS" "cd '$DIR' && git pull --ff-only"
-# copied after the pull, before the restart: the API reads all five files together at startup
-scp data/processed/eligibility_constraints.jsonl "$VPS:$DIR/data/processed/eligibility_constraints.jsonl"
 ssh "$VPS" "cd '$DIR' && docker compose up -d --build api"
 
 echo "Done. Check the API log for a 'no eligibility constraints' warning:"

@@ -233,3 +233,92 @@ def test_another_artist_gets_only_their_own_incomplete_application(artist):
     artist.post("/api/auth/logout")
     assert artist.post("/api/auth/signup", json={"email": "other@example.com", "password": PASSWORD}).status_code == 201
     assert artist.get(f"{url}/download").status_code == 409
+
+
+# -- projects for the application and for one text (sub-step 7) -----------------------------------------
+
+def add_project(client, title, status):
+    response = client.post("/api/projects", json={"title": title, "status": status, "summary": f"About {title}."})
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+@pytest.fixture
+def projects(artist):
+    """Four saved projects. The fake matcher scores them all the same, so the suggestion keeps their order."""
+    return {title: add_project(artist, title, status) for title, status in
+            [("Tidal Bodies", "past"), ("Buried Rivers", "planned"), ("Rain Score", "past"),
+             ("Underwater Choir", "past")]}
+
+
+def test_the_suggestion_proposes_a_planned_project_and_ticks_three_more(artist, projects):
+    body = artist.get("/api/applications/call").json()
+    assert body["selection_chosen"] is False
+    assert body["selection"]["proposing"] == projects["Buried Rivers"]
+    assert body["selection"]["mention"] == [projects["Tidal Bodies"], projects["Rain Score"], projects["Underwater Choir"]]
+    assert [p["title"] for p in body["projects"]][0] == "Buried Rivers" and all(p["suggested"] for p in body["projects"])
+
+
+def test_the_agent_gets_only_the_chosen_projects(artist, projects, model):
+    choice = {"proposing": projects["Buried Rivers"], "mention": [projects["Tidal Bodies"]]}
+    body = artist.put("/api/applications/call/projects", json=choice).json()
+    assert body["selection_chosen"] is True and body["selection"] == choice
+    send(artist, QUESTION)
+    data = model.sent[0][1]["content"]
+    assert "PROPOSING (the project this application is about): Buried Rivers" in data
+    assert "Past or related work: Tidal Bodies" in data and "Rain Score" not in data
+
+
+def test_one_text_can_have_its_own_projects_and_go_back(artist, projects, model):
+    artist.put("/api/applications/call/projects", json={"proposing": projects["Buried Rivers"], "mention": []})
+    own = {"proposing": None, "mention": [projects["Rain Score"], projects["Underwater Choir"]]}
+    body = artist.put(f"/api/applications/call/items/{STATEMENT}/projects", json={"selection": own}).json()
+    assert next(i for i in body["to_draft"] if i["key"] == STATEMENT)["projects"] == own
+    send(artist, STATEMENT)
+    assert "No project is marked as the one being proposed." in model.sent[0][1]["content"]
+    assert "Rain Score" in model.sent[0][1]["content"] and "Buried Rivers" not in model.sent[0][1]["content"]
+    send(artist, QUESTION)                                       # the other texts keep the application's choice
+    assert "PROPOSING (the project this application is about): Buried Rivers" in model.sent[1][1]["content"]
+    body = artist.put(f"/api/applications/call/items/{STATEMENT}/projects", json={"selection": None}).json()
+    assert next(i for i in body["to_draft"] if i["key"] == STATEMENT)["projects"] is None
+
+
+def test_only_the_artists_own_projects_and_deleted_ones_drop_out(artist, projects):
+    assert artist.put("/api/applications/call/projects",
+                      json={"proposing": "00000000-0000-0000-0000-000000000000", "mention": []}).status_code == 422
+    assert artist.put(f"/api/applications/call/items/{CV}/projects", json={"selection": None}).status_code == 422
+    artist.put("/api/applications/call/projects", json={"proposing": projects["Buried Rivers"],
+                                                        "mention": [projects["Tidal Bodies"]]})
+    artist.delete(f"/api/projects/{projects['Buried Rivers']}")
+    assert artist.get("/api/applications/call").json()["selection"] == {"proposing": None,
+                                                                       "mention": [projects["Tidal Bodies"]]}
+
+
+def test_only_a_planned_or_current_work_can_be_proposed():
+    from api.applications import can_propose
+    from api.models import Project
+    assert can_propose(Project(kind="project", status="current", category="work"))
+    assert can_propose(Project(kind="project", status="planned", category=None))       # saved before categories
+    assert not can_propose(Project(kind="project", status="current", category="exhibition"))
+    assert not can_propose(Project(kind="project", status="past", category="work"))
+
+
+def test_a_reply_that_rewrote_the_draft_says_how_long_it_is(artist, model):
+    body = send(artist, QUESTION).json()
+    assert body["messages"][1]["wrote_words"] == 2                         # "Draft 1."
+    assert body["messages"][0]["wrote_words"] is None                      # the artist's own message
+
+
+def test_back_to_the_suggested_projects(artist, projects):
+    artist.put("/api/applications/call/projects", json={"proposing": None, "mention": []})
+    body = artist.delete("/api/applications/call/projects").json()
+    assert body["selection_chosen"] is False and body["selection"]["proposing"] == projects["Buried Rivers"]
+    choices = {p["title"]: p for p in body["projects"]}
+    assert choices["Buried Rivers"]["can_propose"] is True and choices["Rain Score"]["can_propose"] is False
+
+
+def test_the_page_header_knows_the_call_and_whether_it_is_saved(artist):
+    body = artist.get("/api/applications/call").json()
+    assert body["saved"] is False and "countries" in body and "organisation" in body
+    artist.put(f"/api/applications/call/items/{CV}", json={"ticked": True})   # starting saves the call
+    assert artist.get("/api/applications/call").json()["saved"] is True

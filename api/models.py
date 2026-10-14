@@ -6,10 +6,10 @@ guess another user's id.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)   # stored lowercased
     password_hash: Mapped[str] = mapped_column(String(255))        # argon2, never the password itself
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # set by the last onboarding step ("Continue to Discover"); None while onboarding
+    onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # deleting a user deletes their sessions, documents and chunks (ON DELETE CASCADE in the
     # database; passive_deletes lets Postgres do it instead of loading every row first)
@@ -63,6 +65,10 @@ class Document(Base):
     size_bytes: Mapped[int] = mapped_column(Integer)
     chunk_count: Mapped[int] = mapped_column(Integer)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # a PDF's text lines per page (puts a work's images with its title page) and whether its images
+    # were read (api/images.py read_document_images: at upload, or on first use for older documents)
+    page_lines: Mapped[list | None] = mapped_column(JSONB)
+    images_read: Mapped[bool] = mapped_column(Boolean, server_default="false")
 
     chunks: Mapped[list["KnowledgeChunkRow"]] = relationship(cascade="all, delete-orphan", passive_deletes=True)
 
@@ -115,6 +121,7 @@ class Project(Base):
     kind: Mapped[str] = mapped_column(String(10))              # "project" or "interest"
     title: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str | None] = mapped_column(String(10))     # past / current / planned; None for an interest
+    category: Mapped[str | None] = mapped_column(String(12))   # work / exhibition / performance / commission
     years: Mapped[str | None] = mapped_column(String(30))      # "2025", "2024–"
     summary: Mapped[str | None] = mapped_column(Text)
     medium: Mapped[str | None] = mapped_column(Text)
@@ -124,6 +131,25 @@ class Project(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
+
+
+class ProjectImage(Base):
+    """One image of a project: read from the artist's PDF (document_id, page) or uploaded by hand. The
+    files are on disk (api/images.py: image_path), re-encoded as JPEG without metadata. An image read
+    from a document belongs to no project until the artist saves the project it was found with."""
+    __tablename__ = "project_images"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"),
+                                                          index=True)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"),
+                                                         index=True)
+    page: Mapped[int | None] = mapped_column(Integer)                    # 1-based, in its document
+    position: Mapped[int] = mapped_column(Integer, server_default="0")  # order within its project
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class DismissedSuggestion(Base):
@@ -145,6 +171,9 @@ class Application(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     opportunity_id: Mapped[str] = mapped_column(String(100))     # ProcessedOpportunity.id in the corpus
+    # the projects the artist chose for this application: {"proposing": id | None, "mention": [ids]}.
+    # None = not chosen yet: the suggested ones are used (api/applications.py suggested_projects)
+    projects: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list["ApplicationItem"]] = relationship(cascade="all, delete-orphan", passive_deletes=True)
@@ -163,8 +192,24 @@ class ApplicationItem(Base):
     # "confirmed", and any later change to the text sets it back to "draft"
     status: Mapped[str | None] = mapped_column(String(10))
     ticked: Mapped[bool] = mapped_column(Boolean, server_default="false")   # "I have this" (gather items)
+    # this text's own choice of projects, same shape as Application.projects; None = the application's
+    projects: Mapped[dict | None] = mapped_column(JSONB)
+    # the images chosen for an image item (ChecklistItem.images): [image id, ...]; None = none chosen
+    images: Mapped[list | None] = mapped_column(JSONB)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
+
+
+class SavedCall(Base):
+    """A call the artist saved (Discover's Save, or by starting an application). The title and
+    deadline are copied from the corpus at saving: the Studio still lists a call that is gone."""
+    __tablename__ = "saved_calls"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    opportunity_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    title: Mapped[str] = mapped_column(Text)
+    deadline: Mapped[date | None] = mapped_column(Date)
+    saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AgentMessage(Base):
@@ -179,4 +224,6 @@ class AgentMessage(Base):
     content: Mapped[str] = mapped_column(Text)
     # the agent's: the citations of the passages it relied on ("cv.pdf · p. 1 · EDUCATION")
     sources: Mapped[list] = mapped_column(JSONB, server_default="[]")
+    # an agent reply that changed the draft: the new version's length in words; None otherwise
+    wrote_words: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

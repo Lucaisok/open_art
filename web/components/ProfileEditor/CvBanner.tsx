@@ -2,7 +2,7 @@ import Link from "next/link";
 import styles from "./ProfileEditor.module.css";
 
 type CvBannerProps = {
-    cvName: string | null; // the uploaded CV, if any
+    hasDocuments: boolean; // any document uploaded
     documents: string[]; // file names read for suggestions (not yet reviewed)
     found: number | null; // values read from them (null: everything already reviewed)
     filled: number; // empty fields we filled in
@@ -15,8 +15,8 @@ const listNames = (names: string[]) =>
 
 // Above the form: what we did with the artist's documents. They were read by rules on our own
 // server (src/rag/cv_rules.py); nothing is sent anywhere.
-const CvBanner = ({ cvName, documents, found, filled, differing }: CvBannerProps) => {
-    if (!cvName && documents.length === 0 && found === null) {
+const CvBanner = ({ hasDocuments, documents, found, filled, differing }: CvBannerProps) => {
+    if (!hasDocuments && documents.length === 0 && found === null) {
         return (
             <aside className={styles.banner} aria-labelledby="cv-banner-title">
                 <p className={styles.bannerEyebrow}>From your documents</p>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ClampedText from "@/components/ClampedText/ClampedText";
+import SaveCall from "@/components/SaveCall/SaveCall";
 import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
 import { deadlineLabel, matchBand, placeLabel } from "@/lib/discover";
 import type { SearchResult } from "@/lib/types";
@@ -88,6 +89,8 @@ const ResultCard = ({ result, onOpen }: ResultCardProps) => (
                     <ClampedText className={styles.reason}>{result.reason}</ClampedText>
                 </div>
             </div>
+            {/* to the artist's Studio (api/saved.py): top right, above the title's link */}
+            <SaveCall id={result.id} title={result.title} initial={result.saved} />
         </div>
     </li>
 );

@@ -20,6 +20,7 @@ export const FIELD_LABELS: Record<FieldName, string> = {
     degree_field: "Field of most recent degree",
     languages: "Languages you work in",
     education: "Schools",
+    name: "Your name",
 };
 
 export const APPLICANT_TYPES = [

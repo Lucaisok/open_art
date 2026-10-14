@@ -7,7 +7,8 @@ import type { DocumentInfo, ProfileData, ProfileOptions } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Your profile · OpenArt" };
 
-// Onboarding step 3: the facts calls are checked against, by hand or from the CV
+// Onboarding step 3: the facts calls are checked against, by hand or from the documents, and the
+// projects found in them
 export default async function ProfilePage() {
     const user = await getCurrentUser();
     if (!user) {
@@ -18,7 +19,5 @@ export default async function ProfilePage() {
         apiGet<ProfileOptions>("/api/profile/options"),
         apiGet<DocumentInfo[]>("/api/documents"),
     ]);
-    const cv = documents.find((d) => d.kind === "cv");
-
-    return <ProfileEditor initial={profile} options={options} cvName={cv?.file_name ?? null} email={user.email} />;
+    return <ProfileEditor initial={profile} options={options} hasDocuments={documents.length > 0} email={user.email} />;
 }

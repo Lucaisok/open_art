@@ -149,3 +149,21 @@ export const uploadFile = <T>(
     request.send(form);
     return { done, abort: () => request.abort() };
 };
+
+// Sends files as multipart form data in one field (FastAPI's list[UploadFile]) and returns the answer's data
+export const postFiles = async <T>(path: string, field: string, files: File[]): Promise<ApiData<T>> => {
+    const form = new FormData();
+    for (const file of files) {
+        form.append(field, file);
+    }
+    try {
+        const response = await fetch(path, { method: "POST", body: form });
+        const parsed = parseJson(await response.text());
+        if (response.ok) {
+            return { ok: true, data: parsed as T };
+        }
+        return { ok: false, status: response.status, error: errorFromBody(response.status, parsed), fieldErrors: {} };
+    } catch {
+        return { ok: false, status: 0, error: OFFLINE, fieldErrors: {} };
+    }
+};

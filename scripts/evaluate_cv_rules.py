@@ -23,7 +23,7 @@ from datetime import date
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
-from src.rag.cv_rules import extract_practice, extract_profile  # noqa: E402
+from src.rag.cv_rules import extract_all, extract_profile  # noqa: E402
 from src.rag.documents import read_chunks  # noqa: E402
 
 TODAY = date(2026, 10, 8)   # fixed, so the answers don't move with the calendar
@@ -82,7 +82,8 @@ def score(name: str, cvs: dict[str, dict], practice: bool = False) -> Counter:
     print(f"\n#### {name}")
     for path, truth in cvs.items():
         chunks = read_chunks(os.path.join(REPO_ROOT, path))
-        found_list = (extract_practice(chunks, os.path.basename(path), _kind(path), TODAY) if practice
+        # statements and portfolios get every rule, as in the app (api/profile.py)
+        found_list = (extract_all(chunks, os.path.basename(path), _kind(path), TODAY) if practice
                       else extract_profile(chunks, os.path.basename(path), TODAY))
         found = {s.field: s for s in found_list}
         print(f"\n{os.path.basename(path)}")
@@ -98,6 +99,12 @@ def score(name: str, cvs: dict[str, dict], practice: bool = False) -> Counter:
             totals[outcome] += 1
             shown = f'{proposal.value!r}  "{proposal.quote[:60]}"' if proposal else "-"
             print(f"  {outcome:8} {field:19} {shown}")
+        if practice:
+            # a CV-only field read from prose: none of these documents states one, so it is invented
+            for field, proposal in found.items():
+                if field not in PRACTICE_FIELDS:
+                    totals["extra"] += 1
+                    print(f'  extra    {field:19} {proposal.value!r}  "{proposal.quote[:60]}"')
     print("\n" + "   ".join(f"{k}: {totals[k]}" for k in ["right", "wrong", "missed", "extra", "ok-null"]))
     return totals
 

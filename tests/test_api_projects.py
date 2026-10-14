@@ -86,3 +86,21 @@ def test_another_artists_projects_are_out_of_reach(artist, client):
     assert client.get("/api/projects").json()["projects"] == []
     assert client.delete(f"/api/projects/{project_id}").status_code == 404
     assert client.put(f"/api/projects/{project_id}", json={"title": "Taken", "status": "past"}).status_code == 404
+
+
+def test_suggestions_say_what_they_are(artist):
+    body = artist.get("/api/projects").json()
+    assert suggestion(body, "Tidal Bodies")["category"] == "work"                 # CV show + portfolio work
+    assert suggestion(body, "Listening to the Tagus")["category"] == "exhibition"  # only a CV exhibitions line
+    assert all(s["category"] is None for s in body["suggestions"] if s["kind"] == "interest")
+
+
+def test_a_project_is_a_work_unless_it_says_otherwise_and_an_interest_is_neither(artist):
+    added = artist.post("/api/projects", json={"title": "Night Swim", "status": "current"}).json()
+    assert added["category"] == "work"
+    edited = artist.put(f"/api/projects/{added['id']}",
+                        json={"title": "Night Swim", "status": "past", "category": "exhibition"}).json()
+    assert edited["category"] == "exhibition"
+    interest = artist.post("/api/projects", json={"kind": "interest", "summary": "Rivers", "category": "work"})
+    assert interest.json()["category"] is None
+    assert artist.post("/api/projects", json={"title": "X", "status": "past", "category": "poem"}).status_code == 422

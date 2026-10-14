@@ -24,13 +24,12 @@ services:
       - uploads:/data/uploads   # the artists' original files (CVs are personal data: never in git or the image)
       # the corpus for Discover, read-only, at the paths the code expects under /app (src/matching,
       # src/eligibility). Mounted, not copied into the image: a corpus update needs no rebuild, only
-      # `docker compose restart api`. eligibility_constraints.jsonl lives in the private data/ repo:
-      # on the VPS it is copied there by hand (workflow.MD, "Deploying step 5").
+      # `docker compose restart api`. All five files are in git and arrive with `git pull`.
       - ./dataset/opportunities.csv:/app/dataset/opportunities.csv:ro
       - ./dataset/labels/eligibility_constraints_reviewed.csv:/app/dataset/labels/eligibility_constraints_reviewed.csv:ro
       - ./artifacts/opportunity_index.npz:/app/artifacts/opportunity_index.npz:ro
       - ./artifacts/match_score.json:/app/artifacts/match_score.json:ro   # the match percentage's weights
-      - ./data/processed/eligibility_constraints.jsonl:/app/data/processed/eligibility_constraints.jsonl:ro
+      - ./dataset/labels/eligibility_constraints.jsonl:/app/dataset/labels/eligibility_constraints.jsonl:ro
     depends_on:
       db:
         condition: service_healthy

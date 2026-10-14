@@ -10,7 +10,7 @@ from datetime import date
 
 import pytest
 
-from src.rag.cv_rules import extract_practice, extract_profile
+from src.rag.cv_rules import extract_all, extract_practice, extract_profile
 from src.rag.documents import Chunk, read_chunks
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -188,3 +188,80 @@ def test_known_held_out_error_is_still_there():
 def test_career_stage_is_never_read():
     found = extract_practice(chunks("I am an emerging artist and an established painter."), "s.md", "statement", TODAY)
     assert "career_stage" not in {s.field for s in found}
+
+
+# -- every rule on any document (extract_all) ---------------------------------------------------------
+
+def test_a_cv_inside_a_portfolio_is_read():
+    """One PDF holding bio, CV and works (like a real "CV-Portfolio.pdf"). The PDF reader marked only
+    "Education", so the headings in the text are found too: exhibitions aren't read as studies."""
+    doc = [Chunk(index=0, section=None, page=1,
+                 text="Ana Ruiz (b. 1988, Buenos Aires; based in Berlin) is an artist working with film."),
+           Chunk(index=1, section="Education", page=2,
+                 text="2022-2025 MA Kunst und Medien, Berlin\nUniversity of the Arts (UDK), Berlin\n"
+                      "Selection of exhibitions and screenings\n2025 New Fears Gallery, “Tender Is The Riot”, Berlin."),
+           Chunk(index=2, section="Education", page=2,
+                 text="2013 Faena Arts Center, Buenos Aires\nResidencies and programs\n2019 Hangar, Barcelona, Spain.")]
+    found = {s.field: s for s in extract_all(doc, "cv-portfolio.pdf", "portfolio", TODAY)}
+    assert found["residence_country"].value == "DE" and found["residence_city"].value == "Berlin"
+    assert found["active_since"].value == 2013
+    assert found["active_since"].citation == "cv-portfolio.pdf · p. 2 · Selection of exhibitions and screenings"
+    assert found["graduation_year"].value == 2025 and found["degree_field"].value == "Kunst und Medien"
+    # the school is on the line below the degree; both lines are quoted
+    assert found["education"].value == [{"institution": "University of the Arts (UDK)", "city": "Berlin",
+                                         "country": "DE"}]
+    assert "University of the Arts" in found["education"].quote
+
+
+CV_ONLY = {"birth_date", "nationalities", "residence_country", "residence_city"}
+
+
+@pytest.mark.parametrize("text", [
+    "The festival was born on 3 May 2019 in a squat.",
+    "A work about citizenship in Mexico and Brazil.",
+    "A performance based in Lisbon, Portugal, for one dancer.",
+    "The project is based in Lisbon, Portugal.",
+    "It works in Portugal and Spain alike.",
+])
+def test_prose_is_not_read_as_a_cv_fact(text):
+    assert not {s.field for s in extract_all(chunks(text), "s.md", "statement", TODAY)} & CV_ONLY
+
+
+@pytest.mark.parametrize("text, country", [
+    ("Paloma Schnitzer (b. 1988; based in Berlin) is an artist.", "DE"),
+    ("Paloma is based in Lisbon, Portugal.", "PT"),
+    ("She works in Vienna, Austria.", "AT"),
+])
+def test_residence_said_of_the_artist(text, country):
+    found = {s.field: s.value for s in extract_all(chunks(text), "s.md", "statement", TODAY)}
+    assert found["residence_country"] == country
+
+
+@pytest.mark.parametrize("text, codes", [
+    ("Dual Brazilian/Portuguese citizenship", ["BR", "PT"]),
+    ("I am a citizen of Italy.", ["IT"]),
+    ("Swedish citizen, living in Berlin since 2019.", ["SE"]),
+])
+def test_nationality_tied_to_the_word(text, codes):
+    found = {s.field: s.value for s in extract_all(chunks(text), "s.md", "statement", TODAY)}
+    assert found["nationalities"] == codes
+
+
+def test_a_year_inside_prose_is_not_a_career_start():
+    """Ilka's statement: "Low Tide Archive (2024-) is a series..." sits under a heading but is prose."""
+    path = "examples/artists/ilka_varga/statement.docx"
+    found = extract_all(read_chunks(os.path.join(ROOT, path)), "statement.docx", "statement", TODAY)
+    assert {s.field: s.value for s in found} == {"disciplines": ["Visual Arts"]}
+
+
+def test_year_first_works():
+    found = {s.field: s.value for s in extract_all(
+        chunks("2021 Rain Score", "2018 Weserhalle, “Speculation”, Berlin.",
+               "1969 was the year a film by Harun Farocki changed how I think about labour and images."),
+        "p.txt", "portfolio", TODAY)}
+    assert found["active_since"] == 2018             # the long prose line is not a work
+
+
+def test_year_first_lines_outside_career_sections_are_not_works():
+    found = extract_all(chunks("2015 Guest lecturer, Art Academy", section="Teaching"), "p.txt", "portfolio", TODAY)
+    assert "active_since" not in {s.field for s in found}

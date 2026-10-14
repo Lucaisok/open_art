@@ -112,6 +112,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/account/onboarded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish Onboarding
+         * @description The last onboarding step's "Continue to Discover": from now on the app is Discover, Studio and
+         *     Account (the onboarding pages send to the Studio). Done once; later calls change nothing.
+         */
+        post: operations["finish_onboarding_api_account_onboarded_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/account": {
         parameters: {
             query?: never;
@@ -307,6 +328,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review
+         * @description Keeps the accepted suggestions (with the artist's status) and dismisses the others, in one go.
+         */
+        post: operations["review_api_projects_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/images/{image_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Image */
+        get: operations["get_image_api_images__image_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/images/{image_id}/thumb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Thumb */
+        get: operations["get_thumb_api_images__image_id__thumb_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Order Images
+         * @description The project's images in a new order: exactly its images, each once (else 422).
+         */
+        put: operations["order_images_api_projects__project_id__images_put"];
+        /**
+         * Add Images
+         * @description Adds the uploaded images to a saved project, after its existing ones. All or nothing: one
+         *     unreadable file refuses the request, with its name.
+         */
+        post: operations["add_images_api_projects__project_id__images_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/images/{image_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Image */
+        delete: operations["delete_image_api_projects__project_id__images__image_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/applications/{opportunity_id}": {
         parameters: {
             query?: never;
@@ -341,6 +458,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/applications/{opportunity_id}/items/{key}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose Images
+         * @description The images to send for an item asking for images: the artist's own choice from their saved
+         *     projects' images, in their order. [] clears it.
+         */
+        put: operations["choose_images_api_applications__opportunity_id__items__key__images_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/applications/{opportunity_id}/items/{key}/confirm": {
         parameters: {
             query?: never;
@@ -352,6 +490,44 @@ export interface paths {
         put?: never;
         /** Confirm Item */
         post: operations["confirm_item_api_applications__opportunity_id__items__key__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose Projects */
+        put: operations["choose_projects_api_applications__opportunity_id__projects_put"];
+        post?: never;
+        /**
+         * Suggested Again
+         * @description Back to the suggested projects (the closest to the call): the artist's own choice is forgotten.
+         */
+        delete: operations["suggested_again_api_applications__opportunity_id__projects_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/items/{key}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose Item Projects */
+        put: operations["choose_item_projects_api_applications__opportunity_id__items__key__projects_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -386,10 +562,50 @@ export interface paths {
         /**
          * Download
          * @description The complete application as a zip. Refused until every text is reviewed and every item is
-         *     uploaded or ticked: the review is enforced here, not only on the page. Holds application.md and,
-         *     for each item covered by an upload, that original file (only the documents the call asks for).
+         *     uploaded or ticked: the review is enforced here, not only on the page. Holds each text as a .txt
+         *     (to paste into forms), all of them in application.docx (to attach), checklist.txt, and for each item
+         *     covered by an upload that original file (only the documents the call asks for).
          */
         get: operations["download_api_applications__opportunity_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/saved/{opportunity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save */
+        put: operations["save_api_saved__opportunity_id__put"];
+        post?: never;
+        /**
+         * Unsave
+         * @description Removes the call and, as the Studio's confirmation says, its application: drafts, ticks, chat
+         *     (their rows cascade). Saving it again starts afresh.
+         */
+        delete: operations["unsave_api_saved__opportunity_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saved */
+        get: operations["list_saved_api_saved_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -402,6 +618,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptIn */
+        AcceptIn: {
+            /** Key */
+            key: string;
+            /** Status */
+            status?: ("past" | "current" | "planned") | null;
+        };
+        /** AcceptedProject */
+        AcceptedProject: {
+            /** Key */
+            key: string;
+            /** Status */
+            status?: ("past" | "current" | "planned") | null;
+        };
         /** ApplicationDocumentOut */
         ApplicationDocumentOut: {
             /** Kind */
@@ -415,6 +645,20 @@ export interface components {
             opportunity_id: string;
             /** Title */
             title: string;
+            /** Organisation */
+            organisation?: string | null;
+            /** City */
+            city?: string | null;
+            /**
+             * Countries
+             * @default []
+             */
+            countries: string[];
+            /**
+             * Saved
+             * @default false
+             */
+            saved: boolean;
             /** Deadline */
             deadline: string | null;
             /** Source Url */
@@ -441,6 +685,32 @@ export interface components {
              * @default []
              */
             missing: string[];
+            /**
+             * Projects
+             * @default []
+             */
+            projects: components["schemas"]["ProjectChoiceOut"][];
+            /**
+             * @default {
+             *       "mention": []
+             *     }
+             */
+            selection: components["schemas"]["Selection"];
+            /**
+             * Selection Chosen
+             * @default false
+             */
+            selection_chosen: boolean;
+            /**
+             * Image Choices
+             * @default []
+             */
+            image_choices: components["schemas"]["ProjectImagesOut"][];
+        };
+        /** Body_add_images_api_projects__project_id__images_post */
+        Body_add_images_api_projects__project_id__images_post: {
+            /** Files */
+            files: string[];
         };
         /** Body_upload_document_api_documents__kind__put */
         Body_upload_document_api_documents__kind__put: {
@@ -495,6 +765,16 @@ export interface components {
              * Format: date-time
              */
             uploaded_at: string;
+            /**
+             * Images
+             * @default 0
+             */
+            images: number;
+            /**
+             * Reading Images
+             * @default false
+             */
+            reading_images: boolean;
         };
         /** DocumentSuggestions */
         DocumentSuggestions: {
@@ -528,6 +808,31 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ImageOrderIn */
+        ImageOrderIn: {
+            /** Ids */
+            ids: string[];
+        };
+        /** ImageOut */
+        ImageOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+        };
+        /** ImagesIn */
+        ImagesIn: {
+            /**
+             * Ids
+             * @default []
+             */
+            ids: string[];
         };
         /**
          * ItemIn
@@ -563,9 +868,24 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "empty" | "draft" | "confirmed" | "uploaded" | "ticked" | "missing";
+            state: "empty" | "draft" | "confirmed" | "uploaded" | "chosen" | "ticked" | "missing";
+            /**
+             * Images Wanted
+             * @default false
+             */
+            images_wanted: boolean;
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["ImageOut"][];
             /** Draft */
             draft: string | null;
+            projects?: components["schemas"]["Selection"] | null;
+        };
+        /** ItemProjectsIn */
+        ItemProjectsIn: {
+            selection: components["schemas"]["Selection"] | null;
         };
         /** LoginIn */
         LoginIn: {
@@ -604,6 +924,8 @@ export interface components {
             content: string;
             /** Sources */
             sources: string[];
+            /** Wrote Words */
+            wrote_words?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -658,6 +980,11 @@ export interface components {
             /** Profile Filled */
             profile_filled: boolean;
             why?: components["schemas"]["WhyOut"] | null;
+            /**
+             * Saved
+             * @default false
+             */
+            saved: boolean;
         };
         /** Option */
         Option: {
@@ -699,6 +1026,13 @@ export interface components {
              * @default []
              */
             reviewed_documents: string[];
+            /**
+             * @default {
+             *       "accept": [],
+             *       "dismiss": []
+             *     }
+             */
+            projects: components["schemas"]["ProjectsReview"];
         };
         /** ProfileOut */
         ProfileOut: {
@@ -713,6 +1047,38 @@ export interface components {
             /** Updated At */
             updated_at?: string | null;
             suggestions?: components["schemas"]["DocumentSuggestions"] | null;
+            /**
+             * @default {
+             *       "suggestions": [],
+             *       "saved": 0,
+             *       "projects": [],
+             *       "images_pending": false
+             *     }
+             */
+            projects: components["schemas"]["ProfileProjects"];
+        };
+        /** ProfileProjects */
+        ProfileProjects: {
+            /**
+             * Suggestions
+             * @default []
+             */
+            suggestions: components["schemas"]["ProjectOut"][];
+            /**
+             * Saved
+             * @default 0
+             */
+            saved: number;
+            /**
+             * Projects
+             * @default []
+             */
+            projects: components["schemas"]["ProjectOut"][];
+            /**
+             * Images Pending
+             * @default false
+             */
+            images_pending: boolean;
         };
         /**
          * ProfileValues
@@ -760,6 +1126,66 @@ export interface components {
              * @default []
              */
             education: components["schemas"]["EducationEntry"][];
+            /** Name */
+            name?: string | null;
+        };
+        /** Progress */
+        Progress: {
+            /** Texts Reviewed */
+            texts_reviewed: number;
+            /** Texts */
+            texts: number;
+            /** Items Gathered */
+            items_gathered: number;
+            /** Items */
+            items: number;
+        };
+        /** ProjectChoiceOut */
+        ProjectChoiceOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string | null;
+            /** Category */
+            category: string | null;
+            /** Years */
+            years: string | null;
+            /** Medium */
+            medium?: string | null;
+            /**
+             * Can Propose
+             * @default false
+             */
+            can_propose: boolean;
+            /** Suggested */
+            suggested: boolean;
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["ImageOut"][];
+        };
+        /**
+         * ProjectImagesOut
+         * @description One saved project's images, to choose from for an image item.
+         */
+        ProjectImagesOut: {
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Title */
+            title: string;
+            /** Years */
+            years?: string | null;
+            /** Images */
+            images: components["schemas"]["ImageOut"][];
         };
         /** ProjectIn */
         ProjectIn: {
@@ -773,6 +1199,8 @@ export interface components {
             title?: string | null;
             /** Status */
             status?: ("past" | "current" | "planned") | null;
+            /** Category */
+            category?: ("work" | "exhibition" | "performance" | "commission") | null;
             /** Years */
             years?: string | null;
             /** Summary */
@@ -799,6 +1227,8 @@ export interface components {
             title?: string | null;
             /** Status */
             status?: ("past" | "current" | "planned") | null;
+            /** Category */
+            category?: ("work" | "exhibition" | "performance" | "commission") | null;
             /** Years */
             years?: string | null;
             /** Summary */
@@ -824,6 +1254,11 @@ export interface components {
              * @default false
              */
             from_documents: boolean;
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["ImageOut"][];
         };
         /** ProjectsOut */
         ProjectsOut: {
@@ -833,6 +1268,22 @@ export interface components {
             interests: components["schemas"]["ProjectOut"][];
             /** Suggestions */
             suggestions: components["schemas"]["ProjectOut"][];
+        };
+        /**
+         * ProjectsReview
+         * @description The Projects group's ticks: the ticked suggestions are saved, the unticked ones dismissed.
+         */
+        ProjectsReview: {
+            /**
+             * Accept
+             * @default []
+             */
+            accept: components["schemas"]["AcceptedProject"][];
+            /**
+             * Dismiss
+             * @default []
+             */
+            dismiss: string[];
         };
         /** QuestionOut */
         QuestionOut: {
@@ -894,6 +1345,77 @@ export interface components {
              */
             group: "fit" | "other_discipline" | "not_eligible";
             why?: components["schemas"]["CardWhyOut"] | null;
+            /**
+             * Saved
+             * @default false
+             */
+            saved: boolean;
+        };
+        /** ReviewIn */
+        ReviewIn: {
+            /**
+             * Accept
+             * @default []
+             */
+            accept: components["schemas"]["AcceptIn"][];
+            /**
+             * Dismiss
+             * @default []
+             */
+            dismiss: string[];
+        };
+        /** SavedCallOut */
+        SavedCallOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Organisation */
+            organisation?: string | null;
+            /**
+             * Types
+             * @default []
+             */
+            types: string[];
+            /** City */
+            city?: string | null;
+            /**
+             * Countries
+             * @default []
+             */
+            countries: string[];
+            /** Deadline */
+            deadline: string | null;
+            /** Funding */
+            funding?: string | null;
+            /** Status */
+            status?: ("ELIGIBLE" | "CHECK" | "LIKELY_NOT_ELIGIBLE") | null;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "saved" | "draft" | "completed" | "closed";
+            /** Was */
+            was?: ("saved" | "draft" | "completed" | "closed") | null;
+            /** Match */
+            match?: number | null;
+            /** Listed */
+            listed: boolean;
+            progress?: components["schemas"]["Progress"] | null;
+            /**
+             * Saved At
+             * Format: date-time
+             */
+            saved_at: string;
+        };
+        /** SavedCallsOut */
+        SavedCallsOut: {
+            /** Calls */
+            calls: components["schemas"]["SavedCallOut"][];
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
         };
         /** SearchIn */
         SearchIn: {
@@ -966,6 +1488,19 @@ export interface components {
             /** Profile Filled */
             profile_filled: boolean;
         };
+        /**
+         * Selection
+         * @description Which saved projects a text is about: the one being proposed, and past or related work.
+         */
+        Selection: {
+            /** Proposing */
+            proposing?: string | null;
+            /**
+             * Mention
+             * @default []
+             */
+            mention: string[];
+        };
         /** SentenceOut */
         SentenceOut: {
             /** Quote */
@@ -1037,6 +1572,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Onboarded At */
+            onboarded_at?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1254,6 +1791,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    finish_onboarding_api_account_onboarded_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1677,6 +2232,201 @@ export interface operations {
             };
         };
     };
+    review_api_projects_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_image_api_images__image_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thumb_api_images__image_id__thumb_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    order_images_api_projects__project_id__images_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImageOrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_images_api_projects__project_id__images_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_add_images_api_projects__project_id__images_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_image_api_projects__project_id__images__image_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_application_api_applications__opportunity_id__get: {
         parameters: {
             query?: never;
@@ -1744,6 +2494,42 @@ export interface operations {
             };
         };
     };
+    choose_images_api_applications__opportunity_id__items__key__images_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImagesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     confirm_item_api_applications__opportunity_id__items__key__confirm_post: {
         parameters: {
             query?: never;
@@ -1755,6 +2541,108 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_projects_api_applications__opportunity_id__projects_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Selection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggested_again_api_applications__opportunity_id__projects_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_item_projects_api_applications__opportunity_id__items__key__projects_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemProjectsIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1871,6 +2759,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_api_saved__opportunity_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsave_api_saved__opportunity_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_saved_api_saved_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedCallsOut"];
                 };
             };
         };

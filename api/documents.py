@@ -8,7 +8,9 @@ Only when that works are the old rows and file replaced, so a bad upload leaves
 the previous document untouched.
 
 Files are kept at <UPLOADS_DIR>/<user id>/<document id><.ext>. Nothing in the path
-comes from the artist: their file name is only stored, to be shown back.
+comes from the artist: their file name is only stored, to be shown back. A PDF's images are read
+after the upload answers (api/images.py, in the background: decoding them takes seconds); replacing
+or deleting the document deletes the ones no saved project holds.
 """
 
 import os
@@ -17,9 +19,9 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from api.auth import DB, CurrentUser
@@ -41,6 +43,16 @@ class DocumentOut(BaseModel):
     size_bytes: int
     chunk_count: int
     uploaded_at: datetime
+    images: int = 0                  # images read from it (a PDF's; api/images.py)
+    reading_images: bool = False     # still being read in the background: the Studio shows "Reading images…"
+
+
+def document_out(db, document: Document) -> DocumentOut:
+    from api.images import images_pending   # api/images.py imports this module
+    from api.models import ProjectImage
+    count = db.scalar(select(func.count()).select_from(ProjectImage).where(ProjectImage.document_id == document.id))
+    return DocumentOut.model_validate(document, from_attributes=True).model_copy(
+        update={"images": count or 0, "reading_images": images_pending(document)})
 
 
 # -- files on disk -----------------------------------------------------------------------------------
@@ -69,17 +81,17 @@ def clean_file_name(raw: str | None) -> str:
     return name
 
 
-def save_upload(upload: UploadFile, path: str) -> int:
+def save_upload(upload: UploadFile, path: str, max_bytes: int = MAX_FILE_BYTES) -> int:
     """Copies the upload to `path` piece by piece and returns its size.
-    Stops (and deletes the copy) as soon as it passes the size cap."""
+    Stops (and deletes the copy) as soon as it passes the size cap (images have their own)."""
     size = 0
     with open(path, "wb") as out:
         while piece := upload.file.read(READ_PIECE_BYTES):
             size += len(piece)
-            if size > MAX_FILE_BYTES:
+            if size > max_bytes:
                 out.close()
                 os.remove(path)
-                raise HTTPException(413, f"The file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB.")
+                raise HTTPException(413, f"The file is larger than {max_bytes // (1024 * 1024)} MB.")
             out.write(piece)
     return size
 
@@ -89,11 +101,14 @@ def save_upload(upload: UploadFile, path: str) -> int:
 @router.get("")
 def list_documents(user: CurrentUser, db: DB) -> list[DocumentOut]:
     documents = db.scalars(select(Document).where(Document.user_id == user.id).order_by(Document.kind))
-    return [DocumentOut.model_validate(d, from_attributes=True) for d in documents]
+    return [document_out(db, d) for d in documents]
 
 
 @router.put("/{kind}")
-def upload_document(kind: Kind, file: UploadFile, user: CurrentUser, db: DB) -> DocumentOut:
+def upload_document(kind: Kind, file: UploadFile, user: CurrentUser, db: DB,
+                    background: BackgroundTasks) -> DocumentOut:
+    from api.images import forget_document_images, read_document_images, remove_files   # imports this module
+
     file_name = clean_file_name(file.filename)
     extension = os.path.splitext(file_name)[1].lower()
     if extension not in SUPPORTED_EXTENSIONS:
@@ -118,7 +133,9 @@ def upload_document(kind: Kind, file: UploadFile, user: CurrentUser, db: DB) -> 
         document.chunks = build_chunks(chunks, user.id)
         document.chunk_count = len(document.chunks)
 
+        loose = []
         if old is not None:
+            loose = forget_document_images(db, old)   # its images no saved project holds
             db.delete(old)          # its chunks go with it (cascade)
             db.flush()              # before the insert, which would clash on (user, kind)
         db.add(document)
@@ -134,10 +151,12 @@ def upload_document(kind: Kind, file: UploadFile, user: CurrentUser, db: DB) -> 
         os.remove(path)
         raise
 
-    # 4. only now that the new document is saved, remove the old file
+    # 4. only now that the new document is saved, remove the old file and images
     if old is not None and os.path.exists(stored_path(old)):
         os.remove(stored_path(old))
-    return DocumentOut.model_validate(document, from_attributes=True)
+    remove_files(loose)
+    background.add_task(read_document_images, document.id)   # after the answer: the images take seconds
+    return document_out(db, document)
 
 
 @router.delete("/{kind}", status_code=204)
@@ -145,8 +164,11 @@ def delete_document(kind: Kind, user: CurrentUser, db: DB) -> None:
     document = db.scalar(select(Document).where(Document.user_id == user.id, Document.kind == kind))
     if document is None:
         raise HTTPException(404, "There is no document in this slot.")
+    from api.images import forget_document_images, remove_files   # imports this module
     path = stored_path(document)
+    loose = forget_document_images(db, document)
     db.delete(document)
     db.commit()
     if os.path.exists(path):
         os.remove(path)
+    remove_files(loose)

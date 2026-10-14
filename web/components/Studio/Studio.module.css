@@ -1,0 +1,714 @@
+/* The Studio (design: STUDIO.md, "Studio v4"): editorial, content on rules rather than in boxes */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 4vw, 48px);
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 40px) 80px;
+}
+
+/* -- the artist ---------------------------------------------------------------------------- */
+
+.artist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow,
+.sectionTitle,
+.kicker,
+.factLabel,
+.docLabel,
+.projectKind {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  font-size: 13px;
+}
+
+.name {
+  font-size: clamp(40px, 5.6vw, 72px);
+  font-weight: 900;
+  font-stretch: 122%;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.artistFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 700;
+}
+
+.unset {
+  color: var(--color-grey-400);
+}
+
+.edit {
+  align-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-grey-600);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.edit:hover {
+  color: var(--color-ink);
+}
+
+.incomplete {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 6px solid var(--color-lime);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.incomplete button {
+  font-size: 15px;
+}
+
+/* -- the three columns ---------------------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-areas: "calls" "docs" "projects";
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.calls {
+  display: flex;
+  flex-direction: column;
+  grid-area: calls;
+  min-width: 0;
+}
+
+.docs {
+  display: flex;
+  flex-direction: column;
+  grid-area: docs;
+  gap: 14px;
+  min-width: 0;
+}
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  grid-area: projects;
+  min-width: 0;
+}
+
+@media (min-width: 720px) {
+  .grid {
+    grid-template-areas: "calls calls" "docs projects";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
+  }
+}
+
+/* desktop: documents | calls | projects, each column scrolling on its own under its fixed heading */
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-areas: "docs calls projects";
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+  }
+
+  .calls,
+  .projects {
+    position: sticky;
+    top: 24px;
+    height: calc(100vh - 48px);
+  }
+
+  .docs {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow: hidden auto;
+  }
+
+  .scroll,
+  .projectsScroll,
+  .showsScroll,
+  .docs {
+    scrollbar-color: #c9c9c4 transparent;
+    scrollbar-width: thin;
+  }
+
+  .scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0 14px;
+    overflow: hidden auto;
+  }
+
+  .projectsScroll {
+    flex: 3 1 0;
+    min-height: 0;
+    padding-bottom: 12px;
+    overflow: hidden auto;
+  }
+
+  .showsScroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden auto;
+  }
+}
+
+.sectionHead {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-ink);
+}
+
+.sectionTitle {
+  font-size: 13px;
+}
+
+.headLink {
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* -- my calls ------------------------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  margin-bottom: -2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-grey-600);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--color-ink);
+  box-shadow: inset 0 -4px 0 var(--color-lime);
+}
+
+.tabCount {
+  color: var(--color-grey-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.tab[aria-selected="true"] .tabCount {
+  color: var(--color-ink);
+}
+
+.callList,
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.call {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 32px;
+  margin: 0 -14px;
+  padding: 20px 14px;
+  border-bottom: 2px solid var(--color-rule);
+  transition: background-color 120ms ease;
+}
+
+.call:hover {
+  background-color: var(--color-white);
+}
+
+.callClosed,
+.callClosed:hover {
+  background-color: var(--color-grey-100);
+}
+
+.callMain {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kicker {
+  color: var(--color-grey-600);
+  font-size: 12px;
+}
+
+.callTitle {
+  font-size: 22px;
+  font-weight: 900;
+  font-stretch: 110%;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.callTitle a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.callTitle a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.callOrg {
+  color: var(--color-grey-600);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 6px;
+}
+
+.progressItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.progressTrack {
+  display: block;
+  width: 64px;
+  height: 4px;
+  background-color: var(--color-rule);
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  background-color: var(--color-ink);
+}
+
+.facts {
+  display: grid;
+  flex: 0 0 190px;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.factLabel {
+  color: var(--color-grey-600);
+  font-size: 12px;
+}
+
+.factValue {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+}
+
+.due {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.urgent {
+  color: #d92d20;
+}
+
+.dueClosed {
+  color: var(--color-grey-600);
+}
+
+.dueDate {
+  color: var(--color-grey-600);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.fitLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.match {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the status marker: a small square, lime (eligible / current), empty (to check), ink (likely not) */
+.marker {
+  display: block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  outline: 2px solid var(--color-ink);
+}
+
+.markerOk {
+  background-color: var(--color-lime);
+}
+
+.markerCheck {
+  background-color: transparent;
+}
+
+.markerNo {
+  background-color: var(--color-ink);
+}
+
+.actions {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 32px 0;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.emptyText {
+  max-width: 40ch;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.loadError {
+  margin-top: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.loadError button {
+  font-size: 16px;
+}
+
+/* -- documents ------------------------------------------------------------------------------ */
+
+.docList {
+  margin: 0;
+}
+
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 0;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.docLabel {
+  color: var(--color-grey-600);
+  font-size: 12px;
+}
+
+.docBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.docName {
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.docMeta,
+.note {
+  color: var(--color-grey-600);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.docEmpty {
+  color: var(--color-grey-600);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.docActions {
+  display: flex;
+  gap: 16px;
+}
+
+.upload {
+  align-self: flex-start;
+}
+
+/* "Reading images…": no count is known while reading, so the lime bar moves instead */
+.busy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.busyTrack {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  background-color: var(--color-rule);
+}
+
+.busyBar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background-color: var(--color-lime);
+  animation: reading 1.4s ease-in-out infinite;
+}
+
+@keyframes reading {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busyBar {
+    width: 100%;
+    animation: none;
+  }
+}
+
+/* -- projects ------------------------------------------------------------------------------- */
+
+.found {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 6px solid var(--color-lime);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.projectsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.projectStack {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 18px;
+}
+
+.currentList {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.currentProject {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.currentProject:hover {
+  opacity: 0.85;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.strip img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: var(--color-grey-200);
+  object-fit: cover;
+}
+
+.projectText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.projectKind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.projectTitle {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.projectMeta {
+  color: var(--color-grey-600);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rows li {
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  background-color: var(--color-grey-100);
+}
+
+.rowThumb {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 2px;
+  background-color: var(--color-rule);
+  object-fit: cover;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  color: var(--color-grey-600);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.showsHead {
+  margin-top: 28px;
+}
+
+.showsEmpty {
+  padding: 16px 0;
+  color: var(--color-grey-600);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* -- modals --------------------------------------------------------------------------------- */
+
+.confirm,
+.modalLead {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-wrap: pretty;
+}

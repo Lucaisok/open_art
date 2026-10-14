@@ -1,0 +1,80 @@
+/* a project's images: a row of small squares, wrapping */
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.thumb a {
+  display: block;
+  border-radius: 8px;
+}
+
+.thumb img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 2px solid var(--color-ink);
+  border-radius: 8px;
+  background-color: var(--color-paper);
+}
+
+.more {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 2px dashed var(--color-ink);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.remove {
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* inside the Apply picker: smaller, under the project's name */
+.small {
+  gap: 6px;
+}
+
+.small .thumb img,
+.small .more {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+.small .more {
+  font-size: 12px;
+}

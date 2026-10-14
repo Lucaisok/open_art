@@ -6,7 +6,7 @@ OpenArt — the eligibility engine: can this artist apply to this call, and why?
 
 Plain, deterministic Python (CLAUDE.md): no model and no LLM at request time.
 It reads
-  data/processed/eligibility_constraints.jsonl        every sentence of every call, classified at
+  dataset/labels/eligibility_constraints.jsonl        every sentence of every call, classified at
                                                       ingestion (scripts/extract_constraints.py): one
                                                       row per (sentence, label), since a sentence can
                                                       state several requirements
@@ -82,7 +82,7 @@ from src.models.classified_chunk import ClassifiedChunk
 from src.models.processed_opportunity import ProcessedOpportunity
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CONSTRAINTS_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
+CONSTRAINTS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_constraints.jsonl")
 REVIEWED_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_constraints_reviewed.csv")
 
 # the classes a reviewed sentence may reject on (also used by scripts/review_queue.py,

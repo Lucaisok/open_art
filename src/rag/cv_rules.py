@@ -33,6 +33,9 @@ CV section each line sits in ("Education", "Exhibitions"). Per field:
                       a line of its own), the subject after the degree (joined across a line
                       break), and any Education date range ending in "Present"
 
+extract_all runs these rules and the prose ones (extract_practice) on any document, so a CV
+inside a portfolio file is read too (api/profile.py does this for every upload).
+
 A rule that doesn't fire leaves the field empty: the artist fills it in. Wrong values are
 the risk to keep low, so the rules only read the places a CV states these facts.
 """
@@ -73,12 +76,39 @@ CAREER_SECTION = re.compile(
     r"awards?|prizes?|grants?|fellowships?|scholarships?|publications?|bibliography|commissions?|projects?|"
     r"curatorial|support|collections?)\b", re.I)
 KNOWN_SECTION = re.compile(EDUCATION_SECTION.pattern + "|" + CAREER_SECTION.pattern +
-                           r"|\b(personal|contact|details|about|bio(graphy)?|languages?|skills?|statement)\b", re.I)
+                           r"|\b(personal|contact|details|about|bio(graphy)?|languages?|skills?|statement|teaching|"
+                           r"experience|workshops?|talks?|press|memberships?|collaborations?)\b", re.I)
+
+
+# a section title the reader didn't mark as a heading ("Selection of exhibitions and screenings",
+# "Residencies and programs"): a short line that starts with a known section word
+INLINE_HEADING = re.compile(r"^((selected|selection of|solo|group|recent|other)\s+)?(" + KNOWN_SECTION.pattern + ")",
+                            re.I)
+
+
+def _inline_heading(text: str) -> bool:
+    return (len(text.split()) <= 6 and text[:1].isupper() and not re.search(r"[\d,;\"“”]", text)
+            and text[-1] not in ".!?" and bool(INLINE_HEADING.match(text))
+            and not RESIDENCE_PHRASE.search(text))      # "Works in Berlin" is not a heading
 
 
 def _lines(chunks: list[Chunk]) -> list[_Line]:
-    return [_Line(text.strip(" -•\t"), c.section, c.page)
-            for c in chunks for text in c.text.split("\n") if text.strip(" -•\t")]
+    """Every non-empty line with its section. A heading found inside the text replaces the stored
+    one until the reader's next heading: PDFs only get the headings in documents.CV_SECTIONS, so
+    without this a whole CV can sit under "Education" (exhibitions read as studies, and not as
+    career). Works on chunks already stored, so documents uploaded earlier benefit too."""
+    out, stored, found = [], None, None
+    for c in chunks:
+        if c.section != stored:            # the reader's next heading: a new section
+            stored, found = c.section, None
+        for text in c.text.split("\n"):
+            text = text.strip(" -•\t")
+            if not text:
+                continue
+            if _inline_heading(text):
+                found = text.rstrip(":").strip()
+            out.append(_Line(text, found or c.section, c.page))
+    return out
 
 
 def _intro(lines: list[_Line]) -> list[_Line]:
@@ -126,7 +156,8 @@ def _birth_date(lines: list[_Line], today: date) -> tuple[date, _Line] | None:
                     found = date(int(parts["y"]), month, int(parts["d"]))
                 except (TypeError, ValueError):
                     continue
-                if date(1900, 1, 1) <= found <= today:
+                # at least 14 years ago: "the festival was born on 3 May 2019" is not the artist
+                if date(1900, 1, 1) <= found and found.year <= today.year - 14:
                     return found, line
     return None
 
@@ -147,12 +178,26 @@ def _countries_in(text: str) -> list[str]:
     return codes
 
 
+# Prose talks about citizenship too ("a work about citizenship in Mexico"), so the countries must be
+# tied to the word: a "Nationality:" label starting the line, or right next to it ("Swedish citizen",
+# "Brazilian/Portuguese citizenship", "citizen of Italy")
+NATIONALITY_LABEL = re.compile(r"^\W*(nationalit(y|ies)|citizenships?|passports?)\b", re.I)
+_COUNTRY_CHAIN = rf"(?:{COUNTRY_RE.pattern})(?:\s*(?:,|/|&|and)\s*(?:{COUNTRY_RE.pattern}))*"
+COUNTRIES_BEFORE = re.compile(_COUNTRY_CHAIN + r"\s*$", re.I)
+COUNTRIES_AFTER = re.compile(r"^\s*(?:of|:)\s*" + _COUNTRY_CHAIN, re.I)
+
+
 def _nationalities(lines: list[_Line]) -> tuple[list[str], _Line] | None:
     for line in lines:
-        if NATIONALITY_LINE.search(line.text):
-            # "Swedish citizen, living in Berlin": only the part before a residence phrase
-            text = RESIDENCE_PHRASE.split(line.text)[0]
+        # "Swedish citizen, living in Berlin": only the part before a residence phrase
+        text = RESIDENCE_PHRASE.split(line.text)[0]
+        if NATIONALITY_LABEL.search(text):
             if codes := _countries_in(text):
+                return sorted(codes), line
+            continue
+        for word in NATIONALITY_LINE.finditer(text):
+            near = (COUNTRIES_BEFORE.search(text[:word.start()]) or COUNTRIES_AFTER.search(text[word.end():]))
+            if near and (codes := _countries_in(near.group(0))):
                 return sorted(codes), line
     return None
 
@@ -237,13 +282,34 @@ CITY_BEFORE_COUNTRY = re.compile(r"([A-ZÀ-Ý][\w'\-]*(?: [A-ZÀ-Ý][\w'\-]*){0,
 CITY_NAMES = {name.lower() for name in SUBNATIONAL_CITIES}
 
 
+# "lives in" / "resident in" are said of people only. "based in" / "works in" are said of projects
+# too ("a performance based in Lisbon"), so they count only after a person: the start of the line or
+# a clause ("Painter, based in Vienna"), a pronoun, or a name ("Paloma is based in")
+PERSON_VERB = re.compile(r"^(liv|resid)", re.I)
+PERSON_BEFORE = re.compile(r"(^|[(;,:.|/–—-]|\b(i|she|he|they|we|who|currently|now|also|mainly|am|artists?))\s*$",
+                           re.I)
+NAME_IS = re.compile(r"\b(she|he|they|we|[A-ZÀ-Ý][\w'\-]+)\s+(is|are)\s*$")
+NOT_A_NAME = {"It", "This", "That", "The", "There", "Which", "What"}
+
+
+def _residence_phrase(text: str) -> re.Match | None:
+    """The first residence phrase in `text` that is about the artist."""
+    for match in RESIDENCE_PHRASE.finditer(text):
+        before = text[:match.start()]
+        if PERSON_VERB.match(match.group(0)) or PERSON_BEFORE.search(before):
+            return match
+        if (name := NAME_IS.search(before)) and name.group(1) not in NOT_A_NAME:
+            return match
+    return None
+
+
 def _residence(lines: list[_Line], intro: list[_Line]) -> tuple[str, str | None, _Line] | None:
     """(country, city, line): the first country after a residence phrase; a known city ("Lives in
     Amsterdam") if no country; else a line in the contact block that is only a place (CV templates put
     "Berlin" under the name). The city is read from the same words (_city_in), None if not stated."""
     city_only = None
     for line in lines:
-        match = RESIDENCE_PHRASE.search(line.text)
+        match = _residence_phrase(line.text)
         if not match:
             continue
         rest = line.text[match.end():]
@@ -308,13 +374,18 @@ YEAR = re.compile(r"\b(19[5-9]\d|20\d\d)\b")
 FOUNDED = re.compile(r"\b(founded|established|formed)\b[^.]*?\b(19[5-9]\d|20\d\d)\b", re.I)
 
 
+# a dated entry has its year at the start ("2015 Venice Biennale", "Mar 2019 Solo show") or the end
+# ("Venice Biennale (2015)"); a year mid-line is prose ("Low Tide Archive (2024-) is a series...")
+ENTRY_YEAR = re.compile(r"^\W*(?:[A-Za-z]{3,9}\.?\s+)?(19[5-9]\d|20\d\d)\b|\b(19[5-9]\d|20\d\d)\W*$")
+
+
 def _active_since(lines: list[_Line], intro: list[_Line], today: date) -> tuple[int, _Line] | None:
     candidates = []
     for line in lines:
         section = line.section or ""
         if CAREER_SECTION.search(section) and not EDUCATION_SECTION.search(section):
-            if match := YEAR.search(line.text):
-                candidates.append((int(match.group(0)), line))
+            if match := ENTRY_YEAR.search(line.text):
+                candidates.append((int(match.group(1) or match.group(2)), line))
     for line in intro:
         if match := FOUNDED.search(line.text):
             candidates.append((int(match.group(2)), line))
@@ -366,20 +437,22 @@ def _place_code(text: str) -> str | None:
     return NAME_TO_COUNTRY.get(name) or SUBNATIONAL_LOOKUP.get(name)
 
 
-def _school(text: str, degree_end: int) -> dict | None:
+def _school(text: str, degree_end: int, skip_subject: bool = True) -> dict | None:
     """The school of a degree line: what follows the degree and its subject, split on commas.
-    A segment that is only a country is the country; a short one before it, the city; years are
-    skipped; the rest is the institution. The country can also come from a city in the name
-    ("Academy of Fine Arts Vienna" -> AT)."""
+    A segment that is only a country is the country; a short one before it, or a known city alone
+    ("MA Fine Art, Berlin"), the city; years are skipped; the rest is the institution. The country
+    can also come from a city in the name ("Academy of Fine Arts Vienna" -> AT). skip_subject=False
+    for a line that is only the school (see _education)."""
     segments = [seg.strip(" .:") for seg in re.split(r",|\s[-–—|]\s", text[degree_end:])]
-    segments = [seg for seg in segments[1:] if seg and not YEAR_ONLY.match(seg)]   # [0] is the subject
+    segments = [seg for seg in segments[1 if skip_subject else 0:]               # [0] is the subject
+                if seg and not YEAR_ONLY.match(seg)]
     institution, city, country = [], None, None
     for seg in segments:
         code = NAME_TO_COUNTRY.get(seg.lower()) if seg.lower() in PLACE_NAMES else None
         if code:
             country = code
-        elif institution and not SCHOOL_WORD.search(seg) and len(seg.split()) <= 3 and seg[:1].isupper() \
-                and not re.search(r"\d", seg):
+        elif (institution or seg.lower() in CITY_NAMES) and not SCHOOL_WORD.search(seg) \
+                and len(seg.split()) <= 3 and seg[:1].isupper() and not re.search(r"\d", seg):
             city = seg
         else:
             institution.append(seg)
@@ -407,9 +480,15 @@ def _education(lines: list[_Line], today: date) -> list[tuple[str, Any, _Line]]:
         degree = DEGREE.search(line.text)
         if not degree:
             continue
-        if (school := _school(line.text, degree.end())) and school not in schools:
+        school, quoted = _school(line.text, degree.end()), line
+        if school is None and i + 1 < len(education) and SCHOOL_WORD.search(education[i + 1].text) \
+                and not DEGREE.search(education[i + 1].text):
+            # "MA Kunst und Medien, Berlin" over "University of the Arts (UDK), Berlin": the school is below
+            school = _school(education[i + 1].text, 0, skip_subject=False)
+            quoted = _Line(f"{line.text} / {education[i + 1].text}", line.section, line.page)
+        if school and school not in schools:
             schools.append(school)
-            school_lines.append(line)
+            school_lines.append(quoted)
         # this degree's lines: its own, then the next few up to the next degree (dates on their own line)
         entry = [line]
         for following in education[i + 1:i + 1 + LOOKAHEAD]:
@@ -476,17 +555,32 @@ def _prose_disciplines(sentences: list[_Line]) -> tuple[list[str], _Line] | None
     return kept, first_at[kept[0]]          # quoted: where the most-named discipline first appears
 
 
+# "2021 Rain Score" / "2013–2015 Labor in a Single Shot": a year, then a title. Short lines only
+# (a wrapped line of prose can start with a year too), and never in Education (years of study)
+YEAR_FIRST_WORK = re.compile(r"^(19[5-9]\d|20\d\d)(?:\s*[-–—]\s*(?:19[5-9]\d|20\d\d))?:?\s+[\"“‘'A-ZÀ-Ý]")
+MAX_WORK_WORDS = 10
+
+
 def _earliest_work(lines: list[_Line], today: date) -> tuple[int, _Line] | None:
-    """Portfolio entries are "Title, 2021": the earliest one."""
-    works = [(int(m.group(1)), line) for line in lines if (m := WORK_YEAR.match(line.text))]
+    """Portfolio entries are "Title, 2021" or "2021 Title": the earliest one. Year-first lines count
+    only outside a named section or in a career one (not under Teaching, Experience...)."""
+    works = []
+    for line in lines:
+        section = line.section or ""
+        if match := WORK_YEAR.match(line.text):
+            works.append((int(match.group(1)), line))
+        elif (len(line.text.split()) <= MAX_WORK_WORDS and not EDUCATION_SECTION.search(section)
+              and (not section or CAREER_SECTION.search(section))
+              and (match := YEAR_FIRST_WORK.match(line.text))):
+            works.append((int(match.group(1)), line))
     works = [(year, line) for year, line in works if year <= today.year]
     return min(works, key=lambda w: w[0]) if works else None
 
 
 def extract_practice(chunks: list[Chunk], document: str, kind: str, today: date | None = None) -> list[Suggestion]:
-    """The Practice fields an artist statement or portfolio can state: disciplines, applying as
-    (statements: "We are a theatre collective"), active since (portfolios: the earliest dated work).
-    Career stage is never read: it's the artist's own call."""
+    """The Practice fields prose can state: disciplines, applying as ("We are a theatre collective"),
+    active since (the earliest dated work). Written for statements and portfolios; `kind` only picks
+    the wording of the note. Career stage is never read: it's the artist's own call."""
     today = today or date.today()
     lines = _lines(chunks)
     sentences = _sentences(lines)
@@ -498,18 +592,19 @@ def extract_practice(chunks: list[Chunk], document: str, kind: str, today: date 
             suggestions.append(Suggestion(field, value, line.text, _citation(document, line), note))
 
     add("disciplines", _prose_disciplines(sentences),
-        note="named more than once" if kind == "statement" else "named in your works' descriptions")
-    if kind == "statement":
-        add("applicant_type", _applicant_type(sentences[:6]))
-    if kind == "portfolio":
-        add("active_since", _earliest_work(lines, today), note="your earliest dated work in the portfolio")
+        note="named in your works' descriptions" if kind == "portfolio" else "named more than once")
+    add("applicant_type", _applicant_type(sentences[:6]))
+    add("active_since", _earliest_work(lines, today), note=f"your earliest dated work in the {KIND_NAMES[kind]}")
     return suggestions
 
 
 # -- all together ---------------------------------------------------------------------------------
 
+KIND_NAMES = {"cv": "CV", "statement": "statement", "portfolio": "portfolio"}
+
 def extract_profile(chunks: list[Chunk], document: str, today: date | None = None) -> list[Suggestion]:
-    """Profile values found in one CV, each with the line it comes from. Empty fields are left out."""
+    """Profile values found by the CV rules, each with the line it comes from. Empty fields are left
+    out. Safe on any document (see extract_all): each rule reads only where a CV states the fact."""
     today = today or date.today()
     lines = _lines(chunks)
     intro = _intro(lines)
@@ -534,4 +629,19 @@ def extract_profile(chunks: list[Chunk], document: str, today: date | None = Non
     add("languages", _languages(lines))
     for field, value, line in _education(lines, today):
         add(field, (value, line))
+    return suggestions
+
+
+def extract_all(chunks: list[Chunk], document: str, kind: str, today: date | None = None) -> list[Suggestion]:
+    """Every rule on any document: an artist may upload one file holding CV, statement and portfolio
+    together ("CV-Portfolio.pdf"), whatever slot it goes in. In a CV the CV rules go first; in a
+    statement or portfolio the prose rules do (their disciplines come from the whole text, not just
+    the opening lines). One suggestion per field: the first found."""
+    cv_rules = extract_profile(chunks, document, today)
+    prose = extract_practice(chunks, document, kind, today)
+    suggestions, taken = [], set()
+    for suggestion in (cv_rules + prose if kind == "cv" else prose + cv_rules):
+        if suggestion.field not in taken:
+            suggestions.append(suggestion)
+            taken.add(suggestion.field)
     return suggestions

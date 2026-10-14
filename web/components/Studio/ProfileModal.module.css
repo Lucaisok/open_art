@@ -1,0 +1,58 @@
+/* the tabs: underlined text, the selected one with a lime inset line (design: STUDIO.md) */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  margin-bottom: -2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-grey-600);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--color-ink);
+  box-shadow: inset 0 -4px 0 var(--color-lime);
+}
+
+.tabError {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #d92d20;
+  color: var(--color-white);
+  font-size: 12px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 24px 14px;
+}
+
+.problem {
+  margin-right: auto;
+}

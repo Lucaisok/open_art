@@ -18,9 +18,11 @@ ranked call says why it is there: the specific words it shares with the artist's
 is a broad match (src/matching/explain.py).
 
 "Matched to you" ranks by the artist's own words: from each of their documents (statement, portfolio,
-CV), the passages about their practice and wishes (suggest_query, RAG step 4), averaged; no
-documents -> nearest deadline. Short matching terms were tried instead and ranked worse
-(workflow.MD, step 5b).
+CV), the passages about their practice and wishes (suggest_query, RAG step 4), averaged; and their
+saved current and planned works (projects.can_propose), which weigh more than all the documents
+together (PROJECT_WEIGHT): what the artist is making now is what they apply with. Projects only, or
+documents only, rank on their own; neither -> nearest deadline. Short matching terms were tried
+instead of documents and ranked worse (workflow.MD, step 5b).
 
 The corpus, the index, the engine and the model are loaded once per process (get_matcher), sharing
 the embedding model already loaded for the artist's documents: one copy in memory, not two.
@@ -39,7 +41,8 @@ from sqlalchemy import select
 
 from api.auth import DB, CurrentUser
 from api.knowledge_base import PgKnowledgeBase, get_embedder
-from api.models import Document, Profile
+from api.models import Document, Profile, Project, SavedCall
+from api.projects import can_propose, project_text
 from api.profile import ProfileValues, to_artist_profile
 from src.eligibility.engine import TOPIC, Item, Status, Verdict
 from src.eligibility.profile import ArtistProfile
@@ -57,6 +60,10 @@ router = APIRouter(tags=["discover"])
 PAGE_SIZE = 30       # calls per page: the board asks for the next page as the artist scrolls
 MAX_PAGE = 2000      # a page can be longer: "Back to results" reloads every call shown before
 RANKING_KINDS = ["statement", "portfolio", "cv"]   # all of them rank "Matched to you" (listed in this order)
+# the current and planned works' share of the ranking vector, the documents having the rest. More than
+# half: the project the artist is working on decides first, their practice as a whole second. A
+# judgement, not measured: the evaluation personas have no projects (workflow.MD, "Projects in matching")
+PROJECT_WEIGHT = 0.6
 
 # document id -> its embedded ranking query (None: nothing to rank by). Building one takes ~1 s
 # (retrieval + embedding ~2,000 characters), so it is done once per document, not per search. A new
@@ -65,6 +72,8 @@ _query_vectors: dict[uuid.UUID, np.ndarray | None] = {}
 MAX_CACHED_QUERIES = 1000
 # document id -> the text of its ranking query (what _query_vectors embeds): the explanation reads it
 _query_texts: dict[uuid.UUID, str] = {}
+# project text -> its embedding (a project's text changes when it is edited, so the text is the key)
+_project_vectors: dict[str, np.ndarray] = {}
 
 
 @lru_cache
@@ -100,7 +109,7 @@ def saved_profile(db, user_id) -> tuple[ArtistProfile, bool]:
     return to_artist_profile(values), filled
 
 
-def _place(o: ProcessedOpportunity) -> tuple[str | None, list[str]]:
+def place(o: ProcessedOpportunity) -> tuple[str | None, list[str]]:
     """City and countries as shown. The countries come from the controlled vocabulary: the literal
     translation (country_en) can read "of the Slovak Republic"."""
     countries = [c for c in o.country_canonical if c != ANY_COUNTRY]
@@ -161,6 +170,7 @@ class ResultOut(BaseModel):
     funding: str | None         # "EUR 18,000", only when clear and significant (headline_funding)
     group: Group                # fit / other_discipline / not_eligible: the list's three groups
     why: CardWhyOut | None = None   # None when ordered by deadline (nothing ranks it)
+    saved: bool = False         # in the artist's saved calls (api/saved.py)
 
 
 class SearchOut(BaseModel):
@@ -172,8 +182,12 @@ class SearchOut(BaseModel):
     profile_filled: bool        # False: the page asks the artist to fill in their profile
 
 
+def _saved_ids(db, user_id: uuid.UUID) -> set[str]:
+    return set(db.scalars(select(SavedCall.opportunity_id).where(SavedCall.user_id == user_id)))
+
+
 def _result(match: Match, o: ProcessedOpportunity, why: CardWhyOut | None) -> ResultOut:
-    city, countries = _place(o)
+    city, countries = place(o)
     return ResultOut(id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
                      disciplines=disciplines_shown(o),
                      city=city, countries=countries, deadline=o.deadline_date, status=match.verdict.status,
@@ -206,13 +220,14 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
     artist = ArtistText(ranking_documents(db, user.id, matcher)) if vector is not None else None
     stats = ArtistStats.of(matcher.index.vectors, vector) if vector is not None else None
     results = []
+    saved = _saved_ids(db, user.id)
     for m in page:
         o, why = matcher.get(m.opportunity_id), None
         if artist is not None:
             e = explain(matcher.explainer, artist, o)
             mismatch = discipline_mismatch(o, m.verdict, profile)
             why = CardWhyOut(shared=e.shared, match=match_percent(matcher, o, vector, stats, len(e.shared), mismatch))
-        results.append(_result(m, o, why))
+        results.append(_result(m, o, why).model_copy(update={"saved": o.id in saved}))
     return SearchOut(results=results, total=len(matches), groups=groups, order=order, ranked_by=ranked_by,
                      profile_filled=filled)
 
@@ -231,12 +246,30 @@ def document_vector(db, user_id: uuid.UUID, document: Document, matcher: Matcher
     return _query_vectors[document.id]
 
 
+def ranking_projects(db, user_id: uuid.UUID) -> list[tuple[str, str]]:
+    """[(label, text)] of the artist's current and planned works, current first: what ranks calls
+    before the documents. The label reads after "your": 'current project "Memorias"'."""
+    projects = [p for p in db.scalars(select(Project).where(Project.user_id == user_id)
+                                      .order_by(Project.created_at, Project.id)) if can_propose(p)]
+    projects.sort(key=lambda p: p.status != "current")
+    return [(f'{p.status} project “{p.title or "untitled"}”', project_text(p)) for p in projects]
+
+
+def _project_vector(matcher: Matcher, text: str) -> np.ndarray:
+    if text not in _project_vectors:
+        if len(_project_vectors) >= MAX_CACHED_QUERIES:
+            _project_vectors.pop(next(iter(_project_vectors)))
+        _project_vectors[text] = embed_query(matcher.embedder, text)
+    return _project_vectors[text]
+
+
 def ranking_documents(db, user_id: uuid.UUID, matcher: Matcher) -> list[tuple[str, str]]:
-    """[(file name, ranking query text)] of the artist's documents: what the explanation reads.
-    The same texts ranking_vector embeds (built and cached by document_vector)."""
+    """[(name, text)] of what ranks the calls, as the explanation reads it: the current and planned
+    works first (so their sentences win a tie), then the documents' ranking queries (the same texts
+    ranking_vector embeds, built and cached by document_vector)."""
     documents = sorted(db.scalars(select(Document).where(Document.user_id == user_id)),
                        key=lambda d: RANKING_KINDS.index(d.kind))
-    found = []
+    found = list(ranking_projects(db, user_id))
     for document in documents:
         document_vector(db, user_id, document, matcher)   # builds the query text once, then cached
         if text := _query_texts.get(document.id):
@@ -244,18 +277,31 @@ def ranking_documents(db, user_id: uuid.UUID, matcher: Matcher) -> list[tuple[st
     return found
 
 
+def _unit(vectors: list[np.ndarray]) -> np.ndarray:
+    mean = np.mean(vectors, axis=0)
+    return mean / np.linalg.norm(mean)   # back to length 1: a cosine again
+
+
 def ranking_vector(db, user_id: uuid.UUID, matcher: Matcher) -> tuple[list[str], np.ndarray | None]:
-    """What "Matched to you" ranks by: every document the artist uploaded (statement, portfolio,
-    CV), each embedded on its own and averaged, so each counts equally and none is cut off by the
-    model's 512-token limit (workflow.MD step 5b: Ilka 6 -> 10 of 10, Tomás 9 -> 9).
-    Returns (file names, vector); ([], None) when no document gives a query."""
+    """What "Matched to you" ranks by. Every document the artist uploaded (statement, portfolio, CV),
+    each embedded on its own and averaged, so each counts equally and none is cut off by the model's
+    512-token limit (workflow.MD step 5b: Ilka 6 -> 10 of 10, Tomás 9 -> 9). Then the current and
+    planned works, averaged the same way and given PROJECT_WEIGHT of the result. Without projects
+    this is exactly the documents' vector, as before.
+    Returns (what it ranks by: project labels, then file names; vector); ([], None) when nothing does."""
     documents = sorted(db.scalars(select(Document).where(Document.user_id == user_id)),
                        key=lambda d: RANKING_KINDS.index(d.kind))
     used = [(d.file_name, v) for d in documents if (v := document_vector(db, user_id, d, matcher)) is not None]
-    if not used:
+    projects = [(label, _project_vector(matcher, text)) for label, text in ranking_projects(db, user_id)]
+    names = [label for label, _ in projects] + [name for name, _ in used]
+    if not used and not projects:
         return [], None
-    mean = np.mean([v for _, v in used], axis=0)
-    return [name for name, _ in used], mean / np.linalg.norm(mean)   # back to length 1: a cosine again
+    if not projects:
+        return names, _unit([v for _, v in used])
+    if not used:
+        return names, _unit([v for _, v in projects])
+    mixed = PROJECT_WEIGHT * _unit([v for _, v in projects]) + (1 - PROJECT_WEIGHT) * _unit([v for _, v in used])
+    return names, mixed / np.linalg.norm(mixed)
 
 
 # -- one opportunity ---------------------------------------------------------------------------------
@@ -342,11 +388,12 @@ class OpportunityOut(BaseModel):
     verdict: VerdictOut
     profile_filled: bool
     why: WhyOut | None = None   # None without documents (nothing ranks the call)
+    saved: bool = False         # in the artist's saved calls (api/saved.py)
 
 
 def why_matched(db, user_id: uuid.UUID, o: ProcessedOpportunity, matcher: Matcher,
                 mismatch: bool) -> WhyOut | None:
-    """What the call shares with the artist's documents; None when they have none to rank by."""
+    """What the call shares with the artist's projects and documents; None when nothing ranks it."""
     documents = ranking_documents(db, user_id, matcher)
     _, vector = ranking_vector(db, user_id, matcher)
     if not documents or vector is None:
@@ -513,7 +560,7 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
         raise HTTPException(404, "No such call.")
     profile, filled = saved_profile(db, user.id)
     verdict = matcher.engine.evaluate(profile, o)   # once: the page's checks and the match's mismatch
-    city, countries = _place(o)
+    city, countries = place(o)
     return OpportunityOut(
         id=o.id, title=o.title_en, organisation=o.organisation, types=o.opportunity_type_canonical,
         disciplines=disciplines_shown(o), city=city, countries=countries, deadline=o.deadline_date, funding=funding_label(o), funded=is_funded(o),
@@ -529,4 +576,5 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
         application_language=o.application_language_en or o.application_language,
         submission_method=o.submission_method, program_dates=o.program_dates_en or o.program_dates,
         verdict=verdict_out(verdict), profile_filled=filled,
-        why=why_matched(db, user.id, o, matcher, discipline_mismatch(o, verdict, profile)))
+        why=why_matched(db, user.id, o, matcher, discipline_mismatch(o, verdict, profile)),
+        saved=db.get(SavedCall, (user.id, o.id)) is not None)

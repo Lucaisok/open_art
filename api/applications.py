@@ -5,6 +5,10 @@ OpenArt API — an artist's application to one call (workflow.MD, "Step 6 — Ap
                                                                     drafts, ticks and documents
     PUT  /api/applications/{opportunity_id}/items/{key}             save a draft (back to "draft") or a tick
     POST /api/applications/{opportunity_id}/items/{key}/confirm     "I have reviewed this"
+    PUT  /api/applications/{opportunity_id}/projects                the projects chosen for the application
+    DELETE /api/applications/{opportunity_id}/projects              ...back to the suggested ones
+    PUT  /api/applications/{opportunity_id}/items/{key}/projects    ...or for one text only (null = the application's)
+    PUT  /api/applications/{opportunity_id}/items/{key}/images      the images chosen for an image item
     GET  /api/applications/{opportunity_id}/items/{key}/messages    the chat about one item
     POST /api/applications/{opportunity_id}/items/{key}/messages    a message to the agent: its reply
                                                                     and a new draft (src/agent/drafting.py)
@@ -29,6 +33,7 @@ from typing import Literal
 
 from docx import Document as DocxDocument
 from fastapi import APIRouter, HTTPException
+import numpy as np
 from fastapi.responses import Response
 from openai import OpenAI, OpenAIError
 from pydantic import BaseModel, Field
@@ -38,15 +43,36 @@ from api.auth import DB, CurrentUser
 from api import discover   # discover.get_matcher(), not imported by name: the tests replace it
 from api.documents import stored_path
 from api.knowledge_base import PgKnowledgeBase
-from api.models import AgentMessage, Application, ApplicationItem, Document, Profile, Project
+from api.images import ImageOut, image_out, image_path
+from api.models import AgentMessage, Application, ApplicationItem, Document, Profile, Project, ProjectImage, SavedCall
+from api.projects import can_propose, project_text
 from src.agent.checklist import ChecklistItem, build_checklist
 from src.agent.drafting import Passage, TurnContext, agent_turn
 from src.eligibility.engine import Status
+from src.matching.index import embed_query
 from src.models.processed_opportunity import ProcessedOpportunity
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 MAX_DRAFT_CHARS = 20_000   # far above any call's limit; only stops abuse
+
+
+class Selection(BaseModel):
+    """Which saved projects a text is about: the one being proposed, and past or related work."""
+    proposing: uuid.UUID | None = None
+    mention: list[uuid.UUID] = Field(default=[], max_length=50)
+
+
+class ProjectChoiceOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: str | None          # past / current / planned
+    category: str | None        # work / exhibition / performance / commission (None: saved before categories)
+    years: str | None
+    medium: str | None = None
+    can_propose: bool = False   # a planned or current work (projects.can_propose): the one an application proposes
+    suggested: bool             # in the suggested selection (closest to the call)
+    images: list[ImageOut] = []  # its images, shown as thumbnails in the picker
 
 
 class ItemOut(BaseModel):
@@ -56,9 +82,25 @@ class ItemOut(BaseModel):
     title: str
     limit: str | None
     document: str | None        # "cv" / "statement" / "portfolio" that covers it (uploaded or not)
-    # write: "empty" / "draft" / "confirmed"; gather: "uploaded" (its document is) / "ticked" / "missing"
-    state: Literal["empty", "draft", "confirmed", "uploaded", "ticked", "missing"]
+    # write: "empty" / "draft" / "confirmed"; gather: "uploaded" (its document is) / "chosen" (images
+    # chosen for it) / "ticked" / "missing"
+    state: Literal["empty", "draft", "confirmed", "uploaded", "chosen", "ticked", "missing"]
+    images_wanted: bool = False         # asks for pictures of the work (checklist.asks_for_images)
+    images: list[ImageOut] = []         # the ones chosen, in the artist's order
     draft: str | None
+    projects: Selection | None = None   # this text's own choice; None = the application's
+
+
+class ProjectImagesOut(BaseModel):
+    """One saved project's images, to choose from for an image item."""
+    project_id: uuid.UUID
+    title: str
+    years: str | None = None
+    images: list[ImageOut]
+
+
+class ImagesIn(BaseModel):
+    ids: list[uuid.UUID] = Field(default=[], max_length=50)   # in the order chosen; [] = none
 
 
 class ApplicationDocumentOut(BaseModel):
@@ -69,6 +111,10 @@ class ApplicationDocumentOut(BaseModel):
 class ApplicationOut(BaseModel):
     opportunity_id: str
     title: str
+    organisation: str | None = None
+    city: str | None = None
+    countries: list[str] = []
+    saved: bool = False               # in the artist's saved calls (api/saved.py)
     deadline: date | None
     source_url: str
     how_to_apply: str | None
@@ -80,6 +126,11 @@ class ApplicationOut(BaseModel):
     documents: list[ApplicationDocumentOut]
     # what stands before the download ("2 texts to review"); [] = complete. Same rule as the download route
     missing: list[str] = []
+    projects: list[ProjectChoiceOut] = []   # the artist's saved projects, closest to the call first
+    selection: Selection = Selection()      # the application's choice (the suggested one until chosen)
+    selection_chosen: bool = False          # False = still the suggestion
+    # the saved projects' images, when an item asks for images (else [])
+    image_choices: list[ProjectImagesOut] = []
 
 
 class ItemIn(BaseModel):
@@ -102,32 +153,58 @@ def _application(db, user_id: uuid.UUID, opportunity_id: str, create: bool = Fal
         application = Application(user_id=user_id, opportunity_id=opportunity_id)
         db.add(application)
         db.flush()   # gives it its id
+        # starting an application saves the call: the Studio lists it (api/saved.py)
+        from api.saved import save_call   # api/saved.py imports this module
+        save_call(db, user_id, discover.get_matcher().get(opportunity_id))
     return application
 
 
-def _state(item: ChecklistItem, saved: ApplicationItem | None, uploaded: set[str]) -> str:
+def _chosen(saved: ApplicationItem | None, images: dict[str, ProjectImage]) -> list[ProjectImage]:
+    """The images chosen for an item that still exist and belong to a saved project."""
+    return [images[i] for i in (saved.images or []) if i in images] if saved else []   # deleted since: left out
+
+
+def _state(item: ChecklistItem, saved: ApplicationItem | None, uploaded: set[str], chosen: list) -> str:
     if item.kind == "write":
         return saved.status if saved and saved.status else "empty"
     if item.document in uploaded:
         return "uploaded"
+    if chosen:
+        return "chosen"
     return "ticked" if saved and saved.ticked else "missing"
 
 
-def _item_out(item: ChecklistItem, saved: ApplicationItem | None, uploaded: set[str]) -> ItemOut:
+def _item_out(item: ChecklistItem, saved: ApplicationItem | None, uploaded: set[str],
+              images: dict[str, ProjectImage]) -> ItemOut:
+    chosen = _chosen(saved, images) if item.images else []
     return ItemOut(key=item.key, kind=item.kind, source=item.source, title=item.title, limit=item.limit,
-                   document=item.document, state=_state(item, saved, uploaded),
-                   draft=saved.draft if saved else None)
+                   document=item.document, state=_state(item, saved, uploaded, chosen),
+                   draft=saved.draft if saved else None,
+                   projects=Selection(**saved.projects) if saved and saved.projects else None,
+                   images_wanted=item.images, images=[image_out(i) for i in chosen])
 
 
-def _application_out(db, user_id: uuid.UUID, call: ProcessedOpportunity) -> ApplicationOut:
+def _project_images(db, user_id: uuid.UUID) -> dict[str, ProjectImage]:
+    """{image id: image} of every image a saved project holds: what an image item can use."""
+    rows = db.scalars(select(ProjectImage).where(ProjectImage.user_id == user_id, ProjectImage.project_id.is_not(None))
+                      .order_by(ProjectImage.position, ProjectImage.created_at))
+    return {str(i.id): i for i in rows}
+
+
+def application_out(db, user_id: uuid.UUID, call: ProcessedOpportunity) -> ApplicationOut:
     documents = list(db.scalars(select(Document).where(Document.user_id == user_id).order_by(Document.kind)))
     uploaded = {d.kind for d in documents}
     application = _application(db, user_id, call.id)
     saved = {i.key: i for i in application.items} if application else {}
-    items = [_item_out(i, saved.get(i.key), uploaded) for i in build_checklist(call)]
+    images = _project_images(db, user_id)
+    checklist = build_checklist(call)
+    items = [_item_out(i, saved.get(i.key), uploaded, images) for i in checklist]
     profile, _ = discover.saved_profile(db, user_id)
+    city, countries = discover.place(call)
     out = ApplicationOut(
-        opportunity_id=call.id, title=call.title_en, deadline=call.deadline_date, source_url=call.source_url,
+        opportunity_id=call.id, title=call.title_en, organisation=call.organisation, city=city, countries=countries,
+        saved=db.get(SavedCall, (user_id, call.id)) is not None,
+        deadline=call.deadline_date, source_url=call.source_url,
         how_to_apply=call.how_to_apply_en or call.how_to_apply,
         application_language=call.application_language_en or call.application_language,
         submission_method=call.submission_method,
@@ -135,6 +212,23 @@ def _application_out(db, user_id: uuid.UUID, call: ProcessedOpportunity) -> Appl
         to_draft=[i for i in items if i.kind == "write"], to_gather=[i for i in items if i.kind == "gather"],
         documents=[ApplicationDocumentOut(kind=d.kind, file_name=d.file_name) for d in documents])
     out.missing = missing(out)
+    projects = _saved_projects(db, user_id)
+    suggested = suggested_projects(call, projects)
+    by_id = {p.id: p for p in projects}
+    ranked = [by_id[i] for i in ([suggested.proposing] if suggested.proposing else []) + suggested.mention]
+    ranked += [p for p in projects if p not in ranked]
+    picked = {suggested.proposing, *suggested.mention}
+    by_project: dict[uuid.UUID, list[ImageOut]] = {}
+    for image in images.values():
+        by_project.setdefault(image.project_id, []).append(image_out(image))
+    out.projects = [ProjectChoiceOut(id=p.id, title=p.title or "Untitled project", status=p.status,
+                                     category=p.category, years=p.years, medium=p.medium, can_propose=can_propose(p),
+                                     suggested=p.id in picked, images=by_project.get(p.id, [])) for p in ranked]
+    out.selection_chosen = bool(application and application.projects is not None)
+    out.selection = _clean(Selection(**application.projects), projects) if out.selection_chosen else suggested
+    if any(i.images for i in checklist):
+        out.image_choices = [ProjectImagesOut(project_id=p.id, title=p.title or "Untitled project", years=p.years,
+                                              images=by_project[p.id]) for p in ranked if p.id in by_project]
     return out
 
 
@@ -155,7 +249,7 @@ def _saved_item(db, application: Application, key: str) -> ApplicationItem:
 
 @router.get("/{opportunity_id}")
 def get_application(opportunity_id: str, user: CurrentUser, db: DB) -> ApplicationOut:
-    return _application_out(db, user.id, _call(opportunity_id))
+    return application_out(db, user.id, _call(opportunity_id))
 
 
 @router.put("/{opportunity_id}/items/{key}")
@@ -173,7 +267,25 @@ def save_item(opportunity_id: str, key: str, body: ItemIn, user: CurrentUser, db
     if body.ticked is not None:
         saved.ticked = body.ticked
     db.commit()
-    return _application_out(db, user.id, call)
+    return application_out(db, user.id, call)
+
+
+@router.put("/{opportunity_id}/items/{key}/images")
+def choose_images(opportunity_id: str, key: str, body: ImagesIn, user: CurrentUser, db: DB) -> ApplicationOut:
+    """The images to send for an item asking for images: the artist's own choice from their saved
+    projects' images, in their order. [] clears it."""
+    call = _call(opportunity_id)
+    item = _checklist_item(call, key)
+    if not item.images:
+        raise HTTPException(422, "This item doesn't ask for images.")
+    images = _project_images(db, user.id)
+    ids = list(dict.fromkeys(str(i) for i in body.ids))
+    if any(i not in images for i in ids):
+        raise HTTPException(422, "That isn't one of your projects' images.")
+    saved = _saved_item(db, _application(db, user.id, call.id, create=True), key)
+    saved.images = ids or None
+    db.commit()
+    return application_out(db, user.id, call)
 
 
 @router.post("/{opportunity_id}/items/{key}/confirm")
@@ -186,7 +298,110 @@ def confirm_item(opportunity_id: str, key: str, user: CurrentUser, db: DB) -> Ap
         raise HTTPException(409, "There is no draft to confirm yet.")
     saved.status = "confirmed"
     db.commit()
-    return _application_out(db, user.id, call)
+    return application_out(db, user.id, call)
+
+
+# -- projects for the application (sub-step 7) ---------------------------------------------------------
+
+SUGGESTED_MENTIONS = 3   # past or related projects pre-ticked
+# project text -> its embedding: a project is embedded once per text, not on every page load
+_project_vectors: dict[str, np.ndarray] = {}
+MAX_CACHED_PROJECTS = 2000
+
+
+def _saved_projects(db, user_id: uuid.UUID) -> list[Project]:
+    """The artist's saved projects (not interests), oldest first: what can be chosen."""
+    return list(db.scalars(select(Project).where(Project.user_id == user_id, Project.kind == "project")
+                           .order_by(Project.created_at, Project.id)))
+
+
+def suggested_projects(call: ProcessedOpportunity, projects: list[Project]) -> Selection:
+    """A rule, no LLM: the projects closest to the call, embedded with Discover's model and compared
+    with the call's own vector in the index. Proposing = the closest planned or current work (none
+    if there is none); mention = the next closest three. The artist changes them freely."""
+    matcher = discover.get_matcher()
+    row = matcher._row.get(call.id)
+    if row is None or not projects:
+        return Selection()
+    call_vector = matcher.index.vectors[row]
+    if len(_project_vectors) > MAX_CACHED_PROJECTS:
+        _project_vectors.clear()
+
+    def closeness(p: Project) -> float:
+        text = project_text(p)
+        if text not in _project_vectors:
+            _project_vectors[text] = embed_query(matcher.embedder, text)
+        return float(_project_vectors[text] @ call_vector)
+
+    ranked = sorted(projects, key=closeness, reverse=True)
+    proposing = next((p for p in ranked if can_propose(p)), None)
+    mention = [p.id for p in ranked if p is not proposing][:SUGGESTED_MENTIONS]
+    return Selection(proposing=proposing.id if proposing else None, mention=mention)
+
+
+def _clean(selection: Selection, projects: list[Project]) -> Selection:
+    """Drops projects deleted since they were chosen; the proposed one is never also a mention."""
+    ids = {p.id for p in projects}
+    proposing = selection.proposing if selection.proposing in ids else None
+    return Selection(proposing=proposing, mention=[i for i in dict.fromkeys(selection.mention)
+                                                   if i in ids and i != proposing])
+
+
+def _check_selection(selection: Selection, projects: list[Project]) -> None:
+    ids = {p.id for p in projects}
+    if (selection.proposing and selection.proposing not in ids) or any(i not in ids for i in selection.mention):
+        raise HTTPException(422, "That isn't one of your projects.")
+
+
+def effective_selection(db, user_id: uuid.UUID, call: ProcessedOpportunity, application: Application | None,
+                        saved: ApplicationItem | None) -> Selection:
+    """What a text uses: its own choice, else the application's, else the suggestion."""
+    projects = _saved_projects(db, user_id)
+    if saved and saved.projects is not None:
+        return _clean(Selection(**saved.projects), projects)
+    if application and application.projects is not None:
+        return _clean(Selection(**application.projects), projects)
+    return suggested_projects(call, projects)
+
+
+class ItemProjectsIn(BaseModel):
+    selection: Selection | None   # None: back to the application's choice
+
+
+@router.put("/{opportunity_id}/projects")
+def choose_projects(opportunity_id: str, body: Selection, user: CurrentUser, db: DB) -> ApplicationOut:
+    call = _call(opportunity_id)
+    _check_selection(body, _saved_projects(db, user.id))
+    application = _application(db, user.id, call.id, create=True)
+    application.projects = _clean(body, _saved_projects(db, user.id)).model_dump(mode="json")
+    db.commit()
+    return application_out(db, user.id, call)
+
+
+@router.delete("/{opportunity_id}/projects")
+def suggested_again(opportunity_id: str, user: CurrentUser, db: DB) -> ApplicationOut:
+    """Back to the suggested projects (the closest to the call): the artist's own choice is forgotten."""
+    call = _call(opportunity_id)
+    application = _application(db, user.id, call.id)
+    if application is not None:
+        application.projects = None
+        db.commit()
+    return application_out(db, user.id, call)
+
+
+@router.put("/{opportunity_id}/items/{key}/projects")
+def choose_item_projects(opportunity_id: str, key: str, body: ItemProjectsIn, user: CurrentUser,
+                         db: DB) -> ApplicationOut:
+    call = _call(opportunity_id)
+    if _checklist_item(call, key).kind != "write":
+        raise HTTPException(422, "Only a text to write has projects.")
+    if body.selection is not None:
+        _check_selection(body.selection, _saved_projects(db, user.id))
+    saved = _saved_item(db, _application(db, user.id, call.id, create=True), key)
+    saved.projects = (_clean(body.selection, _saved_projects(db, user.id)).model_dump(mode="json")
+                      if body.selection is not None else None)
+    db.commit()
+    return application_out(db, user.id, call)
 
 
 # -- the agent (sub-step 4) ----------------------------------------------------------------------------
@@ -205,6 +420,7 @@ class MessageOut(BaseModel):
     role: Literal["artist", "agent"]
     content: str
     sources: list[str]          # the agent's: citations of the passages it relied on
+    wrote_words: int | None = None   # the agent's: it rewrote the draft, now this many words
     created_at: datetime
 
 
@@ -228,7 +444,8 @@ def _messages(db, application: Application | None, key: str) -> list[AgentMessag
 
 
 def _message_out(m: AgentMessage) -> MessageOut:
-    return MessageOut(role=m.role, content=m.content, sources=m.sources, created_at=m.created_at)
+    return MessageOut(role=m.role, content=m.content, sources=m.sources, wrote_words=m.wrote_words,
+                      created_at=m.created_at)
 
 
 def _passages(db, user_id: uuid.UUID, query: str, statement_file: str | None) -> list[Passage]:
@@ -250,14 +467,21 @@ def _profile(db, user_id: uuid.UUID) -> dict[str, object]:
     return {k: v for k, v in (row.values if row else {}).items() if v not in (None, [], "")}
 
 
-def _projects(db, user_id: uuid.UUID) -> list[str]:
-    lines = []
-    for p in db.scalars(select(Project).where(Project.user_id == user_id)):
-        if p.kind == "interest":
-            lines.append(f"Interest: {p.summary}")
-        else:
-            when = ", ".join(x for x in (p.status, p.years, p.medium) if x)
-            lines.append(f"{p.title or 'Untitled project'} ({when}): {p.summary or ''}".strip())
+def _project_line(p: Project) -> str:
+    when = ", ".join(x for x in (p.status, p.years, p.medium) if x)
+    return f"{p.title or 'Untitled project'} ({when}): {p.summary or ''}".strip()
+
+
+def _projects(db, user_id: uuid.UUID, selection: Selection) -> list[str]:
+    """The chosen projects only (sub-step 7), the proposed one marked, and every interest."""
+    by_id = {p.id: p for p in _saved_projects(db, user_id)}
+    if selection.proposing:
+        lines = [f"PROPOSING (the project this application is about): {_project_line(by_id[selection.proposing])}"]
+    else:
+        lines = ["No project is marked as the one being proposed."]
+    lines += [f"Past or related work: {_project_line(by_id[i])}" for i in selection.mention]
+    lines += [f"Interest: {p.summary}" for p in db.scalars(select(Project).where(Project.user_id == user_id,
+                                                                              Project.kind == "interest"))]
     return lines
 
 
@@ -292,7 +516,7 @@ def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUs
               "Project requirements": call.project_requirements_en or call.project_requirements,
               "Selection criteria": call.selection_criteria_en or call.selection_criteria,
               "Application language": call.application_language_en or call.application_language},
-        passages=passages, profile=_profile(db, user.id), projects=_projects(db, user.id),
+        passages=passages, profile=_profile(db, user.id), projects=_projects(db, user.id, effective_selection(db, user.id, call, application, saved)),
         other_drafts=other_drafts, history=[(m.role, m.content) for m in history],
         current_draft=body.draft if body.draft is not None else saved.draft,
         message=body.message, adapt_statement=adapt)
@@ -307,12 +531,15 @@ def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUs
     sources = list(dict.fromkeys(by_id[i] for i in answer.used_passages if i in by_id))   # unique, in order
     db.add(AgentMessage(application_id=application.id, item_key=key, role="artist", content=body.message,
                         created_at=asked_at))
+    previous = body.draft if body.draft is not None else saved.draft
+    rewrote = bool(answer.draft.strip()) and answer.draft != (previous or "")
     db.add(AgentMessage(application_id=application.id, item_key=key, role="agent", content=answer.reply,
-                        sources=sources, created_at=datetime.now(timezone.utc)))
+                        sources=sources, wrote_words=len(answer.draft.split()) if rewrote else None,
+                        created_at=datetime.now(timezone.utc)))
     saved.draft = answer.draft
     saved.status = "draft" if answer.draft.strip() else None   # the artist reviews it: never "confirmed" here
     db.commit()
-    return TurnOut(application=_application_out(db, user.id, call),
+    return TurnOut(application=application_out(db, user.id, call),
                    messages=[_message_out(m) for m in _messages(db, application, key)])
 
 
@@ -320,9 +547,9 @@ def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUs
 
 def missing(application: ApplicationOut) -> list[str]:
     """What still stands between the artist and a complete application: texts not reviewed, items
-    neither uploaded nor ticked. [] = complete."""
+    neither uploaded, nor given images, nor ticked. [] = complete."""
     to_review = sum(i.state != "confirmed" for i in application.to_draft)
-    to_gather = sum(i.state not in ("uploaded", "ticked") for i in application.to_gather)
+    to_gather = sum(i.state not in ("uploaded", "chosen", "ticked") for i in application.to_gather)
     out = []
     if to_review:
         out.append(f"{to_review} text{'s' if to_review > 1 else ''} to review")
@@ -340,10 +567,20 @@ def _call_lines(call: ProcessedOpportunity, application: ApplicationOut) -> list
     return lines
 
 
+def _image_folder(n: int, item: ItemOut) -> str:
+    """Where an image item's images go in the zip: "images/01 Images of previous works"."""
+    return f"images/{n:02d} {_safe_name(item.title)}"
+
+
 def _to_send(application: ApplicationOut) -> list[str]:
-    return [i.title + (f" ({i.limit})" if i.limit else "")
-            + (f": in this folder ({i.document})" if i.state == "uploaded" else ": you have it")
-            for i in application.to_gather]
+    def where(n: int, i: ItemOut) -> str:
+        if i.state == "uploaded":
+            return f": in this folder ({i.document})"
+        if i.state == "chosen":
+            return f": {len(i.images)} image{'s' if len(i.images) > 1 else ''} in {_image_folder(n, i)}"
+        return ": you have it"
+    return [i.title + (f" ({i.limit})" if i.limit else "") + where(n, i)
+            for n, i in enumerate(application.to_gather, start=1)]
 
 
 def checklist_text(call: ProcessedOpportunity, application: ApplicationOut, text_files: list[str]) -> str:
@@ -386,7 +623,7 @@ def download(opportunity_id: str, user: CurrentUser, db: DB) -> Response:
     (to paste into forms), all of them in application.docx (to attach), checklist.txt, and for each item
     covered by an upload that original file (only the documents the call asks for)."""
     call = _call(opportunity_id)
-    application = _application_out(db, user.id, call)
+    application = application_out(db, user.id, call)
     gaps = missing(application)
     if gaps:
         raise HTTPException(409, "Not complete yet: " + ", ".join(gaps) + ".")
@@ -404,6 +641,16 @@ def download(opportunity_id: str, user: CurrentUser, db: DB) -> Response:
         for d in documents:
             # "cv - my_cv.pdf": the slot first, so two uploads with the same name can't collide
             zip_file.write(stored_path(d), f"{d.kind} - {os.path.basename(d.file_name)}")
+        # each image item's chosen images, numbered in the artist's order, named after their project
+        images = _project_images(db, user.id)
+        titles = {p.id: p.title or "project" for p in _saved_projects(db, user.id)}
+        for n, item in enumerate(application.to_gather, start=1):
+            if item.state != "chosen":
+                continue
+            for m, shown in enumerate(item.images, start=1):
+                image = images[str(shown.id)]
+                name = f"{m:02d} {_safe_name(titles.get(image.project_id, 'project'))}.jpg"
+                zip_file.write(image_path(image), f"{_image_folder(n, item)}/{name}")
     name = _safe_name(call.title_en).replace(" ", "-")
     return Response(buffer.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{name}.zip"'})

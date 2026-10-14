@@ -70,3 +70,12 @@ a.pill:hover {
     padding: 16px;
   }
 }
+
+/* the Projects step: no pills, the steps are on the page */
+.setup {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-grey-400);
+}

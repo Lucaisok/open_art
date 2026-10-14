@@ -1,0 +1,122 @@
+.current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  background-color: var(--color-paper);
+}
+
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--color-grey-600);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 20px;
+  border: 3px dashed var(--color-ink);
+  border-radius: 16px;
+  background-color: var(--color-paper);
+  text-align: center;
+  cursor: pointer;
+}
+
+.dragging {
+  background-color: var(--color-lime);
+}
+
+.refused {
+  border-color: #d92d20;
+  background-color: var(--color-white);
+}
+
+.drop:focus-within {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+.dropTitle {
+  font-size: 20px;
+  font-weight: 900;
+  font-stretch: 112%;
+}
+
+.choose {
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.track {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background-color: var(--color-grey-200);
+  overflow: hidden;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  background-color: var(--color-ink);
+  transition: width 250ms ease;
+}
+
+.error {
+  color: #d92d20;
+  font-size: 15px;
+  font-weight: 800;
+}

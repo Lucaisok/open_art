@@ -52,7 +52,7 @@ from src.eligibility.classify import EligibilityClassifier  # noqa: E402
 from src.eligibility.safety_net import KEYWORD_CUES, keyword_hits  # noqa: E402
 
 LABELS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_annotations_multilabel.csv")
-CORPUS_CHUNKS_PATH = os.path.join(REPO_ROOT, "data", "processed", "eligibility_constraints.jsonl")
+CORPUS_CHUNKS_PATH = os.path.join(REPO_ROOT, "dataset", "labels", "eligibility_constraints.jsonl")
 
 SEEDS = range(10)
 RUNNER_UP_THRESHOLDS = [0.2, 0.3, 0.4]

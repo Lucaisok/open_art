@@ -8,7 +8,7 @@ front, gathered by the API (api/applications.py):
     the item           the question or material to write, and its stated limit
     the call           title, organisation, description, project requirements, selection criteria, language
     the artist         the passages of their documents closest to the item (RAG), their saved profile,
-                       their saved projects and interests
+                       the projects chosen for this text (the proposed one marked) and their interests
     the application    the other items' current drafts: its shared memory, so the texts stay consistent
                        and don't repeat each other
     the conversation   this item's earlier messages, the current draft (with the artist's own edits)
@@ -47,6 +47,8 @@ Rules:
   really there to the call; if the call's focus differs from the practice, say so in your reply.
 - Do not assume the artist's gender or pronouns from their name: in the third person use their name
   or "they", unless their pronouns are stated in their data or messages.
+- Use only the projects given. When the item asks about the project being proposed and no project
+  is marked PROPOSING, do not pick one: leave a placeholder and ask which project it is.
 - Answer what the item asks, for this call: use its description, project requirements and selection
   criteria. Be specific and concrete, not generic.
 - Respect the item's limit (words, characters) when one is stated.

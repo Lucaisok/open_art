@@ -179,6 +179,34 @@ def test_the_document_vectors_are_averaged(artist, small_matcher, monkeypatch):
     assert vector == pytest.approx(np.array([1.0, 1.0]) / np.sqrt(2))   # the mean, back to length 1
 
 
+def test_current_and_planned_works_weigh_more_than_the_documents(artist, small_matcher, monkeypatch):
+    """The project the artist is working on decides first (discover.PROJECT_WEIGHT); past works and
+    exhibitions don't rank (they are track record, and already in the documents)."""
+    vectors = {"statement.md": np.array([1.0, 0.0]), "Night Swim": np.array([0.0, 1.0])}
+    monkeypatch.setattr(discover, "_project_vectors", {})
+    monkeypatch.setattr(discover, "embed_query", lambda embedder, text: vectors[text])
+    monkeypatch.setattr(discover, "suggest_query", lambda kb, documents: SimpleNamespace(query=documents[0]))
+    upload(artist, "statement", f"{TOMAS}/statement.md")
+    artist.post("/api/projects", json={"title": "Night Swim", "status": "current"})
+    artist.post("/api/projects", json={"title": "Old Piece", "status": "past"})                  # not ranked
+    artist.post("/api/projects", json={"title": "A Show", "status": "current", "category": "exhibition"})
+    with Session(db.get_engine()) as session:
+        names, vector = discover.ranking_vector(session, user_id(artist), small_matcher)
+    assert names == ["current project “Night Swim”", "statement.md"]
+    w = discover.PROJECT_WEIGHT
+    expected = np.array([1 - w, w])
+    assert vector == pytest.approx(expected / np.linalg.norm(expected))
+    assert vector[1] > vector[0]                                       # the project leads
+
+
+def test_projects_alone_rank_the_calls(artist, monkeypatch):
+    """No document uploaded, a project typed in by hand: "Matched to you" ranks by it."""
+    monkeypatch.setattr(discover, "_project_vectors", {})
+    artist.post("/api/projects", json={"title": "Night Swim", "status": "planned", "summary": "A sound walk."})
+    body = search(artist, mode="matched")
+    assert body["order"] == "match" and body["ranked_by"] == ["planned project “Night Swim”"]
+
+
 def test_filters_apply(artist):
     assert ids(search(artist, mode="all", types=["Residency"])) == ["near", "blocked"]   # untyped call kept
     assert ids(search(artist, mode="all", funded_only=True)) == ["far"]
