@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -132,3 +132,51 @@ class DismissedSuggestion(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     key: Mapped[str] = mapped_column(Text, primary_key=True)
+
+
+# -- step 6: the application agent (workflow.MD, "Step 6 — Application agent") -------------------------
+
+class Application(Base):
+    """An artist's application to one call: created on the first draft, tick or message. What the call
+    asks for is not stored: src/agent/checklist.py reads it from the corpus every time."""
+    __tablename__ = "applications"
+    __table_args__ = (UniqueConstraint("user_id", "opportunity_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    opportunity_id: Mapped[str] = mapped_column(String(100))     # ProcessedOpportunity.id in the corpus
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    items: Mapped[list["ApplicationItem"]] = relationship(cascade="all, delete-orphan", passive_deletes=True)
+
+
+class ApplicationItem(Base):
+    """The artist's work on one checklist item (ChecklistItem.key): a draft and its review status for
+    an item to write, or the artist's own tick for an item to gather."""
+    __tablename__ = "application_items"
+
+    application_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"),
+                                                      primary_key=True)
+    key: Mapped[str] = mapped_column(String(20), primary_key=True)
+    draft: Mapped[str | None] = mapped_column(Text)
+    # None (no draft yet) -> "draft" -> "confirmed". Only the artist's "I have reviewed this" sets
+    # "confirmed", and any later change to the text sets it back to "draft"
+    status: Mapped[str | None] = mapped_column(String(10))
+    ticked: Mapped[bool] = mapped_column(Boolean, server_default="false")   # "I have this" (gather items)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                 onupdate=func.now())
+
+
+class AgentMessage(Base):
+    """One message of the chat about one item: the artist's, or the agent's reply."""
+    __tablename__ = "agent_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    application_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"),
+                                                      index=True)
+    item_key: Mapped[str] = mapped_column(String(20))
+    role: Mapped[str] = mapped_column(String(10))                  # "artist" or "agent"
+    content: Mapped[str] = mapped_column(Text)
+    # the agent's: the citations of the passages it relied on ("cv.pdf · p. 1 · EDUCATION")
+    sources: Mapped[list] = mapped_column(JSONB, server_default="[]")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

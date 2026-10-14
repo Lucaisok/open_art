@@ -642,6 +642,56 @@ scores them in a second. They were written by the same author as the rules
 and are tidy, so real CVs will leave more fields empty. An empty field is
 cheap: the artist fills it in.
 
+## The application agent (built 2026-10-14)
+
+How "Draft an application" works. The full design is in `workflow.MD`, "Step 6".
+
+```mermaid
+flowchart LR
+    X["Extraction\neach required material:\nwrite or gather"] --> CL["Checklist\n(rules, no LLM)"]
+    U["Uploaded documents"] --> CL
+    CL --> W["To draft:\nquestions + write items"]
+    CL --> G["To gather:\nCV, portfolio, budget..."]
+    W --> A["Agent turn on the selected item\n(OpenAI, + RAG + the other drafts)"]
+    A --> R{"Artist reviews\n'I have reviewed this'"}
+    R --> E["Copy / download"]
+    style R fill:#f2c94c,color:#333
+```
+
+- **Write or gather.** Every material a call asks for is marked when it is extracted: `write` is a
+  text the artist writes for this call (statement, proposal, motivation letter, bio), which the agent can
+  draft; `gather` is something they have or must get (CV, portfolio, budget, letters, ID), which goes
+  on the checklist. The calls extracted before this were marked by a one-off script that changed nothing
+  else. Corpus: 415 write, 636 gather.
+- **On the opportunity page** everything an application needs (project requirements, questions,
+  how to apply, what to send, selection criteria, language, how to submit) is grouped under one
+  "What you need to apply" dropdown in "Can you apply?". Each material is marked "to write" or
+  "to gather". "Draft an application" opens `/opportunities/[id]/apply`.
+- **The checklist** is built by rules every time the page opens, from the call alone: questions
+  and "write" materials are to draft, the rest are to gather. A gather item is ✓ when the
+  matching document (CV, portfolio, statement) is uploaded; otherwise the artist ticks it. Only the
+  artist's own work is stored: drafts (empty → draft → confirmed, and any edit goes back to draft)
+  and ticks. Confirming is always the artist's click.
+- **The application page** has three columns: the checklist on the left (picking an item to write
+  selects it), the assistant's chat about that item in the centre, and its editable draft on the
+  right, counted against the call's limit. On a phone a switch shows one column at a time. It
+  says plainly what drafting sends to OpenAI, and that nothing is sent to the call.
+- **One message to the assistant = one OpenAI call** about the selected item. It gets the call's
+  description and criteria, the passages of the artist's documents closest to the item, their
+  profile and projects, this item's chat, the text in the draft box, and **the other items' drafts**
+  (the application's memory, so the texts agree). It answers in the chat and rewrites the draft,
+  which stays "not reviewed" until the artist confirms it. It never invents facts: a missing one
+  becomes a [placeholder] and a question. A draft over the word limit is shortened once.
+- **Review, then download.** Each draft gets the artist's "I have reviewed this" (only on the
+  saved text, and any later edit undoes it). A reviewed draft can be copied. "Download
+  application" unlocks only when **everything** is ready: every text reviewed, and every item
+  uploaded or ticked. It gives one zip with each text as a `.txt` (to paste into forms), all of
+  them in `application.docx` (to attach), a `checklist.txt`, and the uploaded documents the call
+  asks for, nothing else. The server refuses an incomplete download too. The artist sends it themselves.
+- **Tested live** on a photography call with a sound artist: the agent first stretched the
+  practice to fit ("lens-based") and guessed a pronoun. The prompt now forbids both: it points
+  out the mismatch, and uses the name or "they".
+
 ## The web app (2026-10-08)
 
 The website artists use. It puts matching, eligibility and RAG behind one

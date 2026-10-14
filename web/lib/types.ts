@@ -19,3 +19,7 @@ export type VerdictStatus = SearchResult["status"];
 export type ProjectsData = components["schemas"]["ProjectsOut"];
 export type ProjectItem = components["schemas"]["ProjectOut"];
 export type ProjectInput = components["schemas"]["ProjectIn"];
+export type ApplicationData = components["schemas"]["ApplicationOut"];
+export type ApplicationItem = components["schemas"]["ItemOut"];
+export type AgentMessage = components["schemas"]["MessageOut"];
+export type AgentTurn = components["schemas"]["TurnOut"];

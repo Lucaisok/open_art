@@ -1,0 +1,520 @@
+/* Application page (workflow.MD, "Step 6"): checklist | assistant | draft, one column at a time on narrow screens */
+.main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 40px) 72px;
+  color: var(--color-ink);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border: 3px solid var(--color-ink);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.back:hover {
+  background-color: var(--color-grey-100);
+}
+
+.header {
+  margin-top: 28px;
+}
+
+.kicker {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  max-width: 28ch;
+  margin-top: 8px;
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 900;
+  font-stretch: 122%;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.privacy {
+  max-width: 80ch;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.error:empty {
+  display: none;
+}
+
+/* narrow screens: a three-way switch; wide screens show all three columns and no switch */
+.switch {
+  display: flex;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.switch button {
+  flex: 1;
+  height: 44px;
+  border: 3px solid var(--color-ink);
+  border-radius: 10px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.switch button[aria-pressed="true"] {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.workspace {
+  margin-top: 20px;
+}
+
+/* only below the wide layout: the columns the switch doesn't show are hidden */
+@media (max-width: 1099.98px) {
+  .workspace[data-view="checklist"] > :not(.columnChecklist),
+  .workspace[data-view="chat"] > :not(.columnChat),
+  .workspace[data-view="draft"] > :not(.columnDraft) {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .switch {
+    display: none;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    margin-top: 28px;
+  }
+
+}
+
+.columnTitle {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
+
+/* Left: checklist */
+.checklist {
+  border-top: 6px solid var(--color-lime);
+  padding-top: 16px;
+}
+
+.checklist > .columnTitle:not(:first-child) {
+  margin-top: 28px;
+}
+
+.items {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--color-rule);
+  border-radius: 10px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.item:hover {
+  border-color: var(--color-ink);
+}
+
+.item[aria-current="true"] {
+  border: 3px solid var(--color-ink);
+  padding: 9px 11px;
+  box-shadow: inset 6px 0 0 var(--color-lime);
+}
+
+.itemTitle {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.itemLimit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
+.gather {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 2px solid var(--color-rule);
+}
+
+.tick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.tick input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: var(--color-ink);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stateIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  background-color: var(--color-grey-100);
+}
+
+.confirmed,
+.uploaded,
+.ticked {
+  background-color: var(--color-lime);
+}
+
+.draft {
+  background-color: var(--color-grey-200);
+}
+
+.documents {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.documentKind {
+  font-weight: 800;
+}
+
+.textLink {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+/* Centre: assistant */
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+  padding: 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 14px;
+  background-color: var(--color-white);
+}
+
+.chatAbout {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.messages {
+  flex: 1;
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 2px solid var(--color-rule);
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.composerInput {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.primary {
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background-color: var(--color-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-paper);
+  cursor: pointer;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-ink-hover);
+}
+
+.primary:disabled {
+  background-color: var(--color-grey-200);
+  color: var(--color-grey-600);
+  cursor: not-allowed;
+}
+
+/* Right: draft (.draftPanel: .draft is already the state icon's look for a draft) */
+.draftPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 6px solid var(--color-ink);
+}
+
+.draftInput {
+  width: 100%;
+  min-height: 380px;
+  padding: 12px 14px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 10px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--color-ink);
+  resize: vertical;
+}
+
+.count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-grey-600);
+}
+
+.countOver {
+  color: var(--color-error);
+}
+
+.draftActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.saveMessage {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.note {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-grey-600);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* the conversation */
+.start {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+
+.messageList {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.fromArtist,
+.fromAgent {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.fromArtist {
+  justify-self: end;
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.fromAgent {
+  justify-self: start;
+  background-color: var(--color-grey-100);
+}
+
+.messageText {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.sources {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  overflow-wrap: anywhere;
+}
+
+/* review and export (sub-step 5) */
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  border: 3px solid var(--color-ink);
+  border-radius: 10px;
+  background-color: var(--color-white);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-lime);
+}
+
+.secondary:disabled {
+  border-color: var(--color-grey-300);
+  color: var(--color-grey-600);
+  cursor: not-allowed;
+}
+
+.placeholders {
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.exportRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+
+.reviewed {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.exportHint {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}

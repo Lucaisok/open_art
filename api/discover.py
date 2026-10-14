@@ -299,6 +299,7 @@ class QuestionOut(BaseModel):
 class MaterialOut(BaseModel):
     item: str                   # short English name: "CV", "Portfolio"
     details: str | None         # stated limits, verbatim: "max 10 pages, PDF"
+    kind: Literal["write", "gather"] | None   # write = the agent can draft it; None = not classified yet
 
 
 class WhyOut(BaseModel):
@@ -522,7 +523,7 @@ def opportunity(opportunity_id: str, user: CurrentUser, db: DB) -> OpportunityOu
         how_to_apply=o.how_to_apply_en or o.how_to_apply,
         application_questions=[QuestionOut(question=q.question, limit=q.limit)
                                for q in (o.application_questions_en or o.application_questions)],
-        required_materials=[MaterialOut(item=m.item, details=m.details)
+        required_materials=[MaterialOut(item=m.item, details=m.details, kind=m.kind)
                             for m in (o.required_materials_en or o.required_materials)],
         selection_criteria=o.selection_criteria_en or o.selection_criteria,
         application_language=o.application_language_en or o.application_language,

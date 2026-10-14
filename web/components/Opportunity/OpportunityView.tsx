@@ -5,7 +5,6 @@ import VerdictBadge from "@/components/VerdictBadge/VerdictBadge";
 import { deadlineFact, matchBand, placeLabel } from "@/lib/discover";
 import type { Opportunity } from "@/lib/types";
 import BackToResults from "./BackToResults";
-import DraftButton from "./DraftButton";
 import styles from "./OpportunityView.module.css";
 
 type Sentence = Opportunity["verdict"]["sentences"][number];
@@ -34,11 +33,22 @@ const sourceLabel = (requirement: Requirement): string | null => {
         : "classifier";
 };
 
-// The call's details as extracted from its page, in display order. Texts are verbatim, in the
-// call's own language (not translated); a list shows one row per question or document.
+// The call's details as extracted from its page, in display order (English copy when there is one).
+// A list shows one row per question or document.
 type CallDetail = { title: string; text?: string; items?: string[] };
 
-const callDetails = (call: Opportunity): CallDetail[] => {
+// What each required material is (MaterialOut.kind, workflow.MD "Step 6"): a text the agent can
+// draft, or something the artist already has or must get. Words, not colour alone.
+const MATERIAL_KIND = { write: "to write", gather: "to gather" } as const;
+
+const material = (m: Opportunity["required_materials"][number]): string => {
+    const name = m.details ? `${m.item}: ${m.details}` : m.item;
+    return m.kind ? `${name} (${MATERIAL_KIND[m.kind]})` : name;
+};
+
+// The fields that say what an application needs, grouped under "What you need to apply"
+// (the application agent's checklist is built from the same fields)
+const applyDetails = (call: Opportunity): CallDetail[] => {
     const details: CallDetail[] = [
         { title: "Project requirements", text: call.project_requirements ?? undefined },
         {
@@ -48,23 +58,42 @@ const callDetails = (call: Opportunity): CallDetail[] => {
         { title: "How to apply", text: call.how_to_apply ?? undefined },
         {
             title: "What to send",
-            items: call.required_materials.map((m) => (m.details ? `${m.item}: ${m.details}` : m.item)),
+            items: call.required_materials.map(material),
         },
         { title: "Selection criteria", text: call.selection_criteria ?? undefined },
         { title: "Application language", text: call.application_language ?? undefined },
         { title: "How to submit", text: call.submission_method ?? undefined },
-        { title: "Programme dates", text: call.program_dates ?? undefined },
     ];
     return details.filter((detail) => (detail.items ? detail.items.length > 0 : Boolean(detail.text)));
 };
 
+// One collapsed detail: a list (one row per question or document) or a text
+const Detail = ({ detail }: { detail: CallDetail }) => (
+    <details className={styles.extra}>
+        <summary className={styles.extraSummary}>
+            {detail.title}
+            {detail.items && ` · ${detail.items.length}`}
+        </summary>
+        {detail.items ? (
+            <ul className={styles.extraList}>
+                {detail.items.map((text, i) => (
+                    <li key={i}>{text}</li>
+                ))}
+            </ul>
+        ) : (
+            <p className={styles.extraText}>{detail.text}</p>
+        )}
+    </details>
+);
+
 // One call (design: DISCOVER.md → Opportunity): facts and description on the left, "Can you
 // apply?" on the right, every eligibility sentence quoted verbatim once, with each requirement it
 // states and what that means for the artist (a sentence can state several: "over 18 ... and reside
-// in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results", the
-// quotes' "Show more" and the draft placeholder run in the browser.
+// in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results" and the
+// quotes' "Show more" run in the browser.
 const OpportunityView = ({ call }: { call: Opportunity }) => {
     const place = placeLabel(call.city, call.countries);
+    const apply = applyDetails(call);
     const facts = [
         { label: "Deadline", value: deadlineFact(call.deadline) },
         { label: "Funding", value: call.funding },
@@ -107,6 +136,11 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             <p className={styles.description}>{call.description}</p>
                         </>
                     )}
+
+                    {/* right under the description, so the full call is one step from its summary */}
+                    <a href={call.source_url} target="_blank" rel="noopener noreferrer" className={styles.original}>
+                        Read the original call →<span className={styles.visuallyHidden}> (opens in a new tab)</span>
+                    </a>
 
                     {/* why "Matched to you" suggests it (api/discover.py why_matched): the specific words
                         the call shares with the artist's documents, marked in the call's sentence and in
@@ -160,10 +194,6 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             )}
                         </section>
                     )}
-
-                    <a href={call.source_url} target="_blank" rel="noopener noreferrer" className={styles.original}>
-                        Read the original call →<span className={styles.visuallyHidden}> (opens in a new tab)</span>
-                    </a>
                 </div>
 
                 <section aria-labelledby="apply-heading" className={styles.apply}>
@@ -231,24 +261,19 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                     </ul>
 
                     {/* the call's own details (combined re-extraction), collapsed so they don't compete
-                        with the checks; only the ones the call states */}
-                    {callDetails(call).map((detail) => (
-                        <details key={detail.title} className={styles.extra}>
-                            <summary className={styles.extraSummary}>
-                                {detail.title}
-                                {detail.items && ` · ${detail.items.length}`}
-                            </summary>
-                            {detail.items ? (
-                                <ul className={styles.extraList}>
-                                    {detail.items.map((text, i) => (
-                                        <li key={i}>{text}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className={styles.extraText}>{detail.text}</p>
-                            )}
+                        with the checks; only the ones the call states. What an application needs is
+                        grouped under one parent; the programme dates are about the programme, so apart */}
+                    {apply.length > 0 && (
+                        <details className={styles.extra}>
+                            <summary className={styles.extraSummary}>What you need to apply · {apply.length}</summary>
+                            <div className={styles.nested}>
+                                {apply.map((detail) => (
+                                    <Detail key={detail.title} detail={detail} />
+                                ))}
+                            </div>
                         </details>
-                    ))}
+                    )}
+                    {call.program_dates && <Detail detail={{ title: "Programme dates", text: call.program_dates }} />}
 
                     <p className={styles.note}>
                         These checks use your saved profile and the call&apos;s own words. Always read the original
@@ -263,7 +288,13 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         )}
                     </p>
 
-                    <DraftButton />
+                    {/* the application agent's page (workflow.MD, "Step 6") */}
+                    <Link href={`/opportunities/${encodeURIComponent(call.id)}/apply`} className={styles.draft}>
+                        <span>Draft an application</span>
+                        <span aria-hidden="true" className={styles.draftArrow}>
+                            →
+                        </span>
+                    </Link>
                 </section>
             </div>
         </main>

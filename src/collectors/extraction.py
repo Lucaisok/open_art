@@ -159,6 +159,7 @@ class ExtractedMaterial(BaseModel):
     item: str
     details: str | None
     quote: str
+    kind: Literal["write", "gather"]
 
 
 class ExtractedOpportunity(BaseModel):
@@ -289,7 +290,11 @@ def build_extraction_system_prompt() -> str:
         "portfolio, project description, budget, letters, video link, ID...): "
         "item = a short name in English, details = the stated limits (pages, "
         "size, format) VERBATIM or null, quote = the page sentence asking for "
-        "it VERBATIM. [] if none are stated\n"
+        "it VERBATIM, kind = 'write' if it is a text the applicant writes for this "
+        "application (statement, project description, proposal, motivation or "
+        "cover letter, biography, synopsis), 'gather' if it is something they "
+        "already have or must obtain (CV, portfolio, images, video, budget, "
+        "letters of reference, ID, certificates, forms). [] if none are stated\n"
         "- selection_criteria: VERBATIM, the criteria the jury or committee "
         "judges applications on, or null. Not who sits on the jury\n"
         "- application_language: the language(s) applications must be written "

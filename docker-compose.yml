@@ -18,6 +18,8 @@ services:
       COOKIE_SECURE: "${COOKIE_SECURE:-true}"   # quoted: unquoted true/false would become a YAML boolean
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS in .env}
       UPLOADS_DIR: /data/uploads
+      # the application agent's model calls (api/applications.py); the only data that leaves the server
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
     volumes:
       - uploads:/data/uploads   # the artists' original files (CVs are personal data: never in git or the image)
       # the corpus for Discover, read-only, at the paths the code expects under /app (src/matching,

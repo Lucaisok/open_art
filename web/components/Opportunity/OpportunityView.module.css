@@ -367,6 +367,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-paper);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -382,11 +383,10 @@
   font-size: 22px;
 }
 
-.draftNote {
-  min-height: 20px;
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: 700;
+/* the details inside "What you need to apply": indented, so the group reads as one */
+.nested {
+  margin-top: 4px;
+  padding-left: 16px;
 }
 
 .visuallyHidden {

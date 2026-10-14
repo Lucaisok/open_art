@@ -100,8 +100,9 @@ def translate_details(client: OpenAI, r: ProcessedOpportunity) -> None:
         r.application_questions_en = [ApplicationQuestion(question=q.question, limit=q.limit)
                                       for q in en.application_questions]
     if len(en.required_materials) == len(r.required_materials):
-        r.required_materials_en = [RequiredMaterial(item=t.item, details=t.details, quote=t.quote)
-                                   for t in en.required_materials]
+        # kind is not translated: copied from the original item at the same position
+        r.required_materials_en = [RequiredMaterial(item=t.item, details=t.details, quote=t.quote, kind=m.kind)
+                                   for t, m in zip(en.required_materials, r.required_materials)]
     r.details_translated_at = datetime.now(timezone.utc)
 
 

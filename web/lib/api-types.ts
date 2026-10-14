@@ -307,10 +307,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/applications/{opportunity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application */
+        get: operations["get_application_api_applications__opportunity_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/items/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Item */
+        put: operations["save_item_api_applications__opportunity_id__items__key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/items/{key}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Item */
+        post: operations["confirm_item_api_applications__opportunity_id__items__key__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/items/{key}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Messages */
+        get: operations["get_messages_api_applications__opportunity_id__items__key__messages_get"];
+        put?: never;
+        /** Send Message */
+        post: operations["send_message_api_applications__opportunity_id__items__key__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download
+         * @description The complete application as a zip. Refused until every text is reviewed and every item is
+         *     uploaded or ticked: the review is enforced here, not only on the page. Holds application.md and,
+         *     for each item covered by an upload, that original file (only the documents the call asks for).
+         */
+        get: operations["download_api_applications__opportunity_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApplicationDocumentOut */
+        ApplicationDocumentOut: {
+            /** Kind */
+            kind: string;
+            /** File Name */
+            file_name: string;
+        };
+        /** ApplicationOut */
+        ApplicationOut: {
+            /** Opportunity Id */
+            opportunity_id: string;
+            /** Title */
+            title: string;
+            /** Deadline */
+            deadline: string | null;
+            /** Source Url */
+            source_url: string;
+            /** How To Apply */
+            how_to_apply: string | null;
+            /** Application Language */
+            application_language: string | null;
+            /** Submission Method */
+            submission_method: string | null;
+            /**
+             * Verdict Status
+             * @enum {string}
+             */
+            verdict_status: "ELIGIBLE" | "CHECK" | "LIKELY_NOT_ELIGIBLE";
+            /** To Draft */
+            to_draft: components["schemas"]["ItemOut"][];
+            /** To Gather */
+            to_gather: components["schemas"]["ItemOut"][];
+            /** Documents */
+            documents: components["schemas"]["ApplicationDocumentOut"][];
+            /**
+             * Missing
+             * @default []
+             */
+            missing: string[];
+        };
         /** Body_upload_document_api_documents__kind__put */
         Body_upload_document_api_documents__kind__put: {
             /** File */
@@ -398,6 +529,44 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * ItemIn
+         * @description Either field, or both. A draft only for an item to write, a tick only for one to gather.
+         */
+        ItemIn: {
+            /** Draft */
+            draft?: string | null;
+            /** Ticked */
+            ticked?: boolean | null;
+        };
+        /** ItemOut */
+        ItemOut: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "write" | "gather";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "question" | "material";
+            /** Title */
+            title: string;
+            /** Limit */
+            limit: string | null;
+            /** Document */
+            document: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "empty" | "draft" | "confirmed" | "uploaded" | "ticked" | "missing";
+            /** Draft */
+            draft: string | null;
+        };
         /** LoginIn */
         LoginIn: {
             /**
@@ -414,6 +583,32 @@ export interface components {
             item: string;
             /** Details */
             details: string | null;
+            /** Kind */
+            kind: ("write" | "gather") | null;
+        };
+        /** MessageIn */
+        MessageIn: {
+            /** Message */
+            message: string;
+            /** Draft */
+            draft?: string | null;
+        };
+        /** MessageOut */
+        MessageOut: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "artist" | "agent";
+            /** Content */
+            content: string;
+            /** Sources */
+            sources: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** OpportunityOut */
         OpportunityOut: {
@@ -821,6 +1016,12 @@ export interface components {
             note?: string | null;
             /** Source */
             source: string;
+        };
+        /** TurnOut */
+        TurnOut: {
+            application: components["schemas"]["ApplicationOut"];
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
         };
         /** UserOut */
         UserOut: {
@@ -1464,6 +1665,204 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_api_applications__opportunity_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_item_api_applications__opportunity_id__items__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_item_api_applications__opportunity_id__items__key__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_messages_api_applications__opportunity_id__items__key__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_applications__opportunity_id__items__key__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_api_applications__opportunity_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {

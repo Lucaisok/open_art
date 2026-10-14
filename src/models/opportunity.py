@@ -1,5 +1,6 @@
 # the core schema, this is what every other file ultimately produces.
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -15,6 +16,10 @@ class RequiredMaterial(BaseModel):
     item: str                 # short name, may be paraphrased ("Portfolio")
     details: str | None = None  # stated limits: pages, size, format
     quote: str                # the call's own sentence asking for it, verbatim - checked in code
+    # for the application agent (workflow.MD, "Step 6"): "write" = text the applicant writes for this
+    # call (statement, proposal, motivation letter...), the agent can draft it; "gather" = something
+    # they already have or must obtain (CV, portfolio, budget, letters, ID...). None = not classified yet
+    kind: Literal["write", "gather"] | None = None
 
 
 class RawOpportunity(BaseModel):
