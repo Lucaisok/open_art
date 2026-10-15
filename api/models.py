@@ -192,10 +192,16 @@ class ApplicationItem(Base):
     # "confirmed", and any later change to the text sets it back to "draft"
     status: Mapped[str | None] = mapped_column(String(10))
     ticked: Mapped[bool] = mapped_column(Boolean, server_default="false")   # "I have this" (gather items)
+    # the artist's "Not needed" on an item the call seems to ask for (the extraction can be wrong):
+    # it no longer blocks the download and stays out of the zip, until the artist undoes it
+    skipped: Mapped[bool] = mapped_column(Boolean, server_default="false")
     # this text's own choice of projects, same shape as Application.projects; None = the application's
     projects: Mapped[dict | None] = mapped_column(JSONB)
     # the images chosen for an image item (ChecklistItem.images): [image id, ...]; None = none chosen
     images: Mapped[list | None] = mapped_column(JSONB)
+    # a text the artist added themselves (key "t-..."), with their own title; None = a checklist item
+    title: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
                                                  onupdate=func.now())
 

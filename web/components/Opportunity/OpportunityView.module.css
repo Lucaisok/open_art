@@ -1,4 +1,5 @@
-/* Opportunity page (design: design_handoff_openart, DISCOVER.md → Opportunity) */
+/* Opportunity page (design: DISCOVER.md → Opportunity, restyled from the Discover prototype's
+   lighter editorial style: 1px rules, 2px corners, no boxes) */
 .main {
   max-width: 1240px;
   margin: 0 auto;
@@ -11,12 +12,10 @@
   align-items: center;
   height: 44px;
   padding: 0 16px 0 12px;
-  border: 3px solid var(--color-ink);
-  border-radius: 10px;
+  border: 1px solid var(--color-ink);
+  border-radius: 2px;
   font-size: 14px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 700;
   color: var(--color-ink);
   text-decoration: none;
 }
@@ -34,20 +33,19 @@
 
 .type {
   padding: 4px 10px;
-  border: 2px solid var(--color-ink);
-  border-radius: 999px;
+  border: 1px solid var(--color-ink);
+  border-radius: 4px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .title {
-  max-width: 18ch;
   margin-top: 16px;
   font-size: clamp(36px, 5.6vw, 72px);
-  font-weight: 900;
-  font-stretch: 122%;
+  font-weight: 700;
+  font-stretch: 108%;
   line-height: 0.98;
   letter-spacing: -0.035em;
   text-wrap: balance;
@@ -76,7 +74,7 @@
 }
 
 .factList {
-  border-top: 6px solid var(--color-lime);
+  border-top: 1px solid var(--color-ink);
 }
 
 .fact {
@@ -84,14 +82,14 @@
   flex-wrap: wrap;
   gap: 4px 20px;
   padding: 14px 0;
-  border-bottom: 2px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .factLabel {
   flex: 0 0 150px;
   padding-top: 3px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -106,7 +104,7 @@
 .aboutHeading {
   margin-top: 36px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -117,7 +115,8 @@
   font-size: 17px;
   font-weight: 500;
   line-height: 1.6;
-  white-space: pre-line;   /* keep the call's own paragraphs */
+  white-space: pre-line;
+  /* keep the call's own paragraphs */
 }
 
 .original {
@@ -125,32 +124,31 @@
   align-items: center;
   margin-top: 20px;
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 2px;
   background-color: var(--color-ink);
   font-size: 17px;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--color-paper);
   text-decoration: none;
 }
 
 .original:hover {
   background-color: var(--color-ink-hover);
+  color: var(--color-paper);
 }
 
-/* Right: "Can you apply?" */
+/* Right: "Can you apply?", an open column under an ink rule (no box) */
 .apply {
   flex: 1 1 440px;
   min-width: 0;
-  padding: clamp(18px, 3vw, 28px);
-  border: 3px solid var(--color-ink);
-  border-radius: 16px;
-  background-color: var(--color-white);
+  padding-top: 20px;
+  border-top: 1px solid var(--color-ink);
 }
 
 .applyTitle {
   font-size: clamp(28px, 3.4vw, 36px);
-  font-weight: 900;
-  font-stretch: 118%;
+  font-weight: 700;
+  font-stretch: 108%;
   line-height: 1;
   letter-spacing: -0.03em;
 }
@@ -178,9 +176,9 @@
   align-items: center;
   gap: 10px;
   padding-bottom: 10px;
-  border-bottom: 3px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-ink);
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -189,10 +187,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .iconFail {
@@ -214,10 +212,10 @@
   gap: 8px 20px;
   margin-top: 24px;
   padding-bottom: 10px;
-  border-bottom: 3px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-ink);
   list-style: none;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -245,20 +243,20 @@
   padding: 8px 0;
 }
 
-.requirement > .groupIcon {
+.requirement>.groupIcon {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .requirementTitle {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 
 .check {
   padding: 14px 0;
-  border-bottom: 2px solid var(--color-grey-200);
+  border-bottom: 1px solid var(--color-grey-200);
 }
 
 .quote {
@@ -290,41 +288,132 @@
 
 .label {
   padding: 1px 6px;
-  border: 1.5px solid var(--color-grey-300);
+  border: 1px solid var(--color-grey-300);
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   letter-spacing: 0.02em;
 }
 
-/* the call's details (project requirements, how to apply, ...): collapsed, so they don't compete with the checks */
+/* the call's details (project requirements, how to apply, ...): collapsed rows between thin rules,
+   so they don't compete with the checks */
 .extra {
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.extra:first-of-type {
   margin-top: 16px;
-  border-bottom: 2px solid var(--color-grey-200);
-  padding-bottom: 12px;
 }
 
 .extraSummary {
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 0;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
 }
 
+.extraSummary::-webkit-details-marker {
+  display: none;
+}
+
+.extraSummary:hover>span:first-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* how many rows the detail holds: a small grey chip next to the title */
+.extraCount {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background-color: var(--color-grey-200);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.extraCaret {
+  margin-left: auto;
+  font-size: 13px;
+  transition: transform 150ms ease;
+}
+
+.extra[open]>.extraSummary>.extraCaret {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .extraCaret {
+    transition: none;
+  }
+}
+
+/* one row per question or document, between hairlines */
 .extraList {
   list-style: none;
-  margin-top: 10px;
-  display: grid;
-  gap: 8px;
+  margin-bottom: 12px;
+  border-top: 1px solid var(--color-grey-200);
+}
+
+.extraItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-grey-200);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--color-grey-600);
   overflow-wrap: anywhere;
+}
+
+.extraItem:last-child {
+  border-bottom: 0;
+}
+
+.extraItemText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* a word limit, a material's details: quieter, under the row's text */
+.extraNote {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-grey-600);
+}
+
+/* what kind of material: "To write" (the agent can draft it) in lime, "To gather" outlined */
+.extraTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--color-ink);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.extraTagWrite {
+  border-color: var(--color-lime);
+  background-color: var(--color-lime);
 }
 
 /* a verbatim text block: keeps the call's own line breaks (list items copied one per line) */
 .extraText {
-  margin-top: 10px;
+  margin: 0 0 14px;
+  max-width: 62ch;
   white-space: pre-line;
   font-size: 15px;
   font-weight: 600;
@@ -342,10 +431,10 @@
 }
 
 .noteLink {
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-ink);
   text-decoration: underline;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
@@ -355,17 +444,15 @@
   justify-content: center;
   gap: 12px;
   width: 100%;
-  height: 58px;
+  height: 52px;
   margin-top: 22px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 2px;
   background-color: var(--color-ink);
   font-family: inherit;
   font-size: 17px;
-  font-weight: 900;
+  font-weight: 700;
   font-stretch: 110%;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--color-paper);
   text-decoration: none;
   cursor: pointer;
@@ -373,6 +460,7 @@
 
 .draft:hover {
   background-color: var(--color-ink-hover);
+  color: var(--color-paper);
 }
 
 .draft:active {
@@ -383,10 +471,27 @@
   font-size: 22px;
 }
 
-/* the details inside "What you need to apply": indented, so the group reads as one */
+/* the details inside "What you need to apply": indented behind a thin ink line, smaller rows,
+   so the group reads as one */
 .nested {
-  margin-top: 4px;
+  margin-bottom: 14px;
   padding-left: 16px;
+  border-left: 1px solid var(--color-ink);
+}
+
+.nested .extra:first-of-type {
+  margin-top: 0;
+  border-top: 1px solid var(--color-rule);
+}
+
+.nested .extra:last-of-type {
+  border-bottom: 0;
+}
+
+.nested .extraSummary {
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .visuallyHidden {
@@ -398,15 +503,36 @@
   white-space: nowrap;
 }
 
-/* why it's suggested: the call's sentence and the artist's own, side by side in the reading column */
+/* why it's suggested: right under the facts, compact; the quotes fold into "Where it says so" */
 .why {
-  margin-top: 8px;
+  margin-top: 28px;
+}
+
+.whyHeading {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* the fold: a details row like the call's details, closed by a thin rule above and below */
+.whyMore {
+  margin-top: 14px;
+  border-top: 1px solid var(--color-rule);
+}
+
+.whyQuotes {
+  padding-bottom: 14px;
+}
+
+.whyQuotes>.whyLabel:first-child {
+  margin-top: 0;
 }
 
 .whyLabel {
   margin-top: 12px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-grey-600);
@@ -415,7 +541,7 @@
 .whyQuote {
   margin: 4px 0 0;
   padding-left: 12px;
-  border-left: 3px solid var(--color-lime);
+  border-left: 2px solid var(--color-lime);
   font-size: 16px;
   font-weight: 600;
   font-style: italic;
@@ -426,15 +552,15 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 12px;
 }
 
 .sharedWord {
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: 4px;
   background-color: var(--color-lime);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .whyQuote mark {
@@ -451,9 +577,9 @@
 }
 
 .match {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .matchNote {

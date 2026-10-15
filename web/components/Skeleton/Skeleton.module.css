@@ -20,15 +20,13 @@
   animation: sweep 1.4s ease-in-out infinite;
 }
 
-/* a skeleton card: the real cards' ink border, empty inside but for a few bones */
+/* a skeleton card: the real cards' top rule (in grey), empty inside but for a few bones */
 .card {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 22px;
-  border: 3px solid var(--color-grey-300);
-  border-radius: 18px;
-  background-color: var(--color-white);
+  padding: 18px 14px 22px;
+  border-top: 1px solid var(--color-grey-300);
 }
 
 .spacer {

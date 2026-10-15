@@ -496,6 +496,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/applications/{opportunity_id}/texts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Text
+         * @description A text the artist wants to send, whether or not the call asks for it ("Cover letter"). Like the
+         *     call's texts it is drafted, reviewed by the artist, and goes into the download.
+         */
+        post: operations["add_text_api_applications__opportunity_id__texts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/applications/{opportunity_id}/texts/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename Text */
+        put: operations["rename_text_api_applications__opportunity_id__texts__key__put"];
+        post?: never;
+        /**
+         * Delete Text
+         * @description Removes the text, its draft and its chat with the assistant.
+         */
+        delete: operations["delete_text_api_applications__opportunity_id__texts__key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/applications/{opportunity_id}/projects": {
         parameters: {
             query?: never;
@@ -836,13 +878,16 @@ export interface components {
         };
         /**
          * ItemIn
-         * @description Either field, or both. A draft only for an item to write, a tick only for one to gather.
+         * @description Any of the fields. A draft only for an item to write, a tick only for one to gather; "Not
+         *     needed" (skipped) for any item the call asks for (the artist's own texts are deleted instead).
          */
         ItemIn: {
             /** Draft */
             draft?: string | null;
             /** Ticked */
             ticked?: boolean | null;
+            /** Skipped */
+            skipped?: boolean | null;
         };
         /** ItemOut */
         ItemOut: {
@@ -857,7 +902,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "question" | "material";
+            source: "question" | "material" | "artist";
             /** Title */
             title: string;
             /** Limit */
@@ -882,6 +927,11 @@ export interface components {
             /** Draft */
             draft: string | null;
             projects?: components["schemas"]["Selection"] | null;
+            /**
+             * Skipped
+             * @default false
+             */
+            skipped: boolean;
         };
         /** ItemProjectsIn */
         ItemProjectsIn: {
@@ -1551,6 +1601,14 @@ export interface components {
             note?: string | null;
             /** Source */
             source: string;
+        };
+        /**
+         * TextIn
+         * @description A text of the artist's own: its title ("Cover letter").
+         */
+        TextIn: {
+            /** Title */
+            title: string;
         };
         /** TurnOut */
         TurnOut: {
@@ -2531,6 +2589,109 @@ export interface operations {
         };
     };
     confirm_item_api_applications__opportunity_id__items__key__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_text_api_applications__opportunity_id__texts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_text_api_applications__opportunity_id__texts__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_text_api_applications__opportunity_id__texts__key__delete: {
         parameters: {
             query?: never;
             header?: never;

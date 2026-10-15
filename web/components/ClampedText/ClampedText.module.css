@@ -20,10 +20,10 @@
   background: none;
   font-family: inherit;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-ink);
   text-decoration: underline;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   cursor: pointer;
 }

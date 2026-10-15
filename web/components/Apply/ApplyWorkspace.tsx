@@ -24,10 +24,12 @@ const VIEWS: { view: View; label: string }[] = [
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-// What the downloaded zip holds, in words, for the header and the "Everything is ready" banner
+// What the downloaded zip holds, in words, for the Download button's hover hint
 const zipContents = (data: ApplicationData) => {
-    const parts = [plural(data.to_draft.length, "text", "texts"), "application.docx", "a checklist"];
-    for (const item of data.to_gather) {
+    const texts = data.to_draft.filter((i) => !i.skipped).length;   // "Not needed" items stay out
+    const parts = texts ? [plural(texts, "text", "texts")] : [];      // no "0 texts"
+    parts.push("application.docx", "a checklist");
+    for (const item of data.to_gather.filter((i) => !i.skipped)) {
         if (item.state === "uploaded" && item.document) parts.push(`your ${DOCUMENT_NAMES[item.document] ?? item.document}`);
         if (item.state === "chosen") parts.push(`${plural(item.images.length, "image", "images")} for ${item.title.toLowerCase()}`);
     }
@@ -85,6 +87,7 @@ const ApplyWorkspace = ({ initial }: { initial: ApplicationData }) => {
         if (edits[key] !== undefined && (await saveDraft(key, edits[key]))) return;
         if (!(await call("POST", `${base}/items/${encodeURIComponent(key)}/confirm`))) toast("Reviewed by you");
     };
+    const skip = (key: string, skipped: boolean) => call("PUT", `${base}/items/${encodeURIComponent(key)}`, { skipped });
     const tick = (key: string, ticked: boolean) => call("PUT", `${base}/items/${encodeURIComponent(key)}`, { ticked });
     const chooseImages = async (key: string, ids: string[]) => {
         if (!(await call("PUT", `${base}/items/${encodeURIComponent(key)}/images`, { ids }))) {
@@ -97,54 +100,83 @@ const ApplyWorkspace = ({ initial }: { initial: ApplicationData }) => {
     const chooseItemProjects = (key: string, selection: ProjectSelection | null) =>
         call("PUT", `${base}/items/${encodeURIComponent(key)}/projects`, { selection });
 
+    // the artist's own texts (any call): added, then selected; renamed; deleted with their chat
+    const addText = async (title: string) => {
+        const before = new Set(data.to_draft.map((i) => i.key));
+        const result = await requestJson<ApplicationData>("POST", `${base}/texts`, { title });
+        if (!result.ok) return result.error;
+        setData(result.data);
+        const added = result.data.to_draft.find((i) => !before.has(i.key));
+        if (added) select(added.key);
+        return null;
+    };
+    const texts = `${base}/texts`;
+    const renameText = (key: string, title: string) => call("PUT", `${texts}/${encodeURIComponent(key)}`, { title });
+    const deleteText = async (key: string) => {
+        if (await call("DELETE", `${texts}/${encodeURIComponent(key)}`)) return;
+        dropEdit(key);
+        setSelected(data.to_draft.find((i) => i.key !== key)?.key ?? data.to_gather[0]?.key ?? null);
+        toast("Text deleted");
+    };
+
     const select = (key: string) => {
         setSelected(key);
         setView("draft"); // under 1100 px, picking an item opens its draft
     };
 
-    const reviewed = data.to_draft.filter((i) => i.state === "confirmed").length;
-    const gathered = data.to_gather.filter((i) => ["uploaded", "chosen", "ticked"].includes(i.state)).length;
+    // the progress counts leave out the items marked "Not needed", as the download rule does
+    const toWrite = data.to_draft.filter((i) => !i.skipped);
+    const toGather = data.to_gather.filter((i) => !i.skipped);
+    const reviewed = toWrite.filter((i) => i.state === "confirmed").length;
+    const gathered = toGather.filter((i) => ["uploaded", "chosen", "ticked"].includes(i.state)).length;
     const days = data.deadline ? daysUntil(data.deadline) : null;
     const urgent = !closed && days !== null && days < 7;
     const download = `${base}/download`;
     const pickerItem = data.to_gather.find((i) => i.key === picking) ?? null;
     const progress: [string, number, number][] = [
-        ["Texts reviewed", reviewed, data.to_draft.length],
-        ["Items gathered", gathered, data.to_gather.length],
+        ["Texts reviewed", reviewed, toWrite.length],
+        ["Items gathered", gathered, toGather.length],
     ];
+
+    const todo = closed
+        ? "This call is closed."
+        : complete
+          ? `Contains: ${zipContents(data)}.`
+          : `Still to do: ${data.missing.join(" · ")}`;
 
     return (
         <main id="main" className={styles.main}>
             <section aria-labelledby="h-app" className={styles.header}>
-                <Link href={`/opportunities/${encodeURIComponent(data.opportunity_id)}`} className={styles.back}>
-                    ← Back to the call
-                </Link>
-                <div className={styles.titleRow}>
-                    <div className={styles.titleText}>
-                        <span className={styles.eyebrow}>Draft an application</span>
-                        <h1 id="h-app" className={styles.title}>{data.title}</h1>
-                        <span className={styles.byline}>
-                            {[data.organisation, placeLabel(data.city, data.countries)].filter(Boolean).join(" · ")}
-                        </span>
+                {/* top bar, as on the call page: back on the left, Save and Download on the right */}
+                <div className={styles.topBar}>
+                    <Link href={`/opportunities/${encodeURIComponent(data.opportunity_id)}`} className={styles.back}>
+                        ← Back to the call
+                    </Link>
+                    <div className={styles.headerButtons}>
+                        <SaveCall id={data.opportunity_id} title={data.title} initial={data.saved} look="application" />
+                        {complete ? (
+                            <a href={download} download className={styles.downloadReady}
+                               onClick={() => toast("Application downloaded")}>
+                                Download application →
+                            </a>
+                        ) : (
+                            // what is left is on screen in the progress bars and banners below; here it is
+                            // the disabled button's hover hint and its description for screen readers
+                            <button type="button" className={styles.downloadOff} disabled aria-describedby="todo-line"
+                                    title={todo}>
+                                Download application
+                            </button>
+                        )}
+                        <span id="todo-line" className={styles.visuallyHidden}>{todo}</span>
                     </div>
-                    <div className={styles.headerActions}>
-                        <div className={styles.headerButtons}>
-                            <SaveCall id={data.opportunity_id} title={data.title} initial={data.saved} look="application" />
-                            {complete ? (
-                                <a href={download} download className={styles.downloadReady}
-                                   onClick={() => toast("Application downloaded")}>
-                                    Download application →
-                                </a>
-                            ) : (
-                                <button type="button" className={styles.downloadOff} disabled aria-describedby="todo-line">
-                                    Download application
-                                </button>
-                            )}
-                        </div>
-                        <span id="todo-line" className={styles.todo}>
-                            {closed ? "This call is closed." : complete ? `Contains: ${zipContents(data)}.` : `Still to do: ${data.missing.join(" · ")}`}
-                        </span>
-                    </div>
+                </div>
+                {/* the title takes the full width, the byline under it */}
+                <div className={styles.titleText}>
+                    <span className={styles.eyebrow}>Draft an application</span>
+                    <h1 id="h-app" className={styles.title}>{data.title}</h1>
+                    <span className={styles.byline}>
+                        {[data.organisation, placeLabel(data.city, data.countries)].filter(Boolean).join(" · ")}
+                    </span>
                 </div>
 
                 <dl className={styles.factStrip}>
@@ -190,17 +222,6 @@ const ApplyWorkspace = ({ initial }: { initial: ApplicationData }) => {
                         <span>The deadline was {deadlineFact(data.deadline).split(" · ")[0]}. Your drafts are kept, read-only.</span>
                     </div>
                 )}
-                {complete && (
-                    <div role="status" className={styles.bannerReady}>
-                        <span className={styles.readyText}>
-                            <span className={styles.readyTitle}>Everything is ready</span>
-                            <span>The zip holds {zipContents(data)}. Submit it on the call&apos;s own site: OpenArt never sends it for you.</span>
-                        </span>
-                        <a href={download} download className={styles.darkButton} onClick={() => toast("Application downloaded")}>
-                            Download application →
-                        </a>
-                    </div>
-                )}
                 {data.documents.length === 0 && (
                     <Link href="/studio" className={styles.docsHint}>
                         You have no documents yet. Add your documents for better drafts →
@@ -220,7 +241,7 @@ const ApplyWorkspace = ({ initial }: { initial: ApplicationData }) => {
             <div className={styles.workspace} data-view={view}>
                 <div className={styles.columnChecklist}>
                     <Checklist data={data} selected={selected} readOnly={closed} onSelect={select} onTick={tick}
-                               onChooseImages={(key) => setPicking(key)} />
+                               onChooseImages={(key) => setPicking(key)} onAddText={addText} />
                 </div>
                 <div className={styles.columnDraft}>
                     <DraftColumn
@@ -243,6 +264,14 @@ const ApplyWorkspace = ({ initial }: { initial: ApplicationData }) => {
                             if (gather) tick(gather.key, ticked);
                         }}
                         onChooseImages={() => gather && setPicking(gather.key)}
+                        onRename={(title) => (text ? renameText(text.key, title) : Promise.resolve(null))}
+                        onSkip={(skipped) => {
+                            const key = text?.key ?? gather?.key;
+                            if (key) skip(key, skipped);
+                        }}
+                        onDelete={async () => {
+                            if (text) await deleteText(text.key);
+                        }}
                     />
                 </div>
                 <div className={styles.columnAssistant}>

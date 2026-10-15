@@ -79,8 +79,8 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
     const bandText = proposed
         ? `${proposed.title} is the project you propose${mentioned.length ? `; ${listNames(mentioned.map((p) => p.title))} ${mentioned.length === 1 ? "gets" : "get"} a short mention.` : "."}`
         : mentioned.length
-          ? `No project is proposed; ${listNames(mentioned.map((p) => p.title))} ${mentioned.length === 1 ? "gets" : "get"} a short mention.`
-          : "Your practice in general: no project is named.";
+            ? `No project is proposed; ${listNames(mentioned.map((p) => p.title))} ${mentioned.length === 1 ? "gets" : "get"} a short mention.`
+            : "Your practice in general: no project is named.";
     const bandCards = [...(proposed ? [{ p: proposed, role: "Proposed" }] : []), ...mentioned.map((p) => ({ p, role: "Mentioned" }))];
 
     // the list below edits this text's own choice, or the application's ("Your choice")
@@ -108,7 +108,8 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
                         <span className={styles.who}>Assistant</span>
                         <p>{data.to_draft.length
                             ? "Pick a text in the checklist and I'll help you draft it."
-                            : "This call asks for nothing written: gather the items in the checklist, then download the package."}</p>
+                            : "This call asks for nothing written: gather the items in the checklist, then download the package. "
+                              + "To send a text anyway, add one in the checklist and I'll help you draft it."}</p>
                     </div>
                 </div>
             </section>
@@ -138,7 +139,7 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
                     <div className={styles.bandCards}>
                         {bandCards.map(({ p, role }) => (
                             <button key={p.id} type="button" className={`${styles.bandCard} ${role === "Proposed" ? styles.bandCardLead : ""}`}
-                                    onClick={() => !readOnly && setEditing(true)}>
+                                onClick={() => !readOnly && setEditing(true)}>
                                 {p.images[0] ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={thumbUrl(p.images[0].id)} alt="" className={styles.bandThumb} />
@@ -171,9 +172,9 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
                     {!editingOwn && (
                         <div role="radiogroup" aria-label="Project choice" className={styles.modeTabs}>
                             <button type="button" role="radio" aria-checked={!data.selection_chosen} className={styles.modeTab}
-                                    onClick={() => data.selection_chosen && onProjects("suggested")}>Suggested</button>
+                                onClick={() => data.selection_chosen && onProjects("suggested")}>Suggested</button>
                             <button type="button" role="radio" aria-checked={data.selection_chosen} className={styles.modeTab}
-                                    onClick={() => !data.selection_chosen && onProjects(data.selection)}>Your choice</button>
+                                onClick={() => !data.selection_chosen && onProjects(data.selection)}>Your choice</button>
                         </div>
                     )}
                     {!editable && <p className={styles.modeNote}>The projects closest to this call. Switch to Your choice to change them.</p>}
@@ -235,9 +236,9 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
                         <div className={styles.agentBlock}>
                             <span className={styles.who}>Assistant</span>
                             <p>I draft from your documents, profile, projects and the other texts of this application. You edit and review every word.</p>
-                            {!readOnly && (
+                            {/* {!readOnly && (
                                 <button type="button" className={styles.darkButton} onClick={() => send(`${starter}.`)}>{starter} →</button>
-                            )}
+                            )} */}
                         </div>
                     )}
                     {messages?.map((m, i) =>
@@ -283,14 +284,14 @@ const AssistantPanel = ({ data, item, itemsPath, draft, readOnly, onTurn, onProj
                     }}>
                         <label htmlFor="composer" className={styles.visuallyHidden}>Message the assistant</label>
                         <textarea id="composer" rows={2} value={text} maxLength={4000}
-                                  placeholder="Ask for changes: shorter, more about the project, mention…"
-                                  onChange={(event) => setText(event.target.value)}
-                                  onKeyDown={(event) => {
-                                      if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                                          event.preventDefault();
-                                          send(text);
-                                      }
-                                  }} />
+                            placeholder="Ask for changes: shorter, more about the project, mention…"
+                            onChange={(event) => setText(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                                    event.preventDefault();
+                                    send(text);
+                                }
+                            }} />
                         <button type="submit" disabled={busy || !text.trim()}>Send</button>
                     </form>
                     <span className={styles.composerNote}>

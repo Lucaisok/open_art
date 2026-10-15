@@ -14,7 +14,7 @@ type Requirement = Sentence["requirements"][number];
 // What each outcome looks like (design: DISCOVER.md → "Can you apply?"). Icon + words for every
 // outcome, never colour alone. Listed in display order: failures (only if any), then passes, then
 // checks; the API sorts the sentences and their rows the same way.
-const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "passes"; title: string; icon: string; look: string }> = {
+const OUTCOMES: Record<Requirement["outcome"], { count: "fails" | "checks" | "passes"; title: string; icon: string; look: string; }> = {
     FAIL: { count: "fails", title: "Doesn't pass", icon: "✕", look: styles.iconFail },
     PASS: { count: "passes", title: "Passes", icon: "✓", look: styles.iconPass },
     CHECK: { count: "checks", title: "To check", icon: "○", look: styles.iconCheck },
@@ -35,17 +35,20 @@ const sourceLabel = (requirement: Requirement): string | null => {
 };
 
 // The call's details as extracted from its page, in display order (English copy when there is one).
-// A list shows one row per question or document.
-type CallDetail = { title: string; text?: string; items?: string[] };
+// A list shows one row per question or document: its text, a quieter note (a word limit, a
+// material's details) and, for a material, a small tag saying what kind it is.
+type DetailItem = { text: string; note?: string; kind?: keyof typeof MATERIAL_KIND; };
+type CallDetail = { title: string; text?: string; items?: DetailItem[]; };
 
 // What each required material is (MaterialOut.kind, workflow.MD "Step 6"): a text the agent can
 // draft, or something the artist already has or must get. Words, not colour alone.
-const MATERIAL_KIND = { write: "to write", gather: "to gather" } as const;
+const MATERIAL_KIND = { write: "To write", gather: "To gather" } as const;
 
-const material = (m: Opportunity["required_materials"][number]): string => {
-    const name = m.details ? `${m.item}: ${m.details}` : m.item;
-    return m.kind ? `${name} (${MATERIAL_KIND[m.kind]})` : name;
-};
+const material = (m: Opportunity["required_materials"][number]): DetailItem => ({
+    text: m.item,
+    note: m.details ?? undefined,
+    kind: m.kind ?? undefined,
+});
 
 // The fields that say what an application needs, grouped under "What you need to apply"
 // (the application agent's checklist is built from the same fields)
@@ -54,7 +57,7 @@ const applyDetails = (call: Opportunity): CallDetail[] => {
         { title: "Project requirements", text: call.project_requirements ?? undefined },
         {
             title: "Application questions",
-            items: call.application_questions.map((q) => (q.limit ? `${q.question} (${q.limit})` : q.question)),
+            items: call.application_questions.map((q) => ({ text: q.question, note: q.limit ?? undefined })),
         },
         { title: "How to apply", text: call.how_to_apply ?? undefined },
         {
@@ -68,17 +71,35 @@ const applyDetails = (call: Opportunity): CallDetail[] => {
     return details.filter((detail) => (detail.items ? detail.items.length > 0 : Boolean(detail.text)));
 };
 
+// The summary row of a collapsed detail: title, count, and a caret that turns when open
+const DetailSummary = ({ title, count }: { title: string; count?: number; }) => (
+    <summary className={styles.extraSummary}>
+        <span>{title}</span>
+        {count !== undefined && <span className={styles.extraCount}>{count}</span>}
+        <span aria-hidden="true" className={styles.extraCaret}>
+            ▾
+        </span>
+    </summary>
+);
+
 // One collapsed detail: a list (one row per question or document) or a text
-const Detail = ({ detail }: { detail: CallDetail }) => (
+const Detail = ({ detail }: { detail: CallDetail; }) => (
     <details className={styles.extra}>
-        <summary className={styles.extraSummary}>
-            {detail.title}
-            {detail.items && ` · ${detail.items.length}`}
-        </summary>
+        <DetailSummary title={detail.title} count={detail.items?.length} />
         {detail.items ? (
             <ul className={styles.extraList}>
-                {detail.items.map((text, i) => (
-                    <li key={i}>{text}</li>
+                {detail.items.map((item, i) => (
+                    <li key={i} className={styles.extraItem}>
+                        <span className={styles.extraItemText}>
+                            {item.text}
+                            {item.note && <span className={styles.extraNote}>{item.note}</span>}
+                        </span>
+                        {item.kind && (
+                            <span className={`${styles.extraTag} ${item.kind === "write" ? styles.extraTagWrite : ""}`}>
+                                {MATERIAL_KIND[item.kind]}
+                            </span>
+                        )}
+                    </li>
                 ))}
             </ul>
         ) : (
@@ -92,7 +113,7 @@ const Detail = ({ detail }: { detail: CallDetail }) => (
 // states and what that means for the artist (a sentence can state several: "over 18 ... and reside
 // in Senegal" -> an age row and a residence row). Rendered on the server; only "Back to results" and the
 // quotes' "Show more" run in the browser.
-const OpportunityView = ({ call }: { call: Opportunity }) => {
+const OpportunityView = ({ call }: { call: Opportunity; }) => {
     const place = placeLabel(call.city, call.countries);
     const apply = applyDetails(call);
     const facts = [
@@ -135,25 +156,14 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         ))}
                     </dl>
 
-                    {call.description && (
-                        <>
-                            <h2 className={styles.aboutHeading}>About this call</h2>
-                            <p className={styles.description}>{call.description}</p>
-                        </>
-                    )}
-
-                    {/* right under the description, so the full call is one step from its summary */}
-                    <a href={call.source_url} target="_blank" rel="noopener noreferrer" className={styles.original}>
-                        Read the original call →<span className={styles.visuallyHidden}> (opens in a new tab)</span>
-                    </a>
-
-                    {/* why "Matched to you" suggests it (api/discover.py why_matched): the specific words
-                        the call shares with the artist's documents, marked in the call's sentence and in
-                        the artist's own; or, when it shares none, that it is a broad match. Plain word
-                        rules (src/matching/explain.py), no model call; absent without documents */}
+                    {/* why "Matched to you" suggests it (api/discover.py why_matched), right under the facts:
+                        the match and the specific words the call shares with the artist's documents; the
+                        sentences holding them (the call's and the artist's own) are folded into "Where it
+                        says so". Or, when it shares none, that it is a broad match. Plain word rules
+                        (src/matching/explain.py), no model call; absent without documents */}
                     {call.why && (
                         <section aria-labelledby="why-heading" className={styles.why}>
-                            <h2 id="why-heading" className={styles.aboutHeading}>
+                            <h2 id="why-heading" className={styles.whyHeading}>
                                 Why it&apos;s suggested to you
                             </h2>
                             {/* the chance it is a clear fit for the artist (src/matching/score.py) */}
@@ -166,29 +176,36 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             </p>
                             {call.why.shared.length > 0 ? (
                                 <>
-                                    <p className={styles.whyLabel}>In common with your documents</p>
                                     <p className={styles.shared}>
+                                        <span className={styles.visuallyHidden}>In common with your documents: </span>
                                         {call.why.shared.map((word) => (
                                             <span key={word} className={styles.sharedWord}>
                                                 {word.toLowerCase()}
                                             </span>
                                         ))}
                                     </p>
-                                    {call.why.call_sentence && (
-                                        <>
-                                            <p className={styles.whyLabel}>The call says</p>
-                                            <blockquote className={styles.whyQuote}>
-                                                “<Highlighted text={call.why.call_sentence} words={call.why.call_highlight} />”
-                                            </blockquote>
-                                        </>
-                                    )}
-                                    {call.why.your_sentence && (
-                                        <>
-                                            <p className={styles.whyLabel}>Your {call.why.your_document} says</p>
-                                            <blockquote className={styles.whyQuote}>
-                                                “<Highlighted text={call.why.your_sentence} words={call.why.your_highlight} />”
-                                            </blockquote>
-                                        </>
+                                    {(call.why.call_sentence || call.why.your_sentence) && (
+                                        <details className={`${styles.extra} ${styles.whyMore}`}>
+                                            <DetailSummary title="Where it says so" />
+                                            <div className={styles.whyQuotes}>
+                                                {call.why.call_sentence && (
+                                                    <>
+                                                        <p className={styles.whyLabel}>The call says</p>
+                                                        <blockquote className={styles.whyQuote}>
+                                                            “<Highlighted text={call.why.call_sentence} words={call.why.call_highlight} />”
+                                                        </blockquote>
+                                                    </>
+                                                )}
+                                                {call.why.your_sentence && (
+                                                    <>
+                                                        <p className={styles.whyLabel}>Your {call.why.your_document} says</p>
+                                                        <blockquote className={styles.whyQuote}>
+                                                            “<Highlighted text={call.why.your_sentence} words={call.why.your_highlight} />”
+                                                        </blockquote>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </details>
                                     )}
                                 </>
                             ) : (
@@ -199,6 +216,19 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                             )}
                         </section>
                     )}
+
+                    {call.description && (
+                        <>
+                            <h2 className={styles.aboutHeading}>About this call</h2>
+                            <p className={styles.description}>{call.description}</p>
+                        </>
+                    )}
+
+                    {/* right under the description, so the full call is one step from its summary */}
+                    <a href={call.source_url} target="_blank" rel="noopener noreferrer" className={styles.original}>
+                        Read the original call →<span className={styles.visuallyHidden}> (opens in a new tab)</span>
+                    </a>
+
                 </div>
 
                 <section aria-labelledby="apply-heading" className={styles.apply}>
@@ -270,7 +300,7 @@ const OpportunityView = ({ call }: { call: Opportunity }) => {
                         grouped under one parent; the programme dates are about the programme, so apart */}
                     {apply.length > 0 && (
                         <details className={styles.extra}>
-                            <summary className={styles.extraSummary}>What you need to apply · {apply.length}</summary>
+                            <DetailSummary title="What you need to apply" count={apply.length} />
                             <div className={styles.nested}>
                                 {apply.map((detail) => (
                                     <Detail key={detail.title} detail={detail} />

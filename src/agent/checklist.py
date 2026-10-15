@@ -17,6 +17,11 @@ An item to gather that asks for pictures of the artist's work ("Images of previo
 documentation material", "JPG or PNG preview") is marked `images`: the artist can choose images of
 their saved projects for it (api/applications.py). Not a photo of the person (ID, profile, headshot).
 
+The extraction sometimes lists one text twice: as a question cut out of a sentence ("with contact
+details, affiliation and short bio", max 100 words) and as a material to write ("short bio", max 100
+words). Same limit, and the material's name in the question: one text, kept once, as the material
+(its name is the cleaner title). See `same_text`.
+
 Whether that document is actually uploaded, and the artist's drafts and ticks, are added by the API
 (api/applications.py): this module only reads the call, so it is the same for every artist.
 """
@@ -42,9 +47,10 @@ DOCUMENT_RULES: list[tuple[str, re.Pattern]] = [
 
 @dataclass
 class ChecklistItem:
-    key: str                            # stable id within the call: "q-<hash>" or "m-<hash>"
+    key: str                            # stable id within the call: "q-<hash>" or "m-<hash>" ("t-..." artist's own)
     kind: Literal["write", "gather"]
-    source: Literal["question", "material"]
+    # "artist": a text the artist added themselves (api/applications.py), not one the call asks for
+    source: Literal["question", "material", "artist"]
     title: str                          # the question, or the material's name ("CV")
     limit: str | None                   # the question's limit ("max 300 words") or the material's details
     document: str | None                # "cv" / "statement" / "portfolio" that covers it, or None
@@ -82,14 +88,25 @@ def matching_document(name: str) -> str | None:
     return None
 
 
+def same_text(question, material) -> bool:
+    """A question that is a material to write listed again: the same limit, and the material's name
+    in the question ("Please submit your abstract" / "abstract", both "max 250 words")."""
+    if material.kind != "write" or not question.limit or question.limit != material.details:
+        return False
+    return re.search(rf"\b{re.escape(material.item.lower())}\b", question.question.lower()) is not None
+
+
 def build_checklist(call: ProcessedOpportunity) -> list[ChecklistItem]:
     """Every item the call asks for: questions first, then materials, each in the call's order.
     The English copy is used when there is one (as on the opportunity page)."""
     items: list[ChecklistItem] = []
+    materials = call.required_materials_en or call.required_materials
     for q in call.application_questions_en or call.application_questions:
+        if any(same_text(q, m) for m in materials):
+            continue   # the material stands for it below
         items.append(ChecklistItem(key=item_key("q", q.question), kind="write", source="question",
                                    title=q.question, limit=q.limit, document=None))
-    for m in call.required_materials_en or call.required_materials:
+    for m in materials:
         document = matching_document(m.item)
         if m.kind == "write" and document != "statement":
             document = None   # only a statement can stand in for a text to write (adapted)

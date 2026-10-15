@@ -104,6 +104,7 @@ def unsave(opportunity_id: str, user: CurrentUser, db: DB) -> None:
 
 
 def _progress(application) -> Progress:
+    application = applications.without_skipped(application)   # "Not needed" items don't count
     return Progress(texts_reviewed=sum(i.state == "confirmed" for i in application.to_draft),
                     texts=len(application.to_draft),
                     items_gathered=sum(i.state in ("uploaded", "chosen", "ticked") for i in application.to_gather),

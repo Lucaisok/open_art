@@ -8,12 +8,12 @@ export default function DiscoverLoading() {
         <main id="main" className={styles.main}>
             <div className={styles.titleRow}>
                 <h1 className={styles.title}>
-                    Discover calls<span className={styles.stop}>.</span>
+                    Discover calls
                 </h1>
-                <Bone width="300px" height="58px" radius="14px" />
+                <Bone width="300px" height="54px" radius="2px" />
             </div>
             <div className={styles.searchRow}>
-                <Bone height="56px" radius="14px" />
+                <Bone height="52px" radius="2px" />
             </div>
             <section className={styles.results}>
                 <div className={styles.resultsHead}>

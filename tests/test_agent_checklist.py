@@ -63,3 +63,17 @@ def test_the_english_copy_is_used_when_there_is_one():
     call = opp("call", required_materials=[material("Lebenslauf", "gather")],
                required_materials_en=[material("CV", "gather")])
     assert [i.title for i in build_checklist(call)] == ["CV"]
+
+
+def test_a_question_that_repeats_a_material_to_write_is_listed_once():
+    """LVA50's call: one sentence extracted as two question fragments and as two materials to write."""
+    call = opp("call",
+               application_questions=[ApplicationQuestion(question="Please submit your abstract", limit="max 250 words"),
+                                      ApplicationQuestion(question="with contact details, affiliation and short bio",
+                                                          limit="max 100 words"),
+                                      ApplicationQuestion(question="Why this abstract?", limit="max 50 words")],
+               required_materials=[material("abstract", "write", "max 250 words"), material("contact details", "gather"),
+                                   material("short bio", "write", "max 100 words")])
+    assert [(i.title, i.kind) for i in build_checklist(call)] == [
+        ("Why this abstract?", "write"),   # another limit: a question of its own
+        ("abstract", "write"), ("contact details", "gather"), ("short bio", "write")]

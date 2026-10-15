@@ -29,7 +29,7 @@ const SLOTS: SlotInfo[] = [
         kind: "portfolio",
         number: "03",
         title: "Portfolio",
-        description: "Selected works with their titles and captions, as one file. Only the text is read, not images.",
+        description: "Selected works with their titles and captions, as one file.",
         readResult: () => "Ready",
     },
 ];
@@ -37,7 +37,7 @@ const SLOTS: SlotInfo[] = [
 // Onboarding step 1 (design: OpenArt Documents prototype): the setup steps, the title, the three
 // upload slots and the fixed bar ("N of 3 added", Skip, Continue). Each slot uploads on its own;
 // the board only counts. After the onboarding, documents are managed in the Studio.
-const DocumentsBoard = ({ initialDocuments }: { initialDocuments: DocumentInfo[] }) => {
+const DocumentsBoard = ({ initialDocuments }: { initialDocuments: DocumentInfo[]; }) => {
     // which slots hold a document, and which are uploading: for the bar
     const [added, setAdded] = useState<Record<DocumentKind, boolean>>({
         cv: initialDocuments.some((d) => d.kind === "cv"),

@@ -29,7 +29,7 @@ type DiscoverBoardProps = {
     profileDisciplines: string[];      // "Matched to you" starts from these
 };
 
-const MODES: { mode: Mode; label: string }[] = [
+const MODES: { mode: Mode; label: string; }[] = [
     { mode: "matched", label: "Matched to you" },
     { mode: "all", label: "All calls" },
 ];
@@ -41,7 +41,7 @@ const LOAD_AHEAD_PX = 800;       // start loading the next page this far before 
 // The same search, in words: the request depends on everything but the panel being open
 const searchKey = (state: DiscoverState) => JSON.stringify(toSearchBody(state));
 
-// Discover (design: DISCOVER.md). Every change is written to the page address (lib/discover.ts),
+// Discover (design: DISCOVER.md, restyled from the OpenArt Discover prototype). Every change is written to the page address (lib/discover.ts),
 // then searched; "Back to results" from a call returns to the same address and scroll position.
 // The results arrive one page at a time (PAGE_SIZE): nearing the end of the list loads the next page.
 const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplines }: DiscoverBoardProps) => {
@@ -169,7 +169,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
 
     // Back from a call: reload every call that was shown, then return to where the artist was
     useEffect(() => {
-        let saved: { search: string; y: number; shown?: number } | null = null;
+        let saved: { search: string; y: number; shown?: number; } | null = null;
         try {
             saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null");
             sessionStorage.removeItem(SCROLL_KEY);
@@ -224,11 +224,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
     const note =
         state.mode === "all" ? (
             "Every call in OpenArt, nearest deadline first. Filters still apply."
-        ) : results.ranked_by.length > 0 ? (
-            `Ranked by how close each call is to your ${results.ranked_by.join(", ")}. ` +
-            "Each card shows what the call has in common with them, and the chance it is a clear fit (it also " +
-            "counts the shared words, so it doesn't always follow the order). Filters start from your profile."
-        ) : (
+        ) : results.ranked_by.length > 0 ? `Ranked by how close each call is to your profile` : (
             <>
                 <Link href="/studio" className={styles.noteLink}>
                     Upload your statement, CV or portfolio
@@ -253,7 +249,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
         <main id="main" className={styles.main}>
             <div className={styles.titleRow}>
                 <h1 className={styles.title}>
-                    Discover calls<span className={styles.stop}>.</span>
+                    Discover calls
                 </h1>
                 <div role="group" aria-label="Show" className={styles.modes}>
                     {MODES.map(({ mode, label }) => (
@@ -313,15 +309,12 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
 
             <section aria-labelledby="results-heading" className={styles.results}>
                 <div className={styles.resultsHead}>
-                    <h2 id="results-heading" className={styles.resultsTitle}>
-                        Results
-                    </h2>
+                    <p className={styles.orderNote}>{note}</p>
+
                     <p aria-live="polite" className={styles.count}>
                         {countLine}
                     </p>
                 </div>
-                <p className={styles.orderNote}>{note}</p>
-
                 {!results.profile_filled && (
                     <p className={styles.banner}>
                         <Link href="/studio?edit=profile" className={styles.bannerLink}>

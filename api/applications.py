@@ -3,12 +3,16 @@ OpenArt API — an artist's application to one call (workflow.MD, "Step 6 — Ap
 
     GET  /api/applications/{opportunity_id}                         the checklist with the artist's
                                                                     drafts, ticks and documents
-    PUT  /api/applications/{opportunity_id}/items/{key}             save a draft (back to "draft") or a tick
+    PUT  /api/applications/{opportunity_id}/items/{key}             save a draft (back to "draft"), a tick,
+                                                                    or "Not needed" (skipped)
     POST /api/applications/{opportunity_id}/items/{key}/confirm     "I have reviewed this"
     PUT  /api/applications/{opportunity_id}/projects                the projects chosen for the application
     DELETE /api/applications/{opportunity_id}/projects              ...back to the suggested ones
     PUT  /api/applications/{opportunity_id}/items/{key}/projects    ...or for one text only (null = the application's)
     PUT  /api/applications/{opportunity_id}/items/{key}/images      the images chosen for an image item
+    POST /api/applications/{opportunity_id}/texts                   add a text of the artist's own, with a title
+    PUT  /api/applications/{opportunity_id}/texts/{key}             ...rename it
+    DELETE /api/applications/{opportunity_id}/texts/{key}           ...remove it, with its chat
     GET  /api/applications/{opportunity_id}/items/{key}/messages    the chat about one item
     POST /api/applications/{opportunity_id}/items/{key}/messages    a message to the agent: its reply
                                                                     and a new draft (src/agent/drafting.py)
@@ -16,7 +20,7 @@ OpenArt API — an artist's application to one call (workflow.MD, "Step 6 — Ap
                                                                     reviewed texts + the requested documents
 
 What the call asks for comes from the corpus every time (src/agent/checklist.py); only the artist's
-own work is stored (api/models.py: Application, ApplicationItem, AgentMessage), created on their first save.
+own work is stored, including the texts they add themselves on any call (title set, key "t-...") (api/models.py: Application, ApplicationItem, AgentMessage), created on their first save.
 Human in the loop: only the confirm route sets "confirmed", and only on a draft the artist can see;
 any later change to the text, the agent's included, sets it back to "draft". The agent's model call
 (OpenAI) is the only thing that leaves the server, and nothing is ever sent to the call itself.
@@ -25,6 +29,7 @@ any later change to the text, the agent's included, sets it back to "draft". The
 import io
 import os
 import re
+import secrets
 import uuid
 import zipfile
 from datetime import date, datetime, timezone
@@ -37,7 +42,7 @@ import numpy as np
 from fastapi.responses import Response
 from openai import OpenAI, OpenAIError
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from api.auth import DB, CurrentUser
 from api import discover   # discover.get_matcher(), not imported by name: the tests replace it
@@ -78,7 +83,7 @@ class ProjectChoiceOut(BaseModel):
 class ItemOut(BaseModel):
     key: str
     kind: Literal["write", "gather"]
-    source: Literal["question", "material"]
+    source: Literal["question", "material", "artist"]   # "artist": a text the artist added
     title: str
     limit: str | None
     document: str | None        # "cv" / "statement" / "portfolio" that covers it (uploaded or not)
@@ -89,6 +94,7 @@ class ItemOut(BaseModel):
     images: list[ImageOut] = []         # the ones chosen, in the artist's order
     draft: str | None
     projects: Selection | None = None   # this text's own choice; None = the application's
+    skipped: bool = False               # the artist's "Not needed": out of the download and its rule
 
 
 class ProjectImagesOut(BaseModel):
@@ -133,10 +139,17 @@ class ApplicationOut(BaseModel):
     image_choices: list[ProjectImagesOut] = []
 
 
+class TextIn(BaseModel):
+    """A text of the artist's own: its title ("Cover letter")."""
+    title: str = Field(min_length=1, max_length=200)
+
+
 class ItemIn(BaseModel):
-    """Either field, or both. A draft only for an item to write, a tick only for one to gather."""
+    """Any of the fields. A draft only for an item to write, a tick only for one to gather; "Not
+    needed" (skipped) for any item the call asks for (the artist's own texts are deleted instead)."""
     draft: str | None = Field(default=None, max_length=MAX_DRAFT_CHARS)
     ticked: bool | None = None
+    skipped: bool | None = None
 
 
 def _call(opportunity_id: str) -> ProcessedOpportunity:
@@ -157,6 +170,21 @@ def _application(db, user_id: uuid.UUID, opportunity_id: str, create: bool = Fal
         from api.saved import save_call   # api/saved.py imports this module
         save_call(db, user_id, discover.get_matcher().get(opportunity_id))
     return application
+
+
+def own_texts(application: Application | None) -> list[ChecklistItem]:
+    """The texts the artist added themselves, in the order they added them: items to write like the
+    call's own, with the artist's title."""
+    if application is None:
+        return []
+    rows = sorted((i for i in application.items if i.title), key=lambda i: i.created_at)
+    return [ChecklistItem(key=i.key, kind="write", source="artist", title=i.title, limit=None, document=None)
+            for i in rows]
+
+
+def _all_items(call: ProcessedOpportunity, application: Application | None) -> list[ChecklistItem]:
+    """What the call asks for, then the artist's own texts."""
+    return build_checklist(call) + own_texts(application)
 
 
 def _chosen(saved: ApplicationItem | None, images: dict[str, ProjectImage]) -> list[ProjectImage]:
@@ -181,6 +209,7 @@ def _item_out(item: ChecklistItem, saved: ApplicationItem | None, uploaded: set[
                    document=item.document, state=_state(item, saved, uploaded, chosen),
                    draft=saved.draft if saved else None,
                    projects=Selection(**saved.projects) if saved and saved.projects else None,
+                   skipped=bool(saved and saved.skipped),
                    images_wanted=item.images, images=[image_out(i) for i in chosen])
 
 
@@ -197,7 +226,7 @@ def application_out(db, user_id: uuid.UUID, call: ProcessedOpportunity) -> Appli
     application = _application(db, user_id, call.id)
     saved = {i.key: i for i in application.items} if application else {}
     images = _project_images(db, user_id)
-    checklist = build_checklist(call)
+    checklist = _all_items(call, application)
     items = [_item_out(i, saved.get(i.key), uploaded, images) for i in checklist]
     profile, _ = discover.saved_profile(db, user_id)
     city, countries = discover.place(call)
@@ -232,10 +261,11 @@ def application_out(db, user_id: uuid.UUID, call: ProcessedOpportunity) -> Appli
     return out
 
 
-def _checklist_item(call: ProcessedOpportunity, key: str) -> ChecklistItem:
-    item = next((i for i in build_checklist(call) if i.key == key), None)
+def _item(db, user_id: uuid.UUID, call: ProcessedOpportunity, key: str) -> ChecklistItem:
+    """One item of this artist's application: one the call asks for, or a text they added."""
+    item = next((i for i in _all_items(call, _application(db, user_id, call.id)) if i.key == key), None)
     if item is None:
-        raise HTTPException(404, "This call doesn't ask for that item.")
+        raise HTTPException(404, "This application has no such item.")
     return item
 
 
@@ -255,17 +285,21 @@ def get_application(opportunity_id: str, user: CurrentUser, db: DB) -> Applicati
 @router.put("/{opportunity_id}/items/{key}")
 def save_item(opportunity_id: str, key: str, body: ItemIn, user: CurrentUser, db: DB) -> ApplicationOut:
     call = _call(opportunity_id)
-    item = _checklist_item(call, key)
+    item = _item(db, user.id, call, key)
     if body.draft is not None and item.kind != "write":
         raise HTTPException(422, "Only an item to write has a draft.")
     if body.ticked is not None and item.kind != "gather":
         raise HTTPException(422, "Only an item to gather can be ticked.")
+    if body.skipped is not None and item.source == "artist":
+        raise HTTPException(422, "Delete a text of your own instead.")
     saved = _saved_item(db, _application(db, user.id, call.id, create=True), key)
     if body.draft is not None and body.draft != saved.draft:
         saved.draft = body.draft
         saved.status = "draft" if body.draft.strip() else None   # a changed text needs a new review
     if body.ticked is not None:
         saved.ticked = body.ticked
+    if body.skipped is not None:
+        saved.skipped = body.skipped
     db.commit()
     return application_out(db, user.id, call)
 
@@ -275,7 +309,7 @@ def choose_images(opportunity_id: str, key: str, body: ImagesIn, user: CurrentUs
     """The images to send for an item asking for images: the artist's own choice from their saved
     projects' images, in their order. [] clears it."""
     call = _call(opportunity_id)
-    item = _checklist_item(call, key)
+    item = _item(db, user.id, call, key)
     if not item.images:
         raise HTTPException(422, "This item doesn't ask for images.")
     images = _project_images(db, user.id)
@@ -291,13 +325,64 @@ def choose_images(opportunity_id: str, key: str, body: ImagesIn, user: CurrentUs
 @router.post("/{opportunity_id}/items/{key}/confirm")
 def confirm_item(opportunity_id: str, key: str, user: CurrentUser, db: DB) -> ApplicationOut:
     call = _call(opportunity_id)
-    _checklist_item(call, key)
+    _item(db, user.id, call, key)
     application = _application(db, user.id, call.id)
     saved = db.get(ApplicationItem, (application.id, key)) if application else None
     if saved is None or saved.status is None:
         raise HTTPException(409, "There is no draft to confirm yet.")
     saved.status = "confirmed"
     db.commit()
+    return application_out(db, user.id, call)
+
+
+# -- the artist's own texts (sub-step 8) ---------------------------------------------------------------
+
+def _own_text(db, user_id: uuid.UUID, call: ProcessedOpportunity, key: str) -> ApplicationItem:
+    """One of the texts this artist added on this call (never a checklist item: those can't be renamed)."""
+    application = _application(db, user_id, call.id)
+    saved = db.get(ApplicationItem, (application.id, key)) if application else None
+    if saved is None or not saved.title:
+        raise HTTPException(404, "There is no such text of yours.")
+    return saved
+
+
+@router.post("/{opportunity_id}/texts")
+def add_text(opportunity_id: str, body: TextIn, user: CurrentUser, db: DB) -> ApplicationOut:
+    """A text the artist wants to send, whether or not the call asks for it ("Cover letter"). Like the
+    call's texts it is drafted, reviewed by the artist, and goes into the download."""
+    call = _call(opportunity_id)
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(422, "Give the text a title.")
+    application = _application(db, user.id, call.id, create=True)
+    # "t-" + random: never the same as the call's "q-"/"m-" keys
+    db.add(ApplicationItem(application_id=application.id, key=f"t-{secrets.token_hex(4)}", title=title, ticked=False))
+    db.commit()
+    db.refresh(application)   # its items now include the new text
+    return application_out(db, user.id, call)
+
+
+@router.put("/{opportunity_id}/texts/{key}")
+def rename_text(opportunity_id: str, key: str, body: TextIn, user: CurrentUser, db: DB) -> ApplicationOut:
+    call = _call(opportunity_id)
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(422, "Give the text a title.")
+    _own_text(db, user.id, call, key).title = title
+    db.commit()
+    return application_out(db, user.id, call)
+
+
+@router.delete("/{opportunity_id}/texts/{key}")
+def delete_text(opportunity_id: str, key: str, user: CurrentUser, db: DB) -> ApplicationOut:
+    """Removes the text, its draft and its chat with the assistant."""
+    call = _call(opportunity_id)
+    saved = _own_text(db, user.id, call, key)
+    db.execute(delete(AgentMessage).where(AgentMessage.application_id == saved.application_id,
+                                          AgentMessage.item_key == key))
+    db.delete(saved)
+    db.commit()
+    db.expire_all()   # the application's items are read again without it
     return application_out(db, user.id, call)
 
 
@@ -393,7 +478,7 @@ def suggested_again(opportunity_id: str, user: CurrentUser, db: DB) -> Applicati
 def choose_item_projects(opportunity_id: str, key: str, body: ItemProjectsIn, user: CurrentUser,
                          db: DB) -> ApplicationOut:
     call = _call(opportunity_id)
-    if _checklist_item(call, key).kind != "write":
+    if _item(db, user.id, call, key).kind != "write":
         raise HTTPException(422, "Only a text to write has projects.")
     if body.selection is not None:
         _check_selection(body.selection, _saved_projects(db, user.id))
@@ -488,14 +573,14 @@ def _projects(db, user_id: uuid.UUID, selection: Selection) -> list[str]:
 @router.get("/{opportunity_id}/items/{key}/messages")
 def get_messages(opportunity_id: str, key: str, user: CurrentUser, db: DB) -> list[MessageOut]:
     call = _call(opportunity_id)
-    _checklist_item(call, key)
+    _item(db, user.id, call, key)
     return [_message_out(m) for m in _messages(db, _application(db, user.id, call.id), key)]
 
 
 @router.post("/{opportunity_id}/items/{key}/messages")
 def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUser, db: DB) -> TurnOut:
     call = _call(opportunity_id)
-    item = _checklist_item(call, key)
+    item = _item(db, user.id, call, key)
     if item.kind != "write":
         raise HTTPException(422, "The assistant only drafts items to write.")
     application = _application(db, user.id, call.id, create=True)
@@ -503,9 +588,9 @@ def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUs
     history = _messages(db, application, key)
 
     # the application's memory: the other items' current drafts, by their titles
-    titles = {i.key: i.title for i in build_checklist(call)}
-    other_drafts = [(titles[i.key], i.draft) for i in application.items
-                    if i.key != key and i.key in titles and i.draft and i.draft.strip()]
+    titles = {i.key: i.title for i in _all_items(call, application)}
+    other_drafts = [(titles[i.key], i.draft) for i in application.items   # not the ones marked "Not needed"
+                    if i.key != key and i.key in titles and i.draft and i.draft.strip() and not i.skipped]
     statement = db.scalar(select(Document).where(Document.user_id == user.id, Document.kind == "statement"))
     adapt = item.document == "statement" and statement is not None
     passages = _passages(db, user.id, f"{item.title}. {call.title_en}", statement.file_name if adapt else None)
@@ -545,9 +630,17 @@ def send_message(opportunity_id: str, key: str, body: MessageIn, user: CurrentUs
 
 # -- download (sub-step 6) -----------------------------------------------------------------------------
 
+def without_skipped(application: ApplicationOut) -> ApplicationOut:
+    """The application as it is sent: without the items the artist marked "Not needed"."""
+    return application.model_copy(update={"to_draft": [i for i in application.to_draft if not i.skipped],
+                                          "to_gather": [i for i in application.to_gather if not i.skipped]})
+
+
 def missing(application: ApplicationOut) -> list[str]:
     """What still stands between the artist and a complete application: texts not reviewed, items
-    neither uploaded, nor given images, nor ticked. [] = complete."""
+    neither uploaded, nor given images, nor ticked, or a zip with no file of the artist's in it
+    (no text, no document, no image). Items marked "Not needed" don't count. [] = complete."""
+    application = without_skipped(application)
     to_review = sum(i.state != "confirmed" for i in application.to_draft)
     to_gather = sum(i.state not in ("uploaded", "chosen", "ticked") for i in application.to_gather)
     out = []
@@ -555,6 +648,10 @@ def missing(application: ApplicationOut) -> list[str]:
         out.append(f"{to_review} text{'s' if to_review > 1 else ''} to review")
     if to_gather:
         out.append(f"{to_gather} item{'s' if to_gather > 1 else ''} to gather")
+    # a zip with only application.docx and the checklist holds nothing of the artist's: no download
+    files = len(application.to_draft) + sum(i.state in ("uploaded", "chosen") for i in application.to_gather)
+    if not out and files == 0:
+        out.append("add a text (the zip would be empty)")
     return out
 
 
@@ -623,7 +720,7 @@ def download(opportunity_id: str, user: CurrentUser, db: DB) -> Response:
     (to paste into forms), all of them in application.docx (to attach), checklist.txt, and for each item
     covered by an upload that original file (only the documents the call asks for)."""
     call = _call(opportunity_id)
-    application = application_out(db, user.id, call)
+    application = without_skipped(application_out(db, user.id, call))   # "Not needed" stays out of the zip
     gaps = missing(application)
     if gaps:
         raise HTTPException(409, "Not complete yet: " + ", ".join(gaps) + ".")

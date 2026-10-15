@@ -21,14 +21,27 @@ const MAX_DISCIPLINES = 3;
 const ResultCard = ({ result, onOpen }: ResultCardProps) => (
     <li className={styles.item}>
         <div className={styles.card}>
-            {(result.types.length > 0 || result.disciplines.length > 0) && (
+            {result.types.length > 0 && (
                 <span className={styles.types}>
                     {result.types.map((type) => (
                         <span key={type} className={styles.type}>
                             {type}
                         </span>
                     ))}
-                    {/* who the call is for, in a quieter chip than the type; at most MAX_DISCIPLINES */}
+                </span>
+            )}
+            <Link
+                href={`/opportunities/${encodeURIComponent(result.id)}`}
+                className={styles.title}
+                title={result.title}   // the whole title on hover, when the card cuts it
+                onClick={onOpen}
+            >
+                {result.title}
+            </Link>
+            {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
+            {/* who the call is for: grey chips under the organisation; at most MAX_DISCIPLINES */}
+            {result.disciplines.length > 0 && (
+                <span className={styles.disciplines}>
                     {result.disciplines.slice(0, MAX_DISCIPLINES).map((discipline) => (
                         <span key={discipline} className={styles.discipline}>
                             {discipline}
@@ -42,14 +55,6 @@ const ResultCard = ({ result, onOpen }: ResultCardProps) => (
                     )}
                 </span>
             )}
-            <Link
-                href={`/opportunities/${encodeURIComponent(result.id)}`}
-                className={styles.title}
-                onClick={onOpen}
-            >
-                {result.title}
-            </Link>
-            {result.organisation && <span className={styles.organisation}>{result.organisation}</span>}
             <span className={styles.facts}>
                 <span>{placeLabel(result.city, result.countries)}</span>
                 <span className={result.deadline ? styles.highlight : undefined}>{deadlineLabel(result.deadline)}</span>

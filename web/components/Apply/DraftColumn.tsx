@@ -6,6 +6,7 @@ import { countText, DOCUMENT_NAMES, textLimit } from "@/lib/apply";
 import { thumbUrl } from "@/lib/images";
 import type { ApplicationData, ApplicationItem } from "@/lib/types";
 import { isManual, Mark, stateOf } from "./Checklist";
+import TitleForm from "./TitleForm";
 import styles from "./Apply.module.css";
 
 type DraftColumnProps = {
@@ -21,7 +22,24 @@ type DraftColumnProps = {
     onReview: () => Promise<void>;
     onTick: (ticked: boolean) => void;
     onChooseImages: () => void;
+    onRename: (title: string) => Promise<string | null>;   // the artist's own texts only
+    onDelete: () => Promise<void>;
+    onSkip: (skipped: boolean) => void;   // "Not needed" on an item the call asks for, or undone
 };
+
+// "Not needed": the extraction can list something the call doesn't really ask for. The artist decides;
+// the item then no longer blocks the download and stays out of the zip, until undone.
+const SkipToggle = ({ item, onSkip }: { item: ApplicationItem; onSkip: (skipped: boolean) => void }) =>
+    item.skipped ? (
+        <p className={styles.skipNote}>
+            <span>Marked not needed: it stays out of the download.</span>
+            <button type="button" className={styles.textButton} onClick={() => onSkip(false)}>Needed after all</button>
+        </p>
+    ) : (
+        <button type="button" className={styles.textButton} onClick={() => onSkip(true)}>
+            Not needed for this application
+        </button>
+    );
 
 // what each kind of item to gather needs from the artist, in a sentence
 const helpFor = (item: ApplicationItem) => {
@@ -38,10 +56,11 @@ const helpFor = (item: ApplicationItem) => {
 // "I have reviewed this" is the artist's own click on the text they see, and any later change sets it
 // back to "Draft, not reviewed" (api/applications.py). For an item to gather: what it needs.
 const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, onChange, onSave, onReview, onTick,
-                       onChooseImages }: DraftColumnProps) => {
+                       onChooseImages, onRename, onDelete, onSkip }: DraftColumnProps) => {
     const [feedback, setFeedback] = useState("");
     const [busy, setBusy] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [renaming, setRenaming] = useState(false);
 
     if (gather) {
         const state = stateOf(gather);
@@ -55,7 +74,8 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
                         {gather.limit && <span className={styles.muted}>{gather.limit}</span>}
                     </span>
                 </div>
-                <p className={styles.help}>{helpFor(gather)}</p>
+                {!readOnly && <SkipToggle item={gather} onSkip={onSkip} />}
+                {!gather.skipped && <p className={styles.help}>{helpFor(gather)}</p>}
                 {gather.document && (
                     <div className={styles.fileRow}>
                         <span className={styles.fileName}>
@@ -64,7 +84,7 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
                         <Link href={`/studio?edit=${gather.document}`} className={styles.smallLink}>Upload or replace</Link>
                     </div>
                 )}
-                {gather.images_wanted && gather.state !== "uploaded" && (
+                {gather.images_wanted && gather.state !== "uploaded" && !gather.skipped && (
                     <>
                         {gather.images.length > 0 && (
                             <ul className={styles.bigThumbs}>
@@ -80,7 +100,7 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
                         {!readOnly && <button type="button" className={styles.darkButton} onClick={onChooseImages}>Choose images →</button>}
                     </>
                 )}
-                {isManual(gather) && (
+                {isManual(gather) && !gather.skipped && (
                     <label className={styles.haveItBig}>
                         <input type="checkbox" checked={gather.state === "ticked"} disabled={readOnly}
                                onChange={(event) => onTick(event.target.checked)} />
@@ -96,7 +116,10 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
             <section className={styles.draftColumn}>
                 <div className={styles.nothing}>
                     <h2 className={styles.draftTitle}>Nothing to draft for this call</h2>
-                    <p className={styles.help}>The call only asks for files and images. Gather the items in the checklist, then download the package.</p>
+                    <p className={styles.help}>
+                        The call only asks for files and images. Gather the items in the checklist, then download the
+                        package. Want to send a text anyway, like a cover letter? Use &ldquo;+ Add a text&rdquo; in the checklist.
+                    </p>
                 </div>
             </section>
         );
@@ -109,6 +132,7 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
     const changed = draft !== (text.draft ?? "");
     const holes = Array.from(new Set(draft.match(/\[[^\]\n]{2,80}\]/g) ?? []));
     const canReview = text.state !== "confirmed" && draft.trim() !== "";
+    const own = text.source === "artist";
 
     const save = async () => {
         setBusy(true);
@@ -132,10 +156,34 @@ const DraftColumn = ({ data, text, gather, draft, readOnly, cue, onDismissCue, o
         }
     };
 
+    const remove = async () => {
+        // the draft and its chat go with it: asked first
+        if (window.confirm(`Delete "${text.title}"? Its draft and its chat with the assistant are deleted too.`)) {
+            await onDelete();
+        }
+    };
+
     return (
         <section aria-labelledby="draft-heading" className={styles.draftColumn}>
             <div className={styles.draftHead}>
-                <h2 id="draft-heading" className={styles.draftTitle}>{text.title}</h2>
+                {own && <span className={styles.eyebrowMuted}>Your own text · the call doesn&apos;t ask for it</span>}
+                {renaming ? (
+                    <TitleForm initial={text.title} submitLabel="Rename" onCancel={() => setRenaming(false)}
+                               onSubmit={async (title) => {
+                                   const problem = await onRename(title);
+                                   if (!problem) setRenaming(false);
+                                   return problem;
+                               }} />
+                ) : (
+                    <h2 id="draft-heading" className={styles.draftTitle}>{text.title}</h2>
+                )}
+                {own && !readOnly && !renaming && (
+                    <span className={styles.ownActions}>
+                        <button type="button" className={styles.textButton} onClick={() => setRenaming(true)}>Rename</button>
+                        <button type="button" className={styles.textButton} onClick={remove}>Delete</button>
+                    </span>
+                )}
+                {!own && !readOnly && <SkipToggle item={text} onSkip={onSkip} />}
                 <span className={styles.draftMeta}>
                     <span className={styles.rowState}>
                         <Mark mark={state.mark} />

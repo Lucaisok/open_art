@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { DOCUMENT_NAMES } from "@/lib/apply";
 import { thumbUrl } from "@/lib/images";
 import type { ApplicationData, ApplicationItem } from "@/lib/types";
+import TitleForm from "./TitleForm";
 import styles from "./Apply.module.css";
 
 // how far an item is: an empty square, half-filled, or lime (never colour alone: the words follow)
 export const stateOf = (item: ApplicationItem): { label: string; mark: "empty" | "half" | "done" } => {
+    if (item.skipped) return { label: "Not needed", mark: "empty" };   // the artist's own call: out of the zip
     switch (item.state) {
         case "confirmed":
             return { label: "Reviewed by you", mark: "done" };
@@ -37,38 +40,60 @@ type ChecklistProps = {
     onSelect: (key: string) => void;
     onTick: (key: string, ticked: boolean) => void;
     onChooseImages: (key: string) => void;
+    onAddText: (title: string) => Promise<string | null>;
+};
+
+// "+ Add a text": a text of the artist's own on any call (a cover letter...), with their title
+const AddText = ({ onAdd }: { onAdd: (title: string) => Promise<string | null> }) => {
+    const [open, setOpen] = useState(false);
+    if (!open) {
+        return <button type="button" className={styles.textButton} onClick={() => setOpen(true)}>+ Add a text</button>;
+    }
+    return (
+        <TitleForm submitLabel="Add" onCancel={() => setOpen(false)}
+                   onSubmit={async (title) => {
+                       const problem = await onAdd(title);
+                       if (!problem) setOpen(false);
+                       return problem;
+                   }} />
+    );
 };
 
 // The left column (design: APPLICATION.md → Checklist): the texts to write, then the items to gather,
-// each with its state. Selecting one shows it in the centre column.
-const Checklist = ({ data, selected, readOnly, onSelect, onTick, onChooseImages }: ChecklistProps) => (
+// each with its state. Selecting one shows it in the centre column. The artist can add texts of their own
+// to the ones the call asks for.
+const Checklist = ({ data, selected, readOnly, onSelect, onTick, onChooseImages, onAddText }: ChecklistProps) => (
     <nav aria-label="What this application needs" className={styles.checklist}>
         <h2 className={styles.columnHead}>To write · {data.to_draft.length}</h2>
-        {data.to_draft.length === 0 && <p className={styles.columnHint}>This call asks for nothing written.</p>}
+        {data.to_draft.length === 0 && (
+            <p className={styles.columnHint}>This call asks for nothing written. You can still add a text of your own.</p>
+        )}
         {data.to_draft.map((item) => {
             const state = stateOf(item);
             return (
-                <button key={item.key} type="button" className={styles.row} aria-current={item.key === selected ? "true" : undefined}
+                <button key={item.key} type="button" className={`${styles.row} ${item.skipped ? styles.skipped : ""}`} aria-current={item.key === selected ? "true" : undefined}
                         onClick={() => onSelect(item.key)}>
                     <span className={styles.rowTitle}>{item.title}</span>
                     {item.limit && <span className={styles.rowMeta}>{item.limit}</span>}
+                    {item.source === "artist" && <span className={styles.rowMeta}>Your own text</span>}
                     <span className={styles.rowState}><Mark mark={state.mark} />{state.label}</span>
                 </button>
             );
         })}
+        {!readOnly && <AddText onAdd={onAddText} />}
 
         <h2 className={`${styles.columnHead} ${styles.columnHeadNext}`}>To gather · {data.to_gather.length}</h2>
         {data.to_gather.length === 0 && <p className={styles.columnHint}>Nothing to send besides the texts.</p>}
         {data.to_gather.map((item) => {
             const state = stateOf(item);
             return (
-                <div key={item.key} className={styles.gatherRow} aria-current={item.key === selected ? "true" : undefined}>
+                <div key={item.key} className={`${styles.gatherRow} ${item.skipped ? styles.skipped : ""}`} aria-current={item.key === selected ? "true" : undefined}>
                     <button type="button" className={styles.gatherPick} onClick={() => onSelect(item.key)}>
                         <span className={styles.rowTitle}>{item.title}</span>
                         {item.limit && <span className={styles.rowMeta}>{item.limit}</span>}
                     </button>
                     <span className={styles.rowState}><Mark mark={state.mark} />{state.label}</span>
-                    {item.images_wanted && item.state !== "uploaded" && (
+                    {item.images_wanted && item.state !== "uploaded" && !item.skipped && (
                         <>
                             {item.images.length > 0 && (
                                 <span className={styles.miniThumbs}>
@@ -85,7 +110,7 @@ const Checklist = ({ data, selected, readOnly, onSelect, onTick, onChooseImages 
                             )}
                         </>
                     )}
-                    {isManual(item) && (
+                    {isManual(item) && !item.skipped && (
                         <label className={styles.haveIt}>
                             <input type="checkbox" checked={item.state === "ticked"} disabled={readOnly}
                                    onChange={(event) => onTick(item.key, event.target.checked)} />

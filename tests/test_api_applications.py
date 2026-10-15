@@ -322,3 +322,92 @@ def test_the_page_header_knows_the_call_and_whether_it_is_saved(artist):
     assert body["saved"] is False and "countries" in body and "organisation" in body
     artist.put(f"/api/applications/call/items/{CV}", json={"ticked": True})   # starting saves the call
     assert artist.get("/api/applications/call").json()["saved"] is True
+
+
+# -- the artist's own texts (sub-step 8) -----------------------------------------------------------------
+
+def add_text(client, title="Cover letter"):
+    return client.post("/api/applications/call/texts", json={"title": title})
+
+
+def test_an_own_text_is_added_renamed_and_deleted(artist):
+    body = add_text(artist).json()
+    own = body["to_draft"][-1]
+    assert own["title"] == "Cover letter" and own["source"] == "artist" and own["key"].startswith("t-")
+    assert [i["title"] for i in add_text(artist, "Note to the jury").json()["to_draft"]] == [
+        "Why this residency?", "Artist statement", "Cover letter", "Note to the jury"]   # in the order added
+    body = artist.put(f"/api/applications/call/texts/{own['key']}", json={"title": "Letter"}).json()
+    assert body["to_draft"][2]["title"] == "Letter"
+    body = artist.delete(f"/api/applications/call/texts/{own['key']}").json()
+    assert [i["title"] for i in body["to_draft"]] == ["Why this residency?", "Artist statement", "Note to the jury"]
+    assert artist.put(f"/api/applications/call/items/{own['key']}", json={"draft": "x"}).status_code == 404
+
+
+def test_a_title_is_needed_and_the_calls_items_cant_be_renamed(artist):
+    assert add_text(artist, "").status_code == 422
+    assert add_text(artist, "   ").status_code == 422
+    assert add_text(artist, "x" * 201).status_code == 422
+    assert artist.put(f"/api/applications/call/texts/{QUESTION}", json={"title": "Mine"}).status_code == 404
+    assert artist.delete(f"/api/applications/call/texts/{QUESTION}").status_code == 404
+
+
+def test_an_own_text_is_reviewed_and_downloaded_like_the_others(artist, model):
+    url = "/api/applications/call"
+    key = add_text(artist).json()["to_draft"][-1]["key"]
+    upload(artist, "cv", os.path.join(TOMAS, "cv.docx"))
+    artist.put(f"{url}/items/{BUDGET}", json={"ticked": True})
+    for k in (QUESTION, STATEMENT):
+        artist.put(f"{url}/items/{k}", json={"draft": "Done."})
+        artist.post(f"{url}/items/{k}/confirm")
+    assert artist.get(url).json()["missing"] == ["1 text to review"]              # the own text, still empty
+    body = send(artist, key).json()["application"]                                # the assistant drafts it
+    assert states(body)[key] == "draft" and "Cover letter" in model.sent[0][1]["content"]
+    artist.post(f"{url}/items/{key}/confirm")
+    with zipfile.ZipFile(io.BytesIO(artist.get(f"{url}/download").content)) as z:
+        assert z.read("texts/03 Cover letter.txt").decode() == "Draft 1.\n"
+
+
+def test_another_artist_cant_see_or_touch_an_own_text(artist):
+    key = add_text(artist).json()["to_draft"][-1]["key"]
+    artist.post("/api/auth/logout")
+    assert artist.post("/api/auth/signup", json={"email": "other@example.com", "password": PASSWORD}).status_code == 201
+    assert len(artist.get("/api/applications/call").json()["to_draft"]) == 2
+    assert artist.put(f"/api/applications/call/items/{key}", json={"draft": "x"}).status_code == 404
+    assert artist.delete(f"/api/applications/call/texts/{key}").status_code == 404
+
+
+def test_nothing_to_download_until_there_is_a_file(artist, monkeypatch):
+    """A call that only asks for something to tick: ticked, the zip would hold no file of the artist's."""
+    only = opp("call", title_en="Open studio", required_materials=[material("Signed form", "gather")])
+    m = matcher([only], [[1.0, 0.0]], statuses={"call": "CHECK"})
+    monkeypatch.setattr(discover, "get_matcher", lambda: m)
+    url = "/api/applications/call"
+    body = artist.put(f"{url}/items/{item_key('m', 'Signed form')}", json={"ticked": True}).json()
+    assert body["missing"] == ["add a text (the zip would be empty)"]
+    assert artist.get(f"{url}/download").status_code == 409
+    key = artist.post(f"{url}/texts", json={"title": "Cover letter"}).json()["to_draft"][0]["key"]
+    artist.put(f"{url}/items/{key}", json={"draft": "Hello."})
+    assert artist.post(f"{url}/items/{key}/confirm").json()["missing"] == []
+    assert artist.get(f"{url}/download").status_code == 200
+
+
+# -- "Not needed" (sub-step 9) ------------------------------------------------------------------------------
+
+def test_an_item_marked_not_needed_no_longer_blocks_and_stays_out_of_the_zip(artist):
+    url = "/api/applications/call"
+    artist.put(f"{url}/items/{QUESTION}", json={"draft": "Because the sea."})
+    artist.post(f"{url}/items/{QUESTION}/confirm")
+    artist.put(f"{url}/items/{STATEMENT}", json={"draft": "Half done."})    # a draft, then not needed after all
+    for key in (STATEMENT, CV, BUDGET):
+        body = artist.put(f"{url}/items/{key}", json={"skipped": True}).json()
+    assert body["missing"] == [] and all(i["skipped"] for i in body["to_gather"])
+    with zipfile.ZipFile(io.BytesIO(artist.get(f"{url}/download").content)) as z:
+        assert sorted(z.namelist()) == ["application.docx", "checklist.txt", "texts/01 Why this residency.txt"]
+        assert "Budget" not in z.read("checklist.txt").decode()
+    body = artist.put(f"{url}/items/{BUDGET}", json={"skipped": False}).json()    # undone
+    assert body["missing"] == ["1 item to gather"]
+
+
+def test_only_the_calls_items_can_be_marked_not_needed(artist):
+    key = artist.post("/api/applications/call/texts", json={"title": "Cover letter"}).json()["to_draft"][-1]["key"]
+    assert artist.put(f"/api/applications/call/items/{key}", json={"skipped": True}).status_code == 422

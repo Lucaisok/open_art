@@ -1,4 +1,5 @@
-/* Result card (design: DISCOVER.md → Result card) */
+/* Result card (design: DISCOVER.md → Result card, restyled from the Discover prototype's
+   "shadow-white" card: no box, an ink rule on top, white on hover) */
 .item {
   display: flex;
   min-width: 0;
@@ -10,40 +11,26 @@
   flex-direction: column;
   width: 100%;
   min-height: 340px;
-  padding: 22px;
-  border: 3px solid var(--color-ink);
-  border-radius: 18px;
-  background-color: var(--color-white);
+  padding: 18px 14px 22px;
+  border-top: 1px solid var(--color-ink);
+  background-color: transparent;
   color: var(--color-ink);
-  box-shadow: 4px 4px 0 var(--color-ink);
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: background-color 120ms ease;
 }
 
-/* hover lifts the card towards the pointer, pressing pushes it into its shadow */
 .card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 var(--color-ink);
-}
-
-.card:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--color-ink);
+  background-color: var(--color-white);
 }
 
 /* the focus ring goes around the whole card, not just the title */
 .card:has(.title:focus-visible) {
-  outline: 3px solid var(--color-ink);
-  outline-offset: 4px;
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .card {
     transition: none;
-  }
-
-  .card:hover,
-  .card:active {
-    transform: none;
   }
 }
 
@@ -51,26 +38,33 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  padding-right: 52px;   /* room for the Save bookmark in the top-right corner */
 }
 
 .type {
   padding: 4px 10px;
-  border: 2px solid var(--color-ink);
-  border-radius: 999px;
+  border: 1px solid var(--color-ink);
+  border-radius: 4px;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-/* who the call is for: the same pill, quieter than the type (grey border, no capitals) */
+/* who the call is for: grey chips under the organisation */
+.disciplines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
 .discipline {
-  padding: 4px 10px;
-  border: 2px solid var(--color-grey-200);
-  border-radius: 999px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background-color: var(--color-grey-200);
   font-size: 12px;
-  font-weight: 800;
-  color: var(--color-grey-600);
+  font-weight: 600;
 }
 
 .visuallyHidden {
@@ -86,13 +80,30 @@
   margin-top: 16px;
   color: inherit;
   text-decoration: none;
-  font-size: 25px;
-  font-weight: 900;
-  font-stretch: 115%;
-  line-height: 1.05;
+  font-size: 22px;
+  font-weight: 700;
+  font-stretch: 110%;
+  line-height: 1.1;
   letter-spacing: -0.025em;
   text-wrap: balance;
   overflow-wrap: anywhere;   /* long one-word titles must not push the card wider */
+  /* a long title is cut after 3 lines with "…" (cards only: the call page shows it whole). Not
+     positioned, so the stretched link's ::after (positioned on the card) isn't clipped by this */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* a card without type chips: its title leaves the bookmark's room instead */
+.card > .title:first-child {
+  margin-top: 0;
+  padding-right: 52px;
+}
+
+.title:hover {
+  color: inherit;
 }
 
 .title:focus-visible {
@@ -104,7 +115,6 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 15px;
 }
 
 .organisation {
@@ -121,13 +131,13 @@
   gap: 6px;
   margin-top: 16px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 /* the deadline, and the funding when it is a clear, significant sum */
 .highlight {
   padding: 1px 9px;
-  border-radius: 999px;
+  border-radius: 4px;
   background-color: var(--color-lime);
 }
 
@@ -141,8 +151,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 16px;
-  border-top: 3px solid var(--color-ink);
+  padding-top: 14px;
+  border-top: 1px solid var(--color-rule);
 }
 
 .reason {
@@ -151,19 +161,18 @@
   line-height: 1.45;
 }
 
-/* why "Matched to you" ranks it here: the call's sentence closest to the artist's documents */
+/* why "Matched to you" ranks it here: the match, and the words shared with the artist's documents */
 .why {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 16px;   /* above the verdict's dividing line */
-  padding-left: 10px;
-  border-left: 3px solid var(--color-lime);
 }
 
 .whyLabel {
+  margin-top: 4px;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-grey-600);
@@ -172,38 +181,27 @@
 .shared {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* a shared word: lime, the same mark as in the quote below */
+/* a shared word: the prototype's lime "matches" tag */
 .sharedWord {
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: 4px;
   background-color: var(--color-lime);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 /* nothing specific in common: said plainly, quieter than a real reason */
 .broad {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-grey-600);
 }
 
 /* "72% match": the strongest line of the block */
 .match {
   font-size: 16px;
-  font-weight: 900;
-}
-
-
-/* the chips leave room for the Save bookmark in the top-right corner */
-.types {
-  padding-right: 52px;
-}
-
-/* a card without chips: its title leaves the room instead */
-.card > .title:first-child {
-  padding-right: 52px;
+  font-weight: 700;
 }

@@ -164,7 +164,7 @@ export const placeLabel = (city: string | null | undefined, countries: string[])
 // Never colour alone: every verdict has its own icon and words too
 export const VERDICTS: Record<VerdictStatus, { icon: string; label: string }> = {
     ELIGIBLE: { icon: "✓", label: "Eligible" },
-    CHECK: { icon: "○", label: "Check" },
+    CHECK: { icon: "○", label: "To check" },
     LIKELY_NOT_ELIGIBLE: { icon: "✕", label: "Likely not eligible" },
 };
 

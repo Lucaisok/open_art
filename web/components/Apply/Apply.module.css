@@ -49,22 +49,22 @@
 }
 
 .back {
-  align-self: flex-start;
   font-size: 14px;
   font-weight: 800;
 }
 
-.titleRow {
+/* back on the left, Save and Download on the right (wraps under on narrow screens) */
+.topBar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px 40px;
+  gap: 12px 24px;
 }
 
+/* eyebrow + title, the full width of the page */
 .titleText {
   display: flex;
-  flex: 1 1 520px;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
@@ -80,7 +80,7 @@
   font-stretch: 122%;
   line-height: 1;
   letter-spacing: -0.035em;
-  text-wrap: balance;
+  text-wrap: pretty;   /* fills the width, only avoids a lone last word */
   overflow-wrap: anywhere;
 }
 
@@ -88,15 +88,6 @@
   color: var(--color-grey-600);
   font-size: 17px;
   font-weight: 700;
-}
-
-.headerActions {
-  display: flex;
-  flex: 0 1 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  min-width: 0;
 }
 
 .headerButtons {
@@ -189,13 +180,6 @@
   cursor: progress;
 }
 
-.todo {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.45;
-  text-align: right;
-}
-
 .factStrip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
@@ -260,8 +244,7 @@
 }
 
 .bannerWarn,
-.bannerClosed,
-.bannerReady {
+.bannerClosed {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -280,14 +263,6 @@
 .bannerClosed {
   border-top: 6px solid var(--color-grey-600);
   background-color: var(--color-grey-100);
-}
-
-.bannerReady {
-  justify-content: space-between;
-  gap: 12px 24px;
-  padding: 16px;
-  border-top: 6px solid var(--color-lime);
-  background-color: var(--color-white);
 }
 
 .bannerStrong {
@@ -314,21 +289,6 @@
   width: 8px;
   height: 8px;
   background-color: var(--color-lime);
-}
-
-.readyText {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  font-size: 14px;
-  color: #333333;
-}
-
-.readyTitle {
-  color: var(--color-ink);
-  font-size: 17px;
-  font-weight: 900;
 }
 
 .docsHint {
@@ -396,9 +356,10 @@
 }
 
 @media (max-width: 1099px) {
-  .workspace[data-view="checklist"] > :not(.columnChecklist),
-  .workspace[data-view="draft"] > :not(.columnDraft),
-  .workspace[data-view="assistant"] > :not(.columnAssistant) {
+
+  .workspace[data-view="checklist"]> :not(.columnChecklist),
+  .workspace[data-view="draft"]> :not(.columnDraft),
+  .workspace[data-view="assistant"]> :not(.columnAssistant) {
     display: none;
   }
 
@@ -486,6 +447,22 @@
 .gatherRow[aria-current="true"] {
   background-color: var(--color-white);
   box-shadow: inset 4px 0 0 var(--color-ink);
+}
+
+/* an item marked "Not needed": greyed and struck through, and the words say so */
+.skipped .rowTitle {
+  color: var(--color-grey-600);
+  text-decoration: line-through;
+}
+
+.skipNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--color-grey-600);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .gatherPick {
@@ -756,6 +733,44 @@
   line-height: 1.55;
 }
 
+/* the artist's own texts: the title form (add / rename) and the header's Rename · Delete */
+.titleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.titleFormLabel {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.titleInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--color-ink);
+  border-radius: 4px;
+  background-color: var(--color-white);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.titleFormButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ownActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
 .nothing {
   display: flex;
   flex-direction: column;
@@ -969,11 +984,11 @@
   scrollbar-width: thin;
 }
 
-.projectEditor > .smallLink {
+.projectEditor>.smallLink {
   margin-top: 12px;
 }
 
-.projectEditor > .darkButton {
+.projectEditor>.darkButton {
   margin-top: 14px;
 }
 
@@ -1209,6 +1224,7 @@
 }
 
 @keyframes dot {
+
   0%,
   80%,
   100% {
