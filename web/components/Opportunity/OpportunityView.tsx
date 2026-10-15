@@ -172,7 +172,7 @@ const OpportunityView = ({ call }: { call: Opportunity; }) => {
                             </p>
                             <p className={styles.matchNote}>
                                 The chance this call is a clear fit for your practice, learned from calls graded for
-                                test artists. It doesn&apos;t change the order or the eligibility check.
+                                test artists.
                             </p>
                             {call.why.shared.length > 0 ? (
                                 <>
