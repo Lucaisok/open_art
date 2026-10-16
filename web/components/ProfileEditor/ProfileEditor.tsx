@@ -59,6 +59,13 @@ export const toYear = (text: string): number | null => (text.trim() === "" ? nul
 export const isEmpty = (value: unknown) =>
     value === null || value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 
+// A document that gives only the birth year ("b. 1988", src/rag/cv_rules.py birth_year) is not a
+// birth date, so it never fills the field: while the field is empty, its helper says what was found
+export const helperFor = (name: FieldName, values: ProfileValues, birthYear?: Suggestion): string | undefined =>
+    name === "birth_date" && !values.birth_date && birthYear
+        ? `Your ${birthYear.source === "cv" ? "CV" : birthYear.source} says you were born in ${String(birthYear.value)}: add the day and month. Many calls have age limits.`
+        : HELPERS[name];
+
 // The form's starting point: the saved profile, with the suggestions read from the artist's documents
 // filled into the fields that are still empty. A saved value is never overwritten: where the
 // CV says something else, the suggestion is kept aside and shown under the field.
@@ -81,7 +88,8 @@ export const startingPoint = (initial: ProfileData) => {
             differing[field] = suggestion;
         }
     }
-    return { values, evidence, differing, filled };
+    const birthYear = initial.suggestions?.items.find((s) => s.field === "birth_year");
+    return { values, evidence, differing, filled, birthYear };
 };
 
 // Onboarding step 2 (design: OpenArt Profile prototype): the setup steps, what the documents filled
@@ -210,7 +218,7 @@ const ProfileEditor = ({ initial, options, hasDocuments }: ProfileEditorProps) =
         return {
             id: `field-${name}`,
             label: FIELD_LABELS[name],
-            helper: HELPERS[name],
+            helper: helperFor(name, values, start.birthYear),
             error: errors[name] || undefined,
             evidence: evidence[name],
             cvSays: fromCv
@@ -226,7 +234,7 @@ const ProfileEditor = ({ initial, options, hasDocuments }: ProfileEditorProps) =
         };
     };
     const ariaFor = (name: FieldName) => ({
-        "aria-describedby": describedBy(`field-${name}`, HELPERS[name], errors[name] || undefined),
+        "aria-describedby": describedBy(`field-${name}`, helperFor(name, values, start.birthYear), errors[name] || undefined),
         "aria-invalid": errors[name] ? true : undefined,
     });
 

@@ -29,7 +29,7 @@ def chunks(*lines: str, section: str | None = None) -> list[Chunk]:
 def test_ilka_cv():
     found = extract("examples/artists/ilka_varga/cv.pdf")
     assert {f: s.value for f, s in found.items()} == {
-        "birth_date": "1994-03-12", "nationalities": ["HU"], "residence_country": "AT", "residence_city": "Vienna",
+        "name": "Ilka Varga", "birth_date": "1994-03-12", "nationalities": ["HU"], "residence_country": "AT", "residence_city": "Vienna",
         "disciplines": ["Visual Arts"], "active_since": 2021, "has_degree": True, "graduation_year": 2021,
         "degree_field": "Painting and Graphic Arts", "languages": ["de", "en", "hu"],
         "education": [{"institution": "Academy of Fine Arts Vienna", "city": None, "country": "AT"},
@@ -52,9 +52,19 @@ with open(os.path.join(ROOT, "examples", "cv_eval", "truth.json"), encoding="utf
     HELD_OUT = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
 
 
+# fields added after truth.json was written (2026-10-16), checked by hand against each CV's header
+LATER_TRUTH = {
+    "bruit_blanc.md": {"name": "Collectif Bruit Blanc", "birth_year": None},
+    "jonas_lindqvist.txt": {"name": "Jonas Lindqvist", "birth_year": 1997},    # "(b. 1997, Gothenburg"
+    "lucia_romero.md": {"name": "Lucía Romero", "birth_year": None},           # full date found instead
+    "mei_tanaka.txt": {"name": "Mei Tanaka", "birth_year": 1985},              # "Born in Osaka, Japan, 1985"
+    "nadia_okafor.md": {"name": "Nadia Okafor", "birth_year": None},
+}
+
+
 @pytest.mark.parametrize("name", sorted(HELD_OUT))
 def test_held_out_cvs_have_no_wrong_or_invented_values(name):
-    truth = HELD_OUT[name]
+    truth = HELD_OUT[name] | LATER_TRUTH[name]
     for field, suggestion in extract(f"examples/cv_eval/{name}").items():
         expected = truth[field]
         assert expected not in (None, []), f"{field} invented: {suggestion.value!r}"
@@ -265,3 +275,37 @@ def test_year_first_works():
 def test_year_first_lines_outside_career_sections_are_not_works():
     found = extract_all(chunks("2015 Guest lecturer, Art Academy", section="Teaching"), "p.txt", "portfolio", TODAY)
     assert "active_since" not in {s.field for s in found}
+
+
+# -- name and birth year (test6's CV-portfolio, 2026-10-16) -----------------------------------------
+
+def test_the_name_spelled_by_the_email_address_is_taken_in_any_document():
+    lines = chunks("(b. 1988, Buenos Aires; based in Berlin) is an artist.", "Harun Farocki",
+                   "Curriculum VElena Moretti", "Elena Moretti", "Email: elena.moretti@example.com")
+    found = {s.field: s for s in extract_all(lines, "portfolio.pdf", "portfolio", TODAY)}
+    assert found["name"].value == "Elena Moretti" and found["name"].quote == "Elena Moretti"
+
+
+def test_a_name_like_line_without_confirmation_is_not_taken():
+    # a work title or a collaborator looks like a name: without the email or a CV's heading, nothing
+    assert not [s for s in extract_all(chunks("City Loop", "Harun Farocki", "info@gallery.com"),
+                                       "portfolio.pdf", "portfolio", TODAY) if s.field == "name"]
+    # a portfolio's opening heading is a work, not the artist
+    assert not [s for s in extract_all(chunks("Video, 2018", section="Underwater Choir"),
+                                       "portfolio.pdf", "portfolio", TODAY) if s.field == "name"]
+    # a CV's opening heading is the artist, written as a name when in capitals
+    found = {s.field: s.value for s in extract_all(chunks("Photographer", section="MEI TANAKA"), "cv.txt", "cv", TODAY)}
+    assert found["name"] == "Mei Tanaka"
+
+
+@pytest.mark.parametrize("line, year", [
+    ("(b. 1988, Buenos Aires; based in Berlin)", 1988),
+    ("Born in 1990.", 1990),
+    ("Born in Osaka, Japan, 1985. Lives in Amsterdam.", 1985),
+    ("Web: b.2015 archive", None),            # "b." inside a word is not "born"
+    ("b. 2020", None),                        # too recent to be the artist
+])
+def test_birth_year_alone_is_a_hint_not_a_birth_date(line, year):
+    found = {s.field: s for s in extract_profile(chunks(line), "cv.txt", TODAY)}
+    assert "birth_date" not in found
+    assert (found["birth_year"].value if "birth_year" in found else None) == year

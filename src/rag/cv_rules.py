@@ -13,7 +13,11 @@ and the exact line it was read from, and the artist checks it before saving.
 Works line by line on the chunks of src/rag/documents.py, which already know the
 CV section each line sits in ("Education", "Exhibitions"). Per field:
 
-  birth_date          a full date on a line with "born" / "date of birth" / "DOB"
+  name                a line of 2-4 capitalised words that the CV's email address spells
+                      ("Elena Moretti" + elena.moretti@...), or, in a CV, its opening heading ("ILKA VARGA")
+  birth_date          a full date on a line with "born" / "b." / "date of birth" / "DOB"
+  birth_year          "b. 1988" / "born in 1988" when no full date is given: never put in the profile
+                      (the engine needs the full date), the form shows it as a hint under the birth date
   nationalities       country names or adjectives on a "citizenship" / "nationality" line
   residence_country   the country (or a known city) after "lives in" / "based in" / "resident in";
                       otherwise a line that is only a place in the CV's contact block ("Berlin")
@@ -41,6 +45,7 @@ the risk to keep low, so the rules only read the places a CV states these facts.
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -134,7 +139,9 @@ MONTHS = {name: i for i, names in enumerate(
      ("november", "nov"), ("december", "dec")], start=1) for name in names}
 _MONTH = r"(" + "|".join(sorted(MONTHS, key=len, reverse=True)) + r")\.?"
 
-BORN_LINE = re.compile(r"\b(born|birth ?date|date of birth|d\.?o\.?b)\b", re.I)
+BORN_LINE = re.compile(r"\b(born|birth ?date|date of birth|d\.?o\.?b)\b|(?<![\w.])b\.", re.I)
+# only the year: "(b. 1988, Buenos Aires", "born in 1988", "Born in Osaka, Japan, 1985" (same clause)
+BORN_YEAR = re.compile(r"(?:\bborn\b[^.;\d]{0,40}?|(?<![\w.])b\.\s*)((?:19|20)\d\d)\b", re.I)
 DATE_PATTERNS = [
     (re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+" + _MONTH + r",?\s+(\d{4})\b", re.I), ("d", "m", "y")),  # 12 March 1994
     (re.compile(r"\b" + _MONTH + r"\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b", re.I), ("m", "d", "y")),  # March 12, 1994
@@ -159,6 +166,58 @@ def _birth_date(lines: list[_Line], today: date) -> tuple[date, _Line] | None:
                 # at least 14 years ago: "the festival was born on 3 May 2019" is not the artist
                 if date(1900, 1, 1) <= found and found.year <= today.year - 14:
                     return found, line
+    return None
+
+
+def _birth_year(lines: list[_Line], today: date) -> tuple[int, _Line] | None:
+    """The year alone ("b. 1988"), for the form's hint: not a birth date, so never a profile value."""
+    for line in lines:
+        if (match := BORN_YEAR.search(line.text)) and 1900 <= int(match.group(1)) <= today.year - 14:
+            return int(match.group(1)), line
+    return None
+
+
+# -- name -----------------------------------------------------------------------------------------
+
+# lower-case words a name can hold between its capitalised ones ("Julieta Ortiz de Latierro")
+NAME_PARTICLES = {"de", "da", "di", "del", "della", "der", "den", "van", "von", "le", "la", "du", "dos", "das",
+                  "y", "bin", "ibn", "al"}
+NAME_WORD = re.compile(r"^[A-ZÀ-Ý][A-Za-zÀ-ÿ'’-]+$")
+EMAIL = re.compile(r"\b([\w.+-]+)@[\w-]+\.[\w.-]+")
+DOCUMENT_TITLE = re.compile(r"\b(curriculum|vitae?|cv|resume|résumé|portfolio|dossier)\b", re.I)
+
+
+def _fold(text: str) -> str:
+    """Lower case without accents: "Tomás" -> "tomas", to compare with an email address."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
+
+
+def _looks_like_name(text: str) -> bool:
+    """2-4 words, each capitalised (or a particle like "de"), starting with a capitalised one, no
+    digits, and not a section title, a document title ("Curriculum Vitae") or a place."""
+    words = text.split()
+    if not 2 <= len(words) <= 4 or KNOWN_SECTION.search(text) or DOCUMENT_TITLE.search(text) or PLACE_RE.search(text):
+        return False
+    proper = [w for w in words if w not in NAME_PARTICLES]
+    return len(proper) >= 2 and words[0] in proper and all(NAME_WORD.match(w) for w in proper)
+
+
+def _name(chunks: list[Chunk], lines: list[_Line], is_cv: bool) -> tuple[str, _Line] | None:
+    """The artist's name. A wrong name is worse than none, so a name-like line alone isn't enough:
+    1. a name-like line whose words are all in the document's email address (elena.moretti@...): the
+       document says twice that this is its author, whatever kind of document it is
+    2. in a CV, its opening heading, when it looks like a name ("ILKA VARGA", "Tomás Ferreira")
+    ALL CAPS is written as a name ("Ilka Varga")."""
+    tidy = lambda text: text.title() if text.isupper() else text
+    addresses = [_fold(m.group(1)) for line in lines for m in EMAIL.finditer(line.text)]
+    for line in lines:
+        if addresses and _looks_like_name(line.text):
+            parts = [_fold(w) for w in line.text.split() if w not in NAME_PARTICLES]
+            if any(all(part in address for part in parts) for address in addresses):
+                return tidy(line.text), line
+    heading = chunks[0].section if chunks else None
+    if is_cv and heading and _looks_like_name(heading):
+        return tidy(heading), _Line(heading, heading, chunks[0].page)
     return None
 
 
@@ -602,9 +661,11 @@ def extract_practice(chunks: list[Chunk], document: str, kind: str, today: date 
 
 KIND_NAMES = {"cv": "CV", "statement": "statement", "portfolio": "portfolio"}
 
-def extract_profile(chunks: list[Chunk], document: str, today: date | None = None) -> list[Suggestion]:
+def extract_profile(chunks: list[Chunk], document: str, today: date | None = None,
+                    is_cv: bool = True) -> list[Suggestion]:
     """Profile values found by the CV rules, each with the line it comes from. Empty fields are left
-    out. Safe on any document (see extract_all): each rule reads only where a CV states the fact."""
+    out. Safe on any document (see extract_all): each rule reads only where a CV states the fact.
+    is_cv: the document is in the CV slot (only then is its opening heading taken as the name)."""
     today = today or date.today()
     lines = _lines(chunks)
     intro = _intro(lines)
@@ -615,8 +676,11 @@ def extract_profile(chunks: list[Chunk], document: str, today: date | None = Non
             value, line = result
             suggestions.append(Suggestion(field, value, line.text, _citation(document, line), note))
 
+    add("name", _name(chunks, lines, is_cv))
     found_birth = _birth_date(lines, today)
     add("birth_date", (found_birth[0].isoformat(), found_birth[1]) if found_birth else None)
+    if not found_birth:
+        add("birth_year", _birth_year(lines, today), note="only the year: add the day and month yourself")
     add("nationalities", _nationalities(lines))
     if residence := _residence(lines, intro):
         country, city, line = residence
@@ -637,7 +701,7 @@ def extract_all(chunks: list[Chunk], document: str, kind: str, today: date | Non
     together ("CV-Portfolio.pdf"), whatever slot it goes in. In a CV the CV rules go first; in a
     statement or portfolio the prose rules do (their disciplines come from the whole text, not just
     the opening lines). One suggestion per field: the first found."""
-    cv_rules = extract_profile(chunks, document, today)
+    cv_rules = extract_profile(chunks, document, today, is_cv=kind == "cv")
     prose = extract_practice(chunks, document, kind, today)
     suggestions, taken = [], set()
     for suggestion in (cv_rules + prose if kind == "cv" else prose + cv_rules):

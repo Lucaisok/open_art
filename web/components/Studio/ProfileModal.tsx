@@ -10,7 +10,7 @@ import { MultiChoice, SingleChoice } from "@/components/ProfileEditor/Choices";
 import CountryChips from "@/components/ProfileEditor/CountryChips";
 import DateParts from "@/components/ProfileEditor/DateParts";
 import Field, { describedBy } from "@/components/ProfileEditor/Field";
-import { HELPERS, startingPoint, toYear } from "@/components/ProfileEditor/ProfileEditor";
+import { helperFor, startingPoint, toYear } from "@/components/ProfileEditor/ProfileEditor";
 import SchoolsEditor from "@/components/ProfileEditor/SchoolsEditor";
 import { APPLICANT_TYPES, CAREER_STAGE_LABELS, FIELD_LABELS, formatValue, type FieldName } from "@/components/ProfileEditor/fields";
 import editor from "@/components/ProfileEditor/ProfileEditor.module.css";
@@ -68,7 +68,7 @@ const ProfileModal = ({ initial, options, onClose, onSaved }: ProfileModalProps)
         return {
             id: `field-${name}`,
             label: FIELD_LABELS[name],
-            helper: HELPERS[name],
+            helper: helperFor(name, values, start.birthYear),
             error: errors[name] || undefined,
             evidence: evidence[name],
             cvSays: fromDocument
@@ -86,7 +86,7 @@ const ProfileModal = ({ initial, options, onClose, onSaved }: ProfileModalProps)
         };
     };
     const aria = (name: FieldName) => ({
-        "aria-describedby": describedBy(`field-${name}`, HELPERS[name], errors[name] || undefined),
+        "aria-describedby": describedBy(`field-${name}`, helperFor(name, values, start.birthYear), errors[name] || undefined),
         "aria-invalid": errors[name] ? true : undefined,
     });
 
