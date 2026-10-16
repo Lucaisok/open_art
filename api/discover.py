@@ -12,7 +12,8 @@ stored either: the page asks for the next page (offset, limit) as the artist scr
 list is ranked again each time. The ranking is deterministic, so pages line up.
 
 The list comes in three groups (src/matching/matcher.py): calls that fit, calls probably for other
-disciplines, calls the artist likely can't apply to; similarity orders each group. ELIGIBLE is a badge
+disciplines, calls the artist likely can't apply to. In "Matched to you" the match percentage orders each
+group, so the order and the number on the cards agree (rank_by_percent; workflow.MD "Match percentage"). ELIGIBLE is a badge
 and the "Eligible only" filter, not a rank (2026-10-13, workflow.MD "Matching evaluation"). Each
 ranked call says why it is there: the specific words it shares with the artist's documents, or that it
 is a broad match (src/matching/explain.py).
@@ -47,9 +48,9 @@ from api.profile import ProfileValues, to_artist_profile
 from src.eligibility.engine import TOPIC, Item, Status, Verdict
 from src.eligibility.profile import ArtistProfile
 from src.matching.filters import ANY_COUNTRY, NOT_FUNDING, MatchFilters, is_funded
-from src.matching.explain import ArtistText, explain
+from src.matching.explain import ArtistText, call_text, explain
 from src.matching.index import EMBEDDING_MODEL, OpportunityIndex, embed_query
-from src.matching.matcher import Group, Match, Matcher, discipline_mismatch
+from src.matching.matcher import GROUP_ORDER, Group, Match, Matcher, discipline_mismatch
 from src.matching.score import ArtistStats, MatchScore, features
 from src.models.processed_opportunity import FundingComponent, ProcessedOpportunity
 from src.processing.canonicalize import CANONICAL_DISCIPLINES, CANONICAL_OPPORTUNITY_TYPES
@@ -74,6 +75,9 @@ MAX_CACHED_QUERIES = 1000
 _query_texts: dict[uuid.UUID, str] = {}
 # project text -> its embedding (a project's text changes when it is edited, so the text is the key)
 _project_vectors: dict[str, np.ndarray] = {}
+# the artist's document words -> {call id: how many specific words the call shares with them}. Counting
+# them for every open call takes ~0.2 s, and each page of the infinite scroll ranks the whole list again
+_shared_counts: dict[frozenset[str], dict[str, int]] = {}
 
 
 @lru_cache
@@ -91,11 +95,47 @@ def get_match_score() -> MatchScore:
     return MatchScore()
 
 
+def match_probability(matcher: Matcher, o: ProcessedOpportunity, vector: np.ndarray, stats: ArtistStats,
+                      shared: int, mismatch: bool) -> float:
+    """The chance the call is a clear fit for the artist, 0 to 1 (src/matching/score.py)."""
+    cosine = float(matcher.index.vectors[matcher._row[o.id]] @ vector)
+    return get_match_score().probability(features(cosine, stats, shared, mismatch))
+
+
 def match_percent(matcher: Matcher, o: ProcessedOpportunity, vector: np.ndarray, stats: ArtistStats,
                   shared: int, mismatch: bool) -> int:
-    """The card's "NN% match": the chance the call is a clear fit (src/matching/score.py). Shown only."""
-    cosine = float(matcher.index.vectors[matcher._row[o.id]] @ vector)
-    return round(100 * get_match_score().probability(features(cosine, stats, shared, mismatch)))
+    """The card's "NN% match": match_probability as a whole percentage."""
+    return round(100 * match_probability(matcher, o, vector, stats, shared, mismatch))
+
+
+def shared_counts(matcher: Matcher, artist: ArtistText) -> dict[str, int]:
+    """{call id: how many specific words it shares with the artist's documents}, for every call, the
+    same count explain() gives (its len(shared)). Cached by the artist's words (_shared_counts)."""
+    key = frozenset(artist.words)
+    if key not in _shared_counts:
+        if len(_shared_counts) >= MAX_CACHED_QUERIES:
+            _shared_counts.pop(next(iter(_shared_counts)))   # the oldest entry
+        _shared_counts[key] = {o.id: len(matcher.explainer.shared_words(artist.words, call_text(o)))
+                               for o in matcher.opportunities}
+    return _shared_counts[key]
+
+
+def rank_by_percent(matcher: Matcher, matches: list[Match], vector: np.ndarray, artist: ArtistText,
+                    profile: ArtistProfile) -> tuple[list[Match], dict[str, int]]:
+    """The ranked list ordered by the match percentage inside each of its three groups, and every
+    call's percentage. Sorting by the number the cards show makes the order and the number agree.
+    Measured against the similarity order on the evaluation set (workflow.MD "Match percentage"): a tie
+    (NDCG 0.654 -> 0.688, interval includes zero; P@10 0.83 -> 0.81), so it was chosen for clarity.
+    The sort is stable: equal probabilities keep the similarity order they arrive in."""
+    stats = ArtistStats.of(matcher.index.vectors, vector)
+    counts = shared_counts(matcher, artist)
+    probability = {}
+    for m in matches:
+        o = matcher.get(m.opportunity_id)
+        probability[o.id] = match_probability(matcher, o, vector, stats, counts[o.id],
+                                              discipline_mismatch(o, m.verdict, profile))
+    ordered = sorted(matches, key=lambda m: (GROUP_ORDER[m.group], -probability[m.opportunity_id]))
+    return ordered, {i: round(100 * p) for i, p in probability.items()}
 
 
 def saved_profile(db, user_id) -> tuple[ArtistProfile, bool]:
@@ -208,8 +248,11 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
     profile, filled = saved_profile(db, user.id)
     ranked_by, vector = ranking_vector(db, user.id, matcher) if body.mode == "matched" else ([], None)
     # the whole ranking (the engine runs on every kept call anyway), then this page of it
+    artist = ArtistText(ranking_documents(db, user.id, matcher)) if vector is not None else None
+    percents: dict[str, int] = {}
     if vector is not None:
         matches, order = matcher.search_vector(vector, profile, filters, k=None), "match"
+        matches, percents = rank_by_percent(matcher, matches, vector, artist, profile)
     else:
         matches, order = matcher.by_deadline(profile, filters, k=None), "deadline"
     if body.eligible_only:
@@ -217,16 +260,12 @@ def search(body: SearchIn, user: CurrentUser, db: DB) -> SearchOut:
 
     groups = {group: sum(m.group == group for m in matches) for group in ("fit", "other_discipline", "not_eligible")}
     page = matches[body.offset:body.offset + body.limit]
-    artist = ArtistText(ranking_documents(db, user.id, matcher)) if vector is not None else None
-    stats = ArtistStats.of(matcher.index.vectors, vector) if vector is not None else None
     results = []
     saved = _saved_ids(db, user.id)
     for m in page:
         o, why = matcher.get(m.opportunity_id), None
         if artist is not None:
-            e = explain(matcher.explainer, artist, o)
-            mismatch = discipline_mismatch(o, m.verdict, profile)
-            why = CardWhyOut(shared=e.shared, match=match_percent(matcher, o, vector, stats, len(e.shared), mismatch))
+            why = CardWhyOut(shared=explain(matcher.explainer, artist, o).shared, match=percents[o.id])
         results.append(_result(m, o, why).model_copy(update={"saved": o.id in saved}))
     return SearchOut(results=results, total=len(matches), groups=groups, order=order, ranked_by=ranked_by,
                      profile_filled=filled)

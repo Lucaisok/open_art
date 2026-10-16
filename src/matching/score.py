@@ -13,8 +13,9 @@ scripts/train_match_score.py, which saves its weights to artifacts/match_score.j
             capped at MAX_SHARED
   mismatch  1 if the call is probably for other disciplines (matcher.discipline_mismatch)
 
-It is shown, never used: the ranking stays the measured one (cosine in three groups) and the
-eligibility verdict never sees it (workflow.MD "Match percentage").
+"Matched to you" sorts each of its three groups by it (api/discover.py rank_by_percent), so the
+order and the number on the cards agree. The groups and the eligibility verdict never depend on it
+(workflow.MD "Match percentage").
 """
 
 import json

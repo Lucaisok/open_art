@@ -224,7 +224,7 @@ const DiscoverBoard = ({ initialState, initialResults, options, profileDisciplin
     const note =
         state.mode === "all" ? (
             "Every call in OpenArt, nearest deadline first. Filters still apply."
-        ) : results.ranked_by.length > 0 ? `Ranked by how close each call is to your profile` : (
+        ) : results.ranked_by.length > 0 ? "Ranked by match: how likely each call is a clear fit for your practice" : (
             <>
                 <Link href="/studio" className={styles.noteLink}>
                     Upload your statement, CV or portfolio

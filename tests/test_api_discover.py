@@ -80,6 +80,12 @@ def small_matcher(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def fresh_shared_counts(monkeypatch):
+    # the cache is keyed by the artist's words only (one Matcher per process): each test has its own
+    monkeypatch.setattr(discover, "_shared_counts", {})
+
+
+@pytest.fixture(autouse=True)
 def fake_document_embedder(monkeypatch):
     embedder = KeywordEmbedder()
     monkeypatch.setattr(knowledge_base, "get_embedder", lambda: embedder)
@@ -269,6 +275,19 @@ def test_ranked_cards_say_what_they_share_with_the_documents(artist, described_m
     assert why["far"]["shared"] == []
     # the match percentage: more likely a clear fit with shared words (and the closer cosine)
     assert 0 <= why["far"]["match"] < why["near"]["match"] <= 100
+
+
+def test_matched_orders_each_group_by_the_match_percentage(small_matcher, monkeypatch):
+    """The order follows the number on the cards: "far" is less similar than "near" but shares five
+    specific words with the artist, so it is more likely a clear fit and comes first. The groups
+    still decide first: "blocked" stays last however many words it shares."""
+    monkeypatch.setattr(discover, "shared_counts", lambda matcher, artist: {"near": 0, "far": 5, "blocked": 5, "closed": 0})
+    matches = small_matcher.search_vector(np.array([1.0, 0.0]), ArtistProfile(), k=None)
+    assert [m.opportunity_id for m in matches] == ["near", "far", "blocked"]          # by similarity
+    ordered, percents = discover.rank_by_percent(small_matcher, matches, np.array([1.0, 0.0]),
+                                                 explain.ArtistText([]), ArtistProfile())
+    assert [m.opportunity_id for m in ordered] == ["far", "near", "blocked"]
+    assert percents["far"] > percents["near"]
 
 
 def test_the_call_page_says_why_it_is_suggested(artist, described_matcher):
